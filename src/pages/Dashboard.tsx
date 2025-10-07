@@ -7,37 +7,37 @@ import { TicketList } from "@/components/TicketList";
 import { StatsCards } from "@/components/StatsCards";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { AuthService, UserProfile } from "@/services/authService";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
+      try {
+        const session = await AuthService.getCurrentSession();
+
+        if (!session) {
+          navigate("/auth");
+          return;
+        }
+
+        setUser(session.user);
+        setProfile(session.profile);
+      } catch (error) {
+        console.error('Auth check failed:', error);
         navigate("/auth");
-        return;
+      } finally {
+        setIsLoading(false);
       }
-
-      setUser(session.user);
-
-      // Get user profile
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", session.user.id)
-        .single();
-
-      setProfile(profileData);
-      setIsLoading(false);
     };
 
     checkAuth();
 
+    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (event === "SIGNED_OUT") {

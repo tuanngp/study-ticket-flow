@@ -1,55 +1,33 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Ticket, Clock, CheckCircle2, AlertCircle } from "lucide-react";
+import { StatisticsService, TicketStats } from "@/services/statisticsService";
 
 interface StatsCardsProps {
   userId: string;
 }
 
 export const StatsCards = ({ userId }: StatsCardsProps) => {
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<TicketStats>({
     total: 0,
     open: 0,
     inProgress: 0,
     resolved: 0,
+    closed: 0,
   });
 
   useEffect(() => {
     const fetchStats = async () => {
-      const { data: tickets } = await supabase
-        .from("tickets")
-        .select("status")
-        .eq("creator_id", userId);
-
-      if (tickets) {
-        setStats({
-          total: tickets.length,
-          open: tickets.filter((t) => t.status === "open").length,
-          inProgress: tickets.filter((t) => t.status === "in_progress").length,
-          resolved: tickets.filter((t) => t.status === "resolved").length,
-        });
-      }
+      const ticketStats = await StatisticsService.getTicketStats(userId);
+      setStats(ticketStats);
     };
 
     fetchStats();
 
-    const channel = supabase
-      .channel("tickets-stats")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "tickets",
-        },
-        () => fetchStats()
-      )
-      .subscribe();
+    // Subscribe to stats changes
+    const unsubscribe = StatisticsService.subscribeToStatsChanges(userId, fetchStats);
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return unsubscribe;
   }, [userId]);
 
   const cards = [

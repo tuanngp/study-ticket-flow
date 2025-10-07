@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 import { Clock, User } from "lucide-react";
+import { TicketOperationsService, Ticket } from "@/services/ticketOperationsService";
 
 interface TicketListProps {
   userId: string;
@@ -11,43 +11,22 @@ interface TicketListProps {
 
 export const TicketList = ({ userId }: TicketListProps) => {
   const navigate = useNavigate();
-  const [tickets, setTickets] = useState<any[]>([]);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchTickets = async () => {
-      const { data } = await supabase
-        .from("tickets")
-        .select(`
-          *,
-          creator:profiles!tickets_creator_id_fkey(full_name, email),
-          assignee:profiles!tickets_assignee_id_fkey(full_name, email)
-        `)
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      setTickets(data || []);
+      const ticketList = await TicketOperationsService.getTickets({ limit: 10 });
+      setTickets(ticketList);
       setIsLoading(false);
     };
 
     fetchTickets();
 
-    const channel = supabase
-      .channel("tickets-list")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "tickets",
-        },
-        () => fetchTickets()
-      )
-      .subscribe();
+    // Subscribe to ticket changes
+    const unsubscribe = TicketOperationsService.subscribeToTickets(fetchTickets);
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return unsubscribe;
   }, [userId]);
 
   const getPriorityColor = (priority: string) => {

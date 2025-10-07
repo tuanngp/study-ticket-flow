@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Ticket, LogOut, Home, LayoutDashboard } from "lucide-react";
+import { AuthService } from "@/services/authService";
 
 interface NavbarProps {
   user: any;
@@ -13,7 +13,13 @@ export const Navbar = ({ user, profile }: NavbarProps) => {
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    const { error } = await AuthService.signOut();
+
+    if (error) {
+      toast.error("Failed to sign out");
+      return;
+    }
+
     toast.success("Signed out successfully");
     navigate("/");
   };

@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,13 +9,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { ArrowLeft, Sparkles } from "lucide-react";
+import { AuthService, UserProfile } from "@/services/authService";
+import { TicketService, TicketFormData } from "@/services/ticketService";
 
 const NewTicket = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [formData, setFormData] = useState<TicketFormData>({
     title: "",
     description: "",
     type: "task",
@@ -25,22 +27,22 @@ const NewTicket = () => {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
+      try {
+        const session = await AuthService.getCurrentSession();
+
+        if (!session) {
+          navigate("/auth");
+          return;
+        }
+
+        setUser(session.user);
+        setProfile(session.profile);
+      } catch (error) {
+        console.error('Auth check failed:', error);
         navigate("/auth");
-        return;
+      } finally {
+        setIsAuthLoading(false);
       }
-
-      setUser(session.user);
-
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", session.user.id)
-        .single();
-
-      setProfile(profileData);
     };
 
     checkAuth();
@@ -48,41 +50,43 @@ const NewTicket = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!user) {
+      toast.error("You must be logged in to create a ticket");
+      return;
+    }
+
+    // Validate form data
+    const validation = TicketService.validateTicketData(formData);
+    if (!validation.isValid) {
+      toast.error(validation.errors.join(", "));
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // Call AI triage function to get suggestions
-      const { data: aiData } = await supabase.functions.invoke("ai-triage", {
-        body: {
-          title: formData.title,
-          description: formData.description,
-          type: formData.type,
-        },
-      });
-
-      const { data, error } = await supabase
-        .from("tickets")
-        .insert({
-          title: formData.title,
-          description: formData.description,
-          type: formData.type as any,
-          priority: formData.priority as any,
-          creator_id: user.id,
-          ai_suggested_priority: aiData?.suggested_priority as any,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
+      const createdTicket = await TicketService.createTicket(formData, user.id);
 
       toast.success("Ticket created successfully!");
-      navigate(`/tickets/${data.id}`);
+      navigate(`/tickets/${createdTicket.id}`);
     } catch (error: any) {
       toast.error(error.message || "Failed to create ticket");
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-subtle flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
@@ -143,7 +147,7 @@ const NewTicket = () => {
                   <Select
                     value={formData.type}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, type: value })
+                      setFormData({ ...formData, type: value as TicketFormData['type'] })
                     }
                   >
                     <SelectTrigger id="type">
@@ -163,7 +167,7 @@ const NewTicket = () => {
                   <Select
                     value={formData.priority}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, priority: value })
+                      setFormData({ ...formData, priority: value as TicketFormData['priority'] })
                     }
                   >
                     <SelectTrigger id="priority">

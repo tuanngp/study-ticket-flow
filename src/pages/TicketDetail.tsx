@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,107 +9,117 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { ArrowLeft, Send, User, Clock } from "lucide-react";
+import { AuthService, UserProfile } from "@/services/authService";
+import { TicketOperationsService, Ticket } from "@/services/ticketOperationsService";
+import { CommentService, Comment } from "@/services/commentService";
 
 const TicketDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
-  const [ticket, setTicket] = useState<any>(null);
-  const [comments, setComments] = useState<any[]>([]);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [ticket, setTicket] = useState<Ticket | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
+    const checkAuthAndLoadData = async () => {
+      try {
+        const session = await AuthService.getCurrentSession();
+
+        if (!session) {
+          navigate("/auth");
+          return;
+        }
+
+        setUser(session.user);
+        setProfile(session.profile);
+
+        if (id) {
+          await Promise.all([fetchTicket(), fetchComments()]);
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
         navigate("/auth");
-        return;
+      } finally {
+        setIsAuthLoading(false);
+        setIsLoading(false);
       }
-
-      setUser(session.user);
-
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", session.user.id)
-        .single();
-
-      setProfile(profileData);
-      fetchTicket();
-      fetchComments();
     };
 
-    checkAuth();
+    checkAuthAndLoadData();
   }, [id, navigate]);
 
   const fetchTicket = async () => {
-    const { data } = await supabase
-      .from("tickets")
-      .select(`
-        *,
-        creator:profiles!tickets_creator_id_fkey(full_name, email),
-        assignee:profiles!tickets_assignee_id_fkey(full_name, email)
-      `)
-      .eq("id", id)
-      .single();
+    if (!id) return;
 
-    setTicket(data);
-    setIsLoading(false);
+    const ticketData = await TicketOperationsService.getTicketById(id);
+    setTicket(ticketData);
   };
 
   const fetchComments = async () => {
-    const { data } = await supabase
-      .from("ticket_comments")
-      .select(`
-        *,
-        user:profiles(full_name, email)
-      `)
-      .eq("ticket_id", id)
-      .order("created_at", { ascending: true });
+    if (!id) return;
 
-    setComments(data || []);
+    const commentsData = await CommentService.getCommentsByTicketId(id);
+    setComments(commentsData);
   };
 
   const handleAddComment = async () => {
-    if (!newComment.trim()) return;
+    if (!newComment.trim() || !id || !user) return;
 
-    const { error } = await supabase
-      .from("ticket_comments")
-      .insert({
-        ticket_id: id,
-        user_id: user.id,
-        content: newComment,
-      });
+    const { success, error, comment } = await CommentService.createComment({
+      ticketId: id,
+      userId: user.id,
+      content: newComment.trim(),
+    });
 
-    if (error) {
-      toast.error("Failed to add comment");
+    if (!success) {
+      toast.error(error || "Failed to add comment");
       return;
     }
 
     toast.success("Comment added");
     setNewComment("");
-    fetchComments();
+
+    // Add the new comment to the list immediately for better UX
+    if (comment) {
+      setComments(prev => [...prev, comment]);
+    }
   };
 
   const handleUpdateStatus = async (status: string) => {
-    const { error } = await supabase
-      .from("tickets")
-      .update({ status: status as any })
-      .eq("id", id);
+    if (!id) return;
 
-    if (error) {
-      toast.error("Failed to update status");
+    const { success, error } = await TicketOperationsService.updateTicketStatus(
+      id,
+      status as 'open' | 'in_progress' | 'resolved' | 'closed'
+    );
+
+    if (!success) {
+      toast.error(error || "Failed to update status");
       return;
     }
 
     toast.success("Status updated");
-    fetchTicket();
+
+    // Update the ticket status locally for better UX
+    setTicket(prev => prev ? { ...prev, status } : null);
   };
 
-  if (isLoading) {
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading || !ticket) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>

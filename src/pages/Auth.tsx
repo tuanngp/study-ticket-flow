@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Ticket } from "lucide-react";
+import { AuthService } from "@/services/authService";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -21,20 +21,17 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { user, error } = await AuthService.signUp({
         email,
         password,
-        options: {
-          data: {
-            full_name: fullName,
-          },
-          emailRedirectTo: `${window.location.origin}/`,
-        },
+        fullName,
       });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(error);
+      }
 
-      if (data.user) {
+      if (user) {
         toast.success("Account created successfully!");
         navigate("/dashboard");
       }
@@ -50,14 +47,16 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { user, error } = await AuthService.signIn({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(error);
+      }
 
-      if (data.user) {
+      if (user) {
         toast.success("Signed in successfully!");
         navigate("/dashboard");
       }
