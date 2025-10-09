@@ -39,8 +39,8 @@ export class TicketOperationsService {
         .from("tickets")
         .select(`
           *,
-          creator:profiles!tickets_creator_id_fkey(full_name, email),
-          assignee:profiles!tickets_assignee_id_fkey(full_name, email)
+          creator:profiles!tickets_creator_id_profiles_id_fk(full_name, email),
+          assignee:profiles!tickets_assignee_id_profiles_id_fk(full_name, email)
         `)
         .eq("id", ticketId)
         .single();
@@ -66,8 +66,8 @@ export class TicketOperationsService {
         .from("tickets")
         .select(`
           *,
-          creator:profiles!tickets_creator_id_fkey(full_name, email),
-          assignee:profiles!tickets_assignee_id_fkey(full_name, email)
+          creator:profiles!tickets_creator_id_profiles_id_fk(full_name, email),
+          assignee:profiles!tickets_assignee_id_profiles_id_fk(full_name, email)
         `)
         .order("created_at", { ascending: false });
 

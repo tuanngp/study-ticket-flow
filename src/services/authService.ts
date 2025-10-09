@@ -109,7 +109,7 @@ export class AuthService {
         return null;
       }
 
-      const profile = await this.getUserProfile(session.user.id);
+      const profile = await this.ensureUserProfile(session.user);
 
       return {
         user: session.user,
@@ -117,6 +117,49 @@ export class AuthService {
       };
     } catch (error) {
       console.error('Error in getCurrentSession:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Ensure a profile exists for the user, creating one if necessary
+   */
+  static async ensureUserProfile(user: any): Promise<UserProfile | null> {
+    try {
+      // First try to get existing profile
+      let profile = await this.getUserProfile(user.id);
+
+      if (!profile) {
+        // Profile doesn't exist, create one
+        console.log('Profile not found, creating new profile for user:', user.id);
+
+        const { data, error } = await supabase
+          .from("profiles")
+          .insert({
+            id: user.id,
+            email: user.email,
+            full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error creating user profile:', error);
+          // If profile creation fails, try to get it again in case it was created by another process
+          profile = await this.getUserProfile(user.id);
+          if (!profile) {
+            console.error('Failed to create or retrieve profile');
+            return null;
+          }
+        } else {
+          profile = data;
+          console.log('Profile created successfully:', profile);
+        }
+      }
+
+      return profile;
+    } catch (error) {
+      console.error('Error in ensureUserProfile:', error);
       return null;
     }
   }
