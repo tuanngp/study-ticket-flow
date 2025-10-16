@@ -3,10 +3,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { ChatMessage, RAGAssistantService } from '@/services/ragAssistantService';
-import { Loader2, MessageCircle, Send, Sparkles, X } from 'lucide-react';
+import { BookOpen, Loader2, MessageCircle, Send, Sparkles, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 
 export const AIAssistantWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -161,21 +163,60 @@ export const AIAssistantWidget = () => {
               className={`mb-4 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}
             >
               <div
-                className={`inline-block max-w-[85%] p-3 rounded-lg ${
+                className={`inline-block max-w-[85%] p-4 rounded-lg ${
                   msg.role === 'user'
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-muted'
                 }`}
               >
-                <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
+                {msg.role === 'user' ? (
+                  <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
+                ) : (
+                  <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
+                    <ReactMarkdown
+                      components={{
+                        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                        ul: ({ children }) => <ul className="list-disc pl-4 mb-2 space-y-1">{children}</ul>,
+                        ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>,
+                        li: ({ children }) => <li className="text-sm">{children}</li>,
+                        strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
+                        em: ({ children }) => <em className="italic">{children}</em>,
+                        code: ({ children }) => (
+                          <code className="bg-background/50 px-1.5 py-0.5 rounded text-xs font-mono">
+                            {children}
+                          </code>
+                        ),
+                        pre: ({ children }) => (
+                          <pre className="bg-background/50 p-2 rounded overflow-x-auto my-2">
+                            {children}
+                          </pre>
+                        ),
+                        h1: ({ children }) => <h1 className="text-base font-bold mb-2">{children}</h1>,
+                        h2: ({ children }) => <h2 className="text-sm font-bold mb-2">{children}</h2>,
+                        h3: ({ children }) => <h3 className="text-sm font-semibold mb-1">{children}</h3>,
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
+                  </div>
+                )}
+                
                 {msg.metadata?.sources && msg.metadata.sources.length > 0 && (
-                  <div className="text-xs mt-2 pt-2 border-t border-border/30 opacity-70">
-                    <p className="font-medium mb-1">Nguồn tham khảo:</p>
-                    {msg.metadata.sources.map((s: any, idx: number) => (
-                      <div key={idx} className="truncate">
-                        • {s.title} ({Math.round(s.similarity * 100)}%)
-                      </div>
-                    ))}
+                  <div className="mt-3 pt-3 border-t border-border/20">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
+                      <p className="font-semibold text-xs text-muted-foreground">Nguồn tham khảo:</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      {msg.metadata.sources.map((s: any, idx: number) => (
+                        <div key={idx} className="flex items-start gap-2 text-xs">
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 shrink-0">
+                            {Math.round(s.similarity * 100)}%
+                          </Badge>
+                          <span className="text-muted-foreground leading-5">{s.title}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

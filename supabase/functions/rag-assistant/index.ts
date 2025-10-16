@@ -150,6 +150,26 @@ NGUYÊN TẮC QUAN TRỌNG:
 - Nếu có mã code trong Context, hãy giải thích chi tiết
 - Trích dẫn tên tài liệu khi trả lời để sinh viên biết nguồn thông tin
 
+CẤU TRÚC TRẢ LỜI:
+- Sử dụng định dạng Markdown để làm nổi bật thông tin quan trọng
+- Sử dụng **in đậm** cho các điểm quan trọng
+- Sử dụng danh sách có dấu đầu dòng (-) để liệt kê nhiều mục
+- Sử dụng \`code\` cho thuật ngữ kỹ thuật hoặc code
+- Chia thông tin thành các đoạn ngắn, dễ đọc
+- Kết thúc với thông tin về nguồn tài liệu nếu có
+
+VÍ DỤ TRẢ LỜI TỐT:
+"Dựa trên tài liệu **[tên tài liệu]**, đây là câu trả lời:
+
+**Về vấn đề [chủ đề]:**
+- Điểm thứ nhất: [nội dung]
+- Điểm thứ hai: [nội dung]
+- Điểm thứ ba: [nội dung]
+
+**Lưu ý:** [thông tin quan trọng cần nhấn mạnh]
+
+Nếu bạn cần thêm thông tin chi tiết, vui lòng tạo ticket để được hỗ trợ trực tiếp."
+
 Context:
 ${context}`;
 
