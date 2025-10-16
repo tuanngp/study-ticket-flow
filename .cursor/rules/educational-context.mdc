@@ -1,0 +1,553 @@
+---
+globs: src/**/*.ts,src/**/*.tsx
+description: Educational context patterns including user roles, academic structures, and learning workflows for EduTicket AI
+---
+
+# Educational Context Patterns
+
+## Academic User Roles & Permissions
+
+### Role Definitions
+```typescript
+// types/userRoles.ts
+export type UserRole = 'student' | 'lead' | 'instructor' | 'manager' | 'admin';
+
+export interface RolePermissions {
+  canCreateTickets: boolean;
+  canAssignTickets: boolean;
+  canResolveTickets: boolean;
+  canViewAnalytics: boolean;
+  canManageUsers: boolean;
+  canAccessAllCourses: boolean;
+  canOverrideAI: boolean;
+}
+
+export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
+  student: {
+    canCreateTickets: true,
+    canAssignTickets: false,
+    canResolveTickets: false,
+    canViewAnalytics: false,
+    canManageUsers: false,
+    canAccessAllCourses: false,
+    canOverrideAI: false,
+  },
+  lead: { // Teaching Assistant Lead
+    canCreateTickets: true,
+    canAssignTickets: true,
+    canResolveTickets: true,
+    canViewAnalytics: true,
+    canManageUsers: false,
+    canAccessAllCourses: false, // Only assigned courses
+    canOverrideAI: true,
+  },
+  instructor: {
+    canCreateTickets: true,
+    canAssignTickets: true,
+    canResolveTickets: true,
+    canViewAnalytics: true,
+    canManageUsers: false,
+    canAccessAllCourses: false, // Only assigned courses
+    canOverrideAI: true,
+  },
+  manager: { // Department Manager
+    canCreateTickets: true,
+    canAssignTickets: true,
+    canResolveTickets: true,
+    canViewAnalytics: true,
+    canManageUsers: true,
+    canAccessAllCourses: true, // All courses in department
+    canOverrideAI: true,
+  },
+  admin: {
+    canCreateTickets: true,
+    canAssignTickets: true,
+    canResolveTickets: true,
+    canViewAnalytics: true,
+    canManageUsers: true,
+    canAccessAllCourses: true, // All courses university-wide
+    canOverrideAI: true,
+  },
+};
+```
+
+### Role-Based Access Control
+```typescript
+// hooks/usePermissions.ts
+import { useAuth } from './useAuth';
+import { ROLE_PERMISSIONS, UserRole } from '@/types/userRoles';
+
+export const usePermissions = () => {
+  const { user } = useAuth();
+
+  const hasPermission = (permission: keyof RolePermissions): boolean => {
+    if (!user?.role) return false;
+    return ROLE_PERMISSIONS[user.role as UserRole][permission];
+  };
+
+  const canAccessCourse = (courseId: string): boolean => {
+    if (!user) return false;
+
+    // Admin can access all courses
+    if (user.role === 'admin') return true;
+
+    // Manager can access courses in their department
+    if (user.role === 'manager') {
+      return user.managedDepartments?.includes(courseId) || false;
+    }
+
+    // Instructor/Lead can access assigned courses
+    if (['instructor', 'lead'].includes(user.role)) {
+      return user.assignedCourses?.includes(courseId) || false;
+    }
+
+    // Students can only access their enrolled courses
+    return user.enrolledCourses?.includes(courseId) || false;
+  };
+
+  return {
+    hasPermission,
+    canAccessCourse,
+    userRole: user?.role,
+  };
+};
+```
+
+## Academic Structure Hierarchy
+
+### Database Schema for Educational Hierarchy
+```typescript
+// db/schema.ts
+export const faculties = pgTable("faculties", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  code: text("code").notNull().unique(), // "SE" for Software Engineering
+  name: text("name").notNull(), // "Software Engineering"
+  description: text("description"),
+  managerId: uuid("manager_id").references(() => profiles.id),
+});
+
+export const courses = pgTable("courses", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  code: text("code").notNull().unique(), // "PRJ301"
+  name: text("name").notNull(), // "Java Web Application Development"
+  facultyId: uuid("faculty_id").notNull().references(() => faculties.id),
+  description: text("description"),
+  credits: integer("credits").notNull(),
+  prerequisites: text("prerequisites").array(),
+});
+
+export const classes = pgTable("classes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  courseId: uuid("course_id").notNull().references(() => courses.id),
+  semester: text("semester").notNull(), // "2024A", "2024B"
+  classCode: text("class_code").notNull(), // "SE1730"
+  instructorId: uuid("instructor_id").references(() => profiles.id),
+  leadId: uuid("lead_id").references(() => profiles.id),
+  maxStudents: integer("max_students"),
+  status: classStatusEnum("status").default("active"),
+});
+
+export const projectGroups = pgTable("project_groups", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  classId: uuid("class_id").notNull().references(() => classes.id),
+  name: text("name").notNull(), // "Group 01", "Team Alpha"
+  leaderId: uuid("leader_id").references(() => profiles.id),
+  members: uuid("members").array().notNull(),
+  projectTopic: text("project_topic"),
+});
+```
+
+### Academic Context in Tickets
+```typescript
+// Enhanced ticket creation with educational context
+export interface EducationalTicketData extends TicketFormData {
+  courseCode: string;
+  classId: string;
+  projectGroupId?: string;
+  semester: string;
+  academicLevel: 'foundation' | 'intermediate' | 'advanced';
+  relatedTopics: string[];
+  assignmentDeadline?: string;
+  submissionStatus?: 'not_started' | 'in_progress' | 'submitted' | 'graded';
+}
+
+export class EducationalTicketService extends TicketService {
+  static async createEducationalTicket(
+    ticketData: EducationalTicketData,
+    creatorId: string
+  ): Promise<CreatedTicket> {
+    // Validate educational context
+    await this.validateEducationalContext(ticketData, creatorId);
+
+    // Enhance with AI suggestions based on academic context
+    const aiSuggestions = await AITriageService.analyzeEducationalTicket(ticketData);
+
+    // Create ticket with educational metadata
+    const ticket = await super.createTicket({
+      ...ticketData,
+      // Add educational context to ticket metadata
+      metadata: {
+        courseCode: ticketData.courseCode,
+        classId: ticketData.classId,
+        academicLevel: ticketData.academicLevel,
+        relatedTopics: ticketData.relatedTopics,
+      }
+    }, creatorId);
+
+    // Auto-assign based on educational hierarchy
+    await AutoAssignmentService.autoAssignEducationalTicket(ticket.id, aiSuggestions, ticketData);
+
+    return ticket;
+  }
+
+  private static async validateEducationalContext(
+    ticketData: EducationalTicketData,
+    creatorId: string
+  ) {
+    // Verify student is enrolled in the course/class
+    const { data: enrollment } = await supabase
+      .from('class_enrollments')
+      .select('*')
+      .eq('student_id', creatorId)
+      .eq('class_id', ticketData.classId)
+      .single();
+
+    if (!enrollment) {
+      throw new Error('Student is not enrolled in this class');
+    }
+
+    // Verify course belongs to specified class
+    const { data: classData } = await supabase
+      .from('classes')
+      .select('course_id')
+      .eq('id', ticketData.classId)
+      .single();
+
+    if (classData?.course_id !== ticketData.courseCode) {
+      throw new Error('Course code does not match class');
+    }
+  }
+}
+```
+
+## Educational Workflows
+
+### Ticket Creation Workflow
+```typescript
+// components/EducationalTicketForm.tsx
+export const EducationalTicketForm = () => {
+  const { user } = useAuth();
+  const { hasPermission } = usePermissions();
+
+  // Get student's enrolled courses and classes
+  const { data: enrolledCourses } = useQuery({
+    queryKey: ['enrolled-courses', user?.id],
+    queryFn: () => StudentService.getEnrolledCourses(user!.id),
+    enabled: !!user?.id && user.role === 'student',
+  });
+
+  // For instructors/leads, get assigned courses
+  const { data: assignedCourses } = useQuery({
+    queryKey: ['assigned-courses', user?.id],
+    queryFn: () => InstructorService.getAssignedCourses(user!.id),
+    enabled: !!user?.id && ['instructor', 'lead'].includes(user.role),
+  });
+
+  const courses = enrolledCourses || assignedCourses || [];
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)}>
+        {/* Course Selection */}
+        <FormField
+          control={form.control}
+          name="courseCode"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Course</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select course" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {courses.map((course) => (
+                    <SelectItem key={course.id} value={course.code}>
+                      {course.code} - {course.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Class Selection (filtered by course) */}
+        <FormField
+          control={form.control}
+          name="classId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Class</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select class" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {classes.map((cls) => (
+                    <SelectItem key={cls.id} value={cls.id}>
+                      {cls.classCode} - {cls.semester}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Academic Level Assessment */}
+        <FormField
+          control={form.control}
+          name="academicLevel"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Difficulty Level</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Assess your understanding" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="foundation">Foundation (new to this topic)</SelectItem>
+                  <SelectItem value="intermediate">Intermediate (some experience)</SelectItem>
+                  <SelectItem value="advanced">Advanced (experienced with topic)</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Standard ticket fields */}
+        <FormField
+          control={form.control}
+          name="title"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Title</FormLabel>
+              <FormControl>
+                <Input placeholder="Brief description of your issue" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* ... other fields */}
+      </form>
+    </Form>
+  );
+};
+```
+
+### Assignment Workflow
+```typescript
+// services/educationalAssignmentService.ts
+export class EducationalAssignmentService extends AutoAssignmentService {
+  /**
+   * Educational assignment considers course expertise and workload
+   */
+  static async assignEducationalTicket(
+    ticketId: string,
+    ticketData: EducationalTicketData,
+    aiSuggestions: AITriageResult
+  ) {
+    // Get instructors/leads for this course
+    const courseStaff = await this.getCourseStaff(ticketData.courseCode);
+
+    // Filter by expertise and availability
+    const eligibleAssignees = await this.filterByExpertise(
+      courseStaff,
+      ticketData.relatedTopics
+    );
+
+    // Consider current workload
+    const availableAssignees = await this.filterByWorkload(eligibleAssignees);
+
+    // Apply educational priority rules
+    const bestAssignee = this.selectEducationalAssignee(
+      availableAssignees,
+      ticketData,
+      aiSuggestions
+    );
+
+    if (bestAssignee) {
+      await this.assignWithEducationalContext(ticketId, bestAssignee, ticketData);
+
+      // Notify with course context
+      await this.notifyWithCourseContext(bestAssignee, ticketId, ticketData);
+    }
+  }
+
+  /**
+   * Get course staff based on educational hierarchy
+   */
+  private static async getCourseStaff(courseCode: string) {
+    const { data } = await supabase
+      .from('course_assignments')
+      .select(`
+        profile:profiles(*),
+        role_in_course
+      `)
+      .eq('course_code', courseCode);
+
+    return data || [];
+  }
+
+  /**
+   * Assignment notification with educational context
+   */
+  private static async notifyWithCourseContext(
+    assignee: any,
+    ticketId: string,
+    ticketData: EducationalTicketData
+  ) {
+    const notification = {
+      title: `New ${ticketData.courseCode} Ticket Assigned`,
+      message: `You've been assigned a ticket for ${ticketData.classId}`,
+      context: {
+        course: ticketData.courseCode,
+        class: ticketData.classId,
+        academicLevel: ticketData.academicLevel,
+        urgency: ticketData.assignmentDeadline ?
+          this.calculateUrgency(ticketData.assignmentDeadline) : 'normal'
+      },
+      actions: [
+        {
+          label: 'View Ticket',
+          url: `/tickets/${ticketId}`
+        },
+        {
+          label: 'View Class Dashboard',
+          url: `/classes/${ticketData.classId}`
+        }
+      ]
+    };
+
+    await NotificationService.send(notification, assignee.id);
+  }
+}
+```
+
+## Learning Analytics Integration
+
+### Educational Dashboard Data
+```typescript
+// services/educationalAnalyticsService.ts
+export class EducationalAnalyticsService {
+  /**
+   * Get comprehensive learning analytics for educational stakeholders
+   */
+  static async getEducationalDashboard(userId: string, userRole: UserRole, context: DashboardContext) {
+    switch (userRole) {
+      case 'student':
+        return this.getStudentDashboard(userId, context);
+
+      case 'lead':
+      case 'instructor':
+        return this.getInstructorDashboard(userId, context);
+
+      case 'manager':
+        return this.getManagerDashboard(userId, context);
+
+      default:
+        return this.getBasicDashboard(userId);
+    }
+  }
+
+  /**
+   * Student dashboard: personal learning progress and support needs
+   */
+  private static async getStudentDashboard(studentId: string, context: DashboardContext) {
+    const [tickets, courseProgress, peerComparison] = await Promise.all([
+      TicketService.getStudentTickets(studentId),
+      CourseService.getStudentProgress(studentId),
+      AnalyticsService.getPeerComparison(studentId, context.classId),
+    ]);
+
+    return {
+      myTickets: tickets,
+      courseProgress,
+      peerComparison,
+      learningInsights: this.generateStudentInsights(tickets, courseProgress),
+    };
+  }
+
+  /**
+   * Instructor dashboard: class performance and support effectiveness
+   */
+  private static async getInstructorDashboard(instructorId: string, context: DashboardContext) {
+    const [assignedTickets, classPerformance, aiEffectiveness] = await Promise.all([
+      TicketService.getAssignedTickets(instructorId),
+      ClassAnalyticsService.getClassPerformance(context.classId),
+      AIAnalyticsService.getAIEffectiveness(context.courseCode),
+    ]);
+
+    return {
+      assignedTickets,
+      classPerformance,
+      aiEffectiveness,
+      teachingInsights: this.generateTeachingInsights(classPerformance, aiEffectiveness),
+    };
+  }
+}
+```
+
+## Academic Calendar Integration
+
+### Semester and Deadline Awareness
+```typescript
+// services/academicCalendarService.ts
+export class AcademicCalendarService {
+  /**
+   * Get current academic context for ticket prioritization
+   */
+  static async getAcademicContext(date: Date = new Date()): Promise<AcademicContext> {
+    const currentSemester = await this.getCurrentSemester(date);
+    const upcomingDeadlines = await this.getUpcomingDeadlines(currentSemester);
+    const academicPressure = this.calculateAcademicPressure(upcomingDeadlines, date);
+
+    return {
+      semester: currentSemester,
+      upcomingDeadlines,
+      academicPressure, // 'low' | 'medium' | 'high' | 'critical'
+      businessDaysUntilDeadline: this.getBusinessDaysUntil(upcomingDeadlines[0]?.date),
+    };
+  }
+
+  /**
+   * Adjust ticket priority based on academic calendar
+   */
+  static adjustPriorityForAcademicCalendar(
+    basePriority: TicketPriority,
+    academicContext: AcademicContext
+  ): TicketPriority {
+    // Increase priority during high-pressure periods
+    if (academicContext.academicPressure === 'critical') {
+      return basePriority === 'low' ? 'medium' : 'high';
+    }
+
+    if (academicContext.academicPressure === 'high') {
+      return basePriority === 'low' ? 'medium' : basePriority;
+    }
+
+    return basePriority;
+  }
+}
+```

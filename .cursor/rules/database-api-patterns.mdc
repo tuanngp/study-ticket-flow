@@ -1,0 +1,491 @@
+---
+globs: src/db/*.ts,src/services/*.ts,src/integrations/supabase/*.ts
+description: Database operations, API patterns, and Supabase integration guidelines
+---
+
+# Database & API Patterns
+
+## Educational Database Schema
+
+### Academic Hierarchy Schema
+```typescript
+import { relations } from "drizzle-orm";
+import {
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+  integer,
+  boolean
+} from "drizzle-orm/pg-core";
+
+// Enums for educational context
+export const userRoleEnum = pgEnum("user_role", [
+  "student",
+  "lead",      // Teaching Assistant Lead
+  "instructor",
+  "manager",   // Department Manager
+  "admin",
+]);
+
+export const ticketStatusEnum = pgEnum("ticket_status", [
+  "open",
+  "in_progress",
+  "resolved",
+  "closed"
+]);
+
+export const ticketTypeEnum = pgEnum("ticket_type", [
+  "coding_error",
+  "project_setup",
+  "grading_issue",
+  "concept_question",
+  "system_issue",
+  "other"
+]);
+
+export const ticketPriorityEnum = pgEnum("ticket_priority", [
+  "low",
+  "medium",
+  "high",
+  "critical"
+]);
+
+export const academicLevelEnum = pgEnum("academic_level", [
+  "foundation",
+  "intermediate",
+  "advanced"
+]);
+
+// Academic hierarchy tables
+export const faculties = pgTable("faculties", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  code: text("code").notNull().unique(), // "SE" for Software Engineering
+  name: text("name").notNull(), // "Software Engineering"
+  description: text("description"),
+  managerId: uuid("manager_id").references(() => profiles.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const courses = pgTable("courses", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  code: text("code").notNull().unique(), // "PRJ301"
+  name: text("name").notNull(), // "Java Web Application Development"
+  facultyId: uuid("faculty_id").notNull().references(() => faculties.id),
+  description: text("description"),
+  credits: integer("credits").notNull(),
+  prerequisites: text("prerequisites").array(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const classes = pgTable("classes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  courseId: uuid("course_id").notNull().references(() => courses.id),
+  semester: text("semester").notNull(), // "2024A", "2024B"
+  classCode: text("class_code").notNull(), // "SE1730"
+  instructorId: uuid("instructor_id").references(() => profiles.id),
+  leadId: uuid("lead_id").references(() => profiles.id),
+  maxStudents: integer("max_students"),
+  status: text("status").notNull().default("active"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const projectGroups = pgTable("project_groups", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  classId: uuid("class_id").notNull().references(() => classes.id),
+  name: text("name").notNull(), // "Group 01", "Team Alpha"
+  leaderId: uuid("leader_id").references(() => profiles.id),
+  members: uuid("members").array().notNull(),
+  projectTopic: text("project_topic"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// User and ticket tables
+export const profiles = pgTable("profiles", {
+  id: uuid("id").primaryKey(),
+  email: text("email").notNull(),
+  fullName: text("full_name"),
+  role: userRoleEnum("role").notNull().default("student"),
+  avatarUrl: text("avatar_url"),
+  facultyId: uuid("faculty_id").references(() => faculties.id), // For filtering
+  isAvailable: boolean("is_available").notNull().default(true), // For TA/instructor availability
+  expertiseAreas: text("expertise_areas").array(), // Course codes they're expert in
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const classEnrollments = pgTable("class_enrollments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  studentId: uuid("student_id").notNull().references(() => profiles.id),
+  classId: uuid("class_id").notNull().references(() => classes.id),
+  enrolledAt: timestamp("enrolled_at", { withTimezone: true }).notNull().defaultNow(),
+  status: text("status").notNull().default("active"),
+}, (table) => ({
+  uniqueEnrollment: unique().on(table.studentId, table.classId),
+}));
+
+export const tickets = pgTable("tickets", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  type: ticketTypeEnum("type").notNull().default("concept_question"),
+  priority: ticketPriorityEnum("priority").notNull().default("medium"),
+  status: ticketStatusEnum("status").notNull().default("open"),
+  academicLevel: academicLevelEnum("academic_level").notNull().default("intermediate"),
+
+  // Educational context
+  courseId: uuid("course_id").references(() => courses.id),
+  classId: uuid("class_id").references(() => classes.id),
+  projectGroupId: uuid("project_group_id").references(() => projectGroups.id),
+  semester: text("semester"),
+
+  // Related topics for AI matching
+  relatedTopics: text("related_topics").array(),
+
+  // Assignment and deadlines
+  assignmentDeadline: timestamp("assignment_deadline", { withTimezone: true }),
+  submissionStatus: text("submission_status"), // 'not_started', 'in_progress', 'submitted', 'graded'
+
+  // Creator and assignment
+  creatorId: uuid("creator_id").notNull().references(() => profiles.id),
+  assigneeId: uuid("assignee_id").references(() => profiles.id),
+
+  // AI suggestions and analytics
+  aiSuggestedPriority: ticketPriorityEnum("ai_suggested_priority"),
+  aiSuggestedAssignee: uuid("ai_suggested_assignee").references(() => profiles.id),
+  aiConfidence: integer("ai_confidence"), // 0-100
+
+  // Metadata
+  metadata: jsonb("metadata"), // Additional educational context
+
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Relations
+export const facultiesRelations = relations(faculties, ({ one, many }) => ({
+  manager: one(profiles, {
+    fields: [faculties.managerId],
+    references: [profiles.id],
+  }),
+  courses: many(courses),
+}));
+
+export const coursesRelations = relations(courses, ({ one, many }) => ({
+  faculty: one(faculties, {
+    fields: [courses.facultyId],
+    references: [faculties.id],
+  }),
+  classes: many(classes),
+}));
+
+export const classesRelations = relations(classes, ({ one, many }) => ({
+  course: one(courses, {
+    fields: [classes.courseId],
+    references: [courses.id],
+  }),
+  instructor: one(profiles, {
+    fields: [classes.instructorId],
+    references: [profiles.id],
+  }),
+  lead: one(profiles, {
+    fields: [classes.leadId],
+    references: [profiles.id],
+  }),
+  enrollments: many(classEnrollments),
+  projectGroups: many(projectGroups),
+  tickets: many(tickets),
+}));
+
+export const profilesRelations = relations(profiles, ({ one, many }) => ({
+  faculty: one(faculties, {
+    fields: [profiles.facultyId],
+    references: [profiles.id],
+  }),
+  createdTickets: many(tickets, { relationName: "creator" }),
+  assignedTickets: many(tickets, { relationName: "assignee" }),
+  managedFaculty: one(faculties, { relationName: "manager" }),
+  taughtClasses: many(classes, { relationName: "instructor" }),
+  ledClasses: many(classes, { relationName: "lead" }),
+  enrollments: many(classEnrollments),
+}));
+```
+
+### Database Client Setup
+```typescript
+// db/client.ts
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import * as schema from './schema';
+
+const connectionString = process.env.DATABASE_URL!;
+
+const client = postgres(connectionString, {
+  max: 1, // For edge functions
+});
+
+export const db = drizzle(client, { schema });
+```
+
+## Supabase Integration
+
+### Client Configuration
+```typescript
+// integrations/supabase/client.ts
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10,
+    },
+  },
+});
+```
+
+### Real-time Subscriptions
+```typescript
+// services/ticketOperationsService.ts
+export class TicketOperationsService {
+  static subscribeToTickets(callback: (tickets: Ticket[]) => void) {
+    const channel = supabase
+      .channel('tickets-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tickets'
+        },
+        async (payload) => {
+          console.log('Ticket change:', payload);
+          const tickets = await this.getTickets();
+          callback(tickets);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }
+}
+```
+
+## Service Layer Architecture
+
+### Static Service Classes
+```typescript
+// services/ticketService.ts
+export class TicketService {
+  /**
+   * Call AI triage function to get suggestions for ticket
+   */
+  static async getAITriageSuggestions(formData: TicketFormData): Promise<AITriageResult | null> {
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-triage", {
+        body: {
+          title: formData.title,
+          description: formData.description,
+          type: formData.type,
+        },
+      });
+
+      if (error) {
+        console.error('Error calling AI triage:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in getAITriageSuggestions:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Create a new ticket with AI triage suggestions
+   */
+  static async createTicket(
+    formData: TicketFormData,
+    creatorId: string
+  ): Promise<CreatedTicket> {
+    try {
+      // Get AI triage suggestions first
+      const aiSuggestions = await this.getAITriageSuggestions(formData);
+
+      // Create the ticket
+      const { data, error } = await supabase
+        .from("tickets")
+        .insert({
+          title: formData.title,
+          description: formData.description,
+          type: formData.type,
+          priority: formData.priority,
+          creator_id: creatorId,
+          ai_suggested_priority: aiSuggestions?.suggested_priority || null,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(error.message || 'Failed to create ticket');
+      }
+
+      return data;
+    } catch (error: any) {
+      console.error('Error in createTicket:', error);
+      throw new Error(error.message || 'Failed to create ticket');
+    }
+  }
+}
+```
+
+### CRUD Operations Service
+```typescript
+// services/ticketOperationsService.ts
+export class TicketOperationsService {
+  static async getTickets(filters?: TicketFilters): Promise<Ticket[]> {
+    try {
+      let query = supabase
+        .from('tickets')
+        .select(`
+          *,
+          creator:profiles!creator(id, email, full_name),
+          assignee:profiles!assignee(id, email, full_name)
+        `)
+        .order('created_at', { ascending: false });
+
+      // Apply filters
+      if (filters?.status) {
+        query = query.eq('status', filters.status);
+      }
+
+      if (filters?.priority) {
+        query = query.eq('priority', filters.priority);
+      }
+
+      if (filters?.limit) {
+        query = query.limit(filters.limit);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return data || [];
+    } catch (error: any) {
+      console.error('Error fetching tickets:', error);
+      throw new Error('Failed to fetch tickets');
+    }
+  }
+
+  static async updateTicket(
+    ticketId: string,
+    updates: Partial<TicketUpdateData>
+  ): Promise<Ticket> {
+    try {
+      const { data, error } = await supabase
+        .from('tickets')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', ticketId)
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return data;
+    } catch (error: any) {
+      console.error('Error updating ticket:', error);
+      throw new Error('Failed to update ticket');
+    }
+  }
+}
+```
+
+## Error Handling Patterns
+
+### Consistent Error Responses
+```typescript
+// All service methods should throw errors with user-friendly messages
+try {
+  const result = await someOperation();
+  return result;
+} catch (error: any) {
+  console.error('Operation failed:', error);
+
+  // Re-throw with consistent error format
+  throw new Error(
+    error.message ||
+    'Operation failed. Please try again.'
+  );
+}
+```
+
+### API Response Types
+```typescript
+// Define consistent response interfaces
+export interface ApiResponse<T> {
+  data: T | null;
+  error: string | null;
+  success: boolean;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
+}
+```
+
+## Migration Patterns
+
+### Drizzle Migrations
+```typescript
+// scripts/generate-migration.js
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
+import { db } from '../src/db/client.js';
+
+async function main() {
+  console.log('Running migrations...');
+
+  await migrate(db, { migrationsFolder: './supabase/migrations' });
+
+  console.log('Migrations completed!');
+}
+
+main();
+```
+
+## Type Safety
+
+### Generated Supabase Types
+```typescript
+// Use generated types for full type safety
+import type { Database } from '@/integrations/supabase/types';
+
+type TicketRow = Database['public']['Tables']['tickets']['Row'];
+type TicketInsert = Database['public']['Tables']['tickets']['Insert'];
+type TicketUpdate = Database['public']['Tables']['tickets']['Update'];
+```

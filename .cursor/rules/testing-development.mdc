@@ -1,0 +1,451 @@
+---
+alwaysApply: true
+description: Development workflow, testing guidelines, and quality assurance practices
+---
+
+# Development Workflow & Testing
+
+## Code Quality Tools
+
+### ESLint Configuration
+```javascript
+// eslint.config.js
+import js from '@eslint/js';
+import globals from 'globals';
+import reactHooks from 'eslint-plugin-react-hooks';
+import reactRefresh from 'eslint-plugin-react-refresh';
+import tseslint from 'typescript-eslint';
+
+export default tseslint.config(
+  { ignores: ['dist'] },
+  {
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    files: ['**/*.{ts,tsx}'],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: globals.browser,
+    },
+    plugins: {
+      'react-hooks': reactHooks,
+      'react-refresh': reactRefresh,
+    },
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+      'react-refresh/only-export-components': [
+        'warn',
+        { allowConstantExport: true },
+      ],
+      // Custom rules for this project
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-explicit-any': 'warn',
+    },
+  }
+);
+```
+
+### Development Scripts
+```json
+// package.json scripts
+{
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:dev": "vite build --mode development",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
+  }
+}
+```
+
+## Git Workflow
+
+### Branch Naming Convention
+- Features: `feature/add-ticket-filtering`
+- Bug fixes: `fix/auth-redirect-issue`
+- Documentation: `docs/update-api-docs`
+- Hotfixes: `hotfix/critical-security-patch`
+
+### Commit Message Format
+```
+type(scope): description
+
+[optional body]
+
+[optional footer]
+```
+
+**Types:**
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation
+- `style`: Code style changes
+- `refactor`: Code refactoring
+- `test`: Testing
+- `chore`: Maintenance
+
+**Examples:**
+```
+feat: add ticket priority filtering
+fix: resolve memory leak in ticket list
+docs: update installation guide
+refactor: extract ticket validation logic
+```
+
+## Development Best Practices
+
+### Pre-commit Hooks
+```bash
+# Install husky for git hooks
+npm install --save-dev husky
+npx husky init
+
+# Add pre-commit hook
+echo '#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+npm run lint
+npm run build:dev
+' > .husky/pre-commit
+```
+
+### Code Review Checklist
+- [ ] **Type Safety**: All variables and functions are properly typed
+- [ ] **Error Handling**: Appropriate error handling and user feedback
+- [ ] **Performance**: No unnecessary re-renders or expensive operations
+- [ ] **Accessibility**: ARIA labels, keyboard navigation, screen reader support
+- [ ] **Security**: Input validation, XSS prevention, authentication checks
+- [ ] **Testing**: Unit tests for critical logic
+- [ ] **Documentation**: JSDoc comments for public APIs
+
+### Performance Guidelines
+```typescript
+// Avoid expensive operations in render
+const TicketList = ({ tickets }: TicketListProps) => {
+  // ❌ Bad: Filtering on every render
+  const filteredTickets = tickets.filter(ticket => ticket.status === 'open');
+
+  return (
+    <div>
+      {filteredTickets.map(ticket => <TicketCard key={ticket.id} ticket={ticket} />)}
+    </div>
+  );
+};
+
+// ✅ Good: Use useMemo for expensive operations
+const TicketList = ({ tickets, statusFilter }: TicketListProps) => {
+  const filteredTickets = useMemo(() => {
+    return tickets.filter(ticket => ticket.status === statusFilter);
+  }, [tickets, statusFilter]);
+
+  return (
+    <div>
+      {filteredTickets.map(ticket => <TicketCard key={ticket.id} ticket={ticket} />)}
+    </div>
+  );
+};
+```
+
+## Testing Guidelines
+
+### Unit Testing Setup
+```typescript
+// Install testing dependencies
+npm install --save-dev vitest @testing-library/react @testing-library/jest-dom jsdom
+
+// vitest.config.ts
+/// <reference types="vitest" />
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react-swc'
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.ts',
+  },
+})
+```
+
+### Educational Component Testing
+```typescript
+// src/components/EducationalTicketForm.test.tsx
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { EducationalTicketForm } from './EducationalTicketForm';
+import { CourseProvider } from './providers/CourseContext';
+
+// Mock services
+jest.mock('@/services/ticketService');
+jest.mock('@/hooks/useAuth');
+
+const mockUser = {
+  id: 'user-1',
+  role: 'student',
+  enrolledCourses: ['PRJ301', 'SWP391']
+};
+
+const mockCourses = [
+  { id: 'course-1', code: 'PRJ301', name: 'Java Web Development' },
+  { id: 'course-2', code: 'SWP391', name: 'Software Engineering Project' }
+];
+
+const createTestQueryClient = () => new QueryClient({
+  defaultOptions: {
+    queries: { retry: false },
+    mutations: { retry: false }
+  }
+});
+
+const renderWithProviders = (component: React.ReactElement) => {
+  const queryClient = createTestQueryClient();
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <CourseProvider>
+        {component}
+      </CourseProvider>
+    </QueryClientProvider>
+  );
+};
+
+describe('EducationalTicketForm', () => {
+  beforeEach(() => {
+    // Mock useAuth hook
+    const mockUseAuth = require('@/hooks/useAuth');
+    mockUseAuth.useAuth.mockReturnValue({
+      user: mockUser,
+      loading: false
+    });
+
+    // Mock course service
+    const mockCourseService = require('@/services/courseService');
+    mockCourseService.getEnrolledCourses.mockResolvedValue(mockCourses);
+  });
+
+  it('renders course selection for students', async () => {
+    renderWithProviders(<EducationalTicketForm />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/course/i)).toBeInTheDocument();
+      expect(screen.getByText('PRJ301 - Java Web Development')).toBeInTheDocument();
+      expect(screen.getByText('SWP391 - Software Engineering Project')).toBeInTheDocument();
+    });
+  });
+
+  it('shows academic level assessment', () => {
+    renderWithProviders(<EducationalTicketForm />);
+
+    expect(screen.getByLabelText(/difficulty level/i)).toBeInTheDocument();
+    expect(screen.getByText(/assess your understanding/i)).toBeInTheDocument();
+  });
+
+  it('validates educational context', async () => {
+    renderWithProviders(<EducationalTicketForm />);
+
+    // Fill form without selecting course
+    fireEvent.change(screen.getByLabelText(/title/i), {
+      target: { value: 'Test Ticket' }
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /create/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/course is required/i)).toBeInTheDocument();
+    });
+  });
+});
+```
+
+### AI Integration Testing
+```typescript
+// src/services/aiTriageService.test.ts
+import { AITriageService } from './aiTriageService';
+
+// Mock Supabase functions
+jest.mock('@/integrations/supabase/client', () => ({
+  supabase: {
+    functions: {
+      invoke: jest.fn()
+    }
+  }
+}));
+
+describe('AITriageService', () => {
+  const mockSupabase = require('@/integrations/supabase/client').supabase;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('analyzeTicket', () => {
+    it('returns AI suggestions for valid educational ticket', async () => {
+      const mockAIResponse = {
+        suggested_priority: 'high',
+        suggested_category: 'coding_error',
+        suggested_assignee: 'ta-1',
+        confidence_score: 85,
+        reasoning: 'Complex coding issue requiring TA assistance'
+      };
+
+      mockSupabase.functions.invoke.mockResolvedValue({
+        data: mockAIResponse,
+        error: null
+      });
+
+      const ticketData = {
+        title: 'Cannot connect to database in Java project',
+        description: 'Getting null pointer exception when trying to connect...',
+        type: 'coding_error',
+        courseCode: 'PRJ301',
+        academicLevel: 'intermediate'
+      };
+
+      const result = await AITriageService.analyzeTicket(ticketData);
+
+      expect(result).toEqual({
+        ...mockAIResponse,
+        educationalContext: expect.any(Object)
+      });
+      expect(mockSupabase.functions.invoke).toHaveBeenCalledWith('ai-triage', {
+        body: expect.objectContaining({
+          title: ticketData.title,
+          academicContext: expect.any(Object)
+        })
+      });
+    });
+
+    it('falls back to rule-based suggestions when AI fails', async () => {
+      mockSupabase.functions.invoke.mockRejectedValue(
+        new Error('AI service unavailable')
+      );
+
+      const ticketData = {
+        title: 'Grade dispute',
+        description: 'I believe my grade is incorrect...',
+        type: 'grading_issue',
+        courseCode: 'SWP391'
+      };
+
+      const result = await AITriageService.analyzeTicket(ticketData);
+
+      expect(result).toEqual({
+        suggested_priority: 'high', // Grading issues are high priority
+        suggested_category: 'grading_issue',
+        suggested_assignee: expect.any(String),
+        confidence_score: 70 // Lower confidence for fallback
+      });
+    });
+
+    it('validates AI suggestions against educational constraints', async () => {
+      const invalidAIResponse = {
+        suggested_priority: 'critical',
+        suggested_category: 'coding_error',
+        suggested_assignee: 'student-1', // Student cannot be assignee
+        confidence_score: 90
+      };
+
+      mockSupabase.functions.invoke.mockResolvedValue({
+        data: invalidAIResponse,
+        error: null
+      });
+
+      const ticketData = {
+        title: 'Simple question',
+        description: 'What is inheritance?',
+        type: 'concept_question'
+      };
+
+      const result = await AITriageService.analyzeTicket(ticketData);
+
+      expect(result?.suggested_assignee).not.toBe('student-1');
+      expect(result?.suggested_priority).toBe('medium'); // Should be adjusted
+    });
+  });
+});
+```
+
+### Service Testing
+```typescript
+// src/services/ticketService.test.ts
+import { TicketService } from './ticketService';
+
+describe('TicketService', () => {
+  describe('validateTicketData', () => {
+    it('returns valid for complete data', () => {
+      const validData = {
+        title: 'Valid Title',
+        description: 'Valid description with enough content',
+        type: 'bug' as const,
+        priority: 'medium' as const,
+      };
+
+      const result = TicketService.validateTicketData(validData);
+
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('returns errors for invalid data', () => {
+      const invalidData = {
+        title: '',
+        description: '',
+        type: 'bug' as const,
+        priority: 'medium' as const,
+      };
+
+      const result = TicketService.validateTicketData(invalidData);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('Title is required');
+      expect(result.errors).toContain('Description is required');
+    });
+  });
+});
+```
+
+## Environment Configuration
+
+### Environment Variables
+```bash
+# .env.local (local development)
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
+
+# .env.example (template for other developers)
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
+```
+
+### Environment-specific Builds
+```typescript
+// vite.config.ts
+import { defineConfig } from 'vite';
+
+export default defineConfig(({ mode }) => ({
+  // Environment-specific configuration
+  define: {
+    __DEV__: mode === 'development',
+    __PROD__: mode === 'production',
+  },
+}));
+```
+
+## Deployment Checklist
+
+### Pre-deployment
+- [ ] Run `npm run lint` - no ESLint errors
+- [ ] Run `npm run build` - successful production build
+- [ ] Test critical user flows
+- [ ] Check responsive design on mobile/tablet
+- [ ] Verify environment variables are set
+- [ ] Database migrations are applied
+
+### Post-deployment
+- [ ] Verify application loads correctly
+- [ ] Test authentication flow
+- [ ] Check real-time features work
+- [ ] Monitor error logs
+- [ ] Performance metrics are acceptable

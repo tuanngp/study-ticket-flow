@@ -1,0 +1,414 @@
+---
+globs: src/services/*Service.ts,supabase/functions/**/*.ts
+description: AI integration patterns for EduTicket AI including triage, auto-assignment, and learning assistance
+---
+
+# AI Integration Patterns
+
+## AI Service Architecture
+
+### AI Triage Service
+```typescript
+// services/aiTriageService.ts
+export class AITriageService {
+  /**
+   * Analyze ticket content and provide intelligent suggestions
+   */
+  static async analyzeTicket(ticketData: {
+    title: string;
+    description: string;
+    type: TicketType;
+  }): Promise<AITriageResult> {
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-triage", {
+        body: {
+          title: ticketData.title,
+          description: ticketData.description,
+          type: ticketData.type,
+          // Include educational context
+          academicContext: {
+            courseCode: ticketData.courseCode,
+            classId: ticketData.classId,
+            semester: ticketData.semester,
+          },
+        },
+      });
+
+      if (error) {
+        console.error('AI triage failed:', error);
+        return this.getFallbackSuggestions(ticketData);
+      }
+
+      // Validate AI response against educational constraints
+      return this.validateAISuggestions(data);
+    } catch (error) {
+      console.error('AI triage error:', error);
+      return this.getFallbackSuggestions(ticketData);
+    }
+  }
+
+  /**
+   * Fallback suggestions when AI is unavailable
+   */
+  private static getFallbackSuggestions(ticketData: any): AITriageResult {
+    // Educational fallback logic based on course type and content patterns
+    const suggestions = {
+      priority: this.inferPriorityFromContent(ticketData),
+      category: this.categorizeEducationalIssue(ticketData),
+      suggestedAssignee: this.suggestEducationalAssignee(ticketData),
+      estimatedResolutionTime: this.estimateResolutionTime(ticketData),
+      learningResources: this.suggestLearningResources(ticketData),
+    };
+
+    return suggestions;
+  }
+
+  /**
+   * Validate AI suggestions against educational constraints
+   */
+  private static validateAISuggestions(aiResult: any): AITriageResult {
+    return {
+      ...aiResult,
+      // Ensure suggestions align with educational roles
+      suggestedAssignee: this.validateAssigneeRole(aiResult.suggestedAssignee),
+      // Add educational context validation
+      educationalContext: this.enrichWithEducationalContext(aiResult),
+    };
+  }
+}
+```
+
+### Auto-Assignment Logic
+```typescript
+// services/autoAssignmentService.ts
+export class AutoAssignmentService {
+  /**
+   * Automatically assign tickets based on AI suggestions and availability
+   */
+  static async autoAssignTicket(ticketId: string, aiSuggestions: AITriageResult): Promise<AssignmentResult> {
+    try {
+      // Get available assignees based on educational role and expertise
+      const availableAssignees = await this.getAvailableAssignees(aiSuggestions);
+
+      // Apply educational assignment rules
+      const bestAssignee = this.selectBestAssignee(availableAssignees, aiSuggestions, ticketId);
+
+      if (bestAssignee) {
+        await TicketOperationsService.assignTicket(ticketId, bestAssignee.id);
+
+        // Notify assignee with educational context
+        await this.notifyAssignee(bestAssignee, ticketId, aiSuggestions);
+
+        return {
+          success: true,
+          assignee: bestAssignee,
+          reason: this.getAssignmentReason(bestAssignee, aiSuggestions),
+        };
+      }
+
+      // Fallback to manual assignment queue
+      return await this.queueForManualAssignment(ticketId, aiSuggestions);
+
+    } catch (error) {
+      console.error('Auto-assignment failed:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Get available assignees based on educational roles and workload
+   */
+  private static async getAvailableAssignees(aiSuggestions: AITriageResult) {
+    const { data: assignees } = await supabase
+      .from('profiles')
+      .select(`
+        id, full_name, role, expertise_areas,
+        assigned_tickets:assigned_tickets(count)
+      `)
+      .in('role', this.getEligibleRoles(aiSuggestions.category))
+      .eq('is_available', true)
+      .order('assigned_tickets', { ascending: true });
+
+    return assignees || [];
+  }
+
+  /**
+   * Determine eligible roles for assignment based on ticket category
+   */
+  private static getEligibleRoles(category: string): UserRole[] {
+    const roleMapping = {
+      'coding_error': ['student', 'lead', 'instructor'],
+      'grading_issue': ['lead', 'instructor'],
+      'project_setup': ['lead', 'instructor'],
+      'concept_question': ['student', 'lead', 'instructor'],
+      'system_issue': ['instructor'],
+    };
+
+    return roleMapping[category] || ['lead', 'instructor'];
+  }
+}
+```
+
+### Learning Assistant Integration
+```typescript
+// services/learningAssistantService.ts
+export class LearningAssistantService {
+  /**
+   * Provide 24/7 AI-powered learning assistance
+   */
+  static async getLearningHelp(query: string, context: EducationalContext): Promise<LearningResponse> {
+    try {
+      const { data, error } = await supabase.functions.invoke("learning-assistant", {
+        body: {
+          query,
+          context: {
+            courseCode: context.courseCode,
+            topic: context.topic,
+            studentLevel: context.studentLevel,
+            previousInteractions: context.previousInteractions,
+          },
+        },
+      });
+
+      if (error) {
+        console.error('Learning assistant error:', error);
+        return this.getFallbackHelp(query, context);
+      }
+
+      return {
+        answer: data.answer,
+        confidence: data.confidence,
+        suggestedResources: data.suggestedResources,
+        followUpQuestions: data.followUpQuestions,
+        // Educational context enrichment
+        relatedConcepts: this.getRelatedConcepts(data, context),
+        difficultyLevel: this.assessDifficultyLevel(data, context),
+      };
+
+    } catch (error) {
+      console.error('Learning assistant failed:', error);
+      return this.getFallbackHelp(query, context);
+    }
+  }
+
+  /**
+   * Fallback educational help when AI is unavailable
+   */
+  private static getFallbackHelp(query: string, context: EducationalContext): LearningResponse {
+    // Provide curated educational resources based on course and topic
+    const resources = this.getCuratedResources(context.courseCode, context.topic);
+
+    return {
+      answer: "I'm currently unable to provide a direct answer, but here are some helpful resources:",
+      confidence: 0.5,
+      suggestedResources: resources,
+      followUpQuestions: [
+        "Can you provide more details about what you're trying to accomplish?",
+        "Have you checked the course materials or documentation?",
+      ],
+      relatedConcepts: this.getBasicRelatedConcepts(context),
+      difficultyLevel: 'intermediate',
+    };
+  }
+}
+```
+
+## AI Edge Functions
+
+### AI Triage Edge Function
+```typescript
+// supabase/functions/ai-triage/index.ts
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+serve(async (req) => {
+  try {
+    const { title, description, type, academicContext } = await req.json()
+
+    // Initialize AI model (OpenAI, Gemini, etc.)
+    const aiResponse = await analyzeWithAI({
+      title,
+      description,
+      type,
+      academicContext,
+    })
+
+    // Process AI response with educational context
+    const processedResult = {
+      suggested_priority: mapToEducationalPriority(aiResponse.priority),
+      suggested_category: mapToEducationalCategory(aiResponse.category),
+      suggested_assignee: await findBestAssignee(aiResponse, academicContext),
+      confidence_score: aiResponse.confidence,
+      reasoning: aiResponse.reasoning,
+      educational_insights: generateEducationalInsights(aiResponse, academicContext),
+    }
+
+    return new Response(
+      JSON.stringify(processedResult),
+      { headers: { 'Content-Type': 'application/json' } }
+    )
+
+  } catch (error) {
+    console.error('AI triage function error:', error)
+    return new Response(
+      JSON.stringify({ error: 'AI triage failed' }),
+      { status: 500 }
+    )
+  }
+})
+
+// Educational priority mapping
+function mapToEducationalPriority(aiPriority: string): TicketPriority {
+  const priorityMap = {
+    'critical': 'critical',     // System down, major assignment deadline
+    'high': 'high',            // Code not compiling, major bugs
+    'medium': 'medium',        // Conceptual questions, minor issues
+    'low': 'low'              // General questions, optimization
+  }
+  return priorityMap[aiPriority] || 'medium'
+}
+
+// Educational category mapping
+function mapToEducationalCategory(aiCategory: string): TicketCategory {
+  const categoryMap = {
+    'syntax_error': 'coding_error',
+    'logic_error': 'coding_error',
+    'setup_issue': 'project_setup',
+    'grade_dispute': 'grading_issue',
+    'concept_question': 'concept_question',
+    'system_error': 'system_issue'
+  }
+  return categoryMap[aiCategory] || 'concept_question'
+}
+```
+
+## AI Error Handling & Fallbacks
+
+### Graceful Degradation
+```typescript
+// services/aiResilienceService.ts
+export class AIResilienceService {
+  /**
+   * Execute AI operation with fallback strategies
+   */
+  static async executeWithFallback<T>(
+    primaryOperation: () => Promise<T>,
+    fallbackOperation: () => Promise<T>,
+    options: {
+      maxRetries?: number;
+      timeout?: number;
+      circuitBreaker?: boolean;
+    } = {}
+  ): Promise<T> {
+    const { maxRetries = 2, timeout = 10000 } = options;
+
+    for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
+      try {
+        // Execute with timeout
+        const result = await Promise.race([
+          primaryOperation(),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('AI timeout')), timeout)
+          )
+        ]);
+
+        // Log successful AI operation for analytics
+        await this.logAISuccess(result);
+        return result;
+
+      } catch (error) {
+        console.warn(`AI operation attempt ${attempt} failed:`, error);
+
+        // Try fallback on last attempt
+        if (attempt > maxRetries) {
+          console.log('Switching to fallback operation');
+          const fallbackResult = await fallbackOperation();
+          await this.logAIFallback(fallbackResult);
+          return fallbackResult;
+        }
+
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      }
+    }
+  }
+
+  /**
+   * Log AI performance for continuous improvement
+   */
+  private static async logAISuccess(result: any) {
+    await supabase.from('ai_performance_logs').insert({
+      operation_type: 'triage',
+      success: true,
+      response_time: Date.now(),
+      confidence_score: result.confidence_score,
+      educational_context: result.educational_context,
+    });
+  }
+
+  private static async logAIFallback(result: any) {
+    await supabase.from('ai_performance_logs').insert({
+      operation_type: 'triage_fallback',
+      success: true,
+      fallback_used: true,
+      educational_context: result.educational_context,
+    });
+  }
+}
+```
+
+## AI Monitoring & Analytics
+
+### AI Performance Tracking
+```typescript
+// services/aiAnalyticsService.ts
+export class AIAnalyticsService {
+  /**
+   * Track AI performance metrics for continuous improvement
+   */
+  static async trackAIPerformance(operation: string, metrics: AIPerformanceMetrics) {
+    await supabase.from('ai_analytics').insert({
+      operation,
+      timestamp: new Date().toISOString(),
+      response_time: metrics.responseTime,
+      confidence_score: metrics.confidenceScore,
+      accuracy_rating: metrics.accuracyRating,
+      user_feedback: metrics.userFeedback,
+      educational_context: {
+        course_code: metrics.courseCode,
+        difficulty_level: metrics.difficultyLevel,
+        student_level: metrics.studentLevel,
+      },
+    });
+  }
+
+  /**
+   * Get AI performance insights for educational improvement
+   */
+  static async getAIPerformanceInsights(courseCode?: string, dateRange?: DateRange) {
+    let query = supabase
+      .from('ai_analytics')
+      .select('*')
+      .order('timestamp', { ascending: false });
+
+    if (courseCode) {
+      query = query.eq('educational_context.course_code', courseCode);
+    }
+
+    if (dateRange) {
+      query = query
+        .gte('timestamp', dateRange.start)
+        .lte('timestamp', dateRange.end);
+    }
+
+    const { data } = await query.limit(1000);
+
+    return {
+      averageConfidence: this.calculateAverageConfidence(data),
+      accuracyTrends: this.analyzeAccuracyTrends(data),
+      commonMisclassifications: this.findCommonErrors(data),
+      courseSpecificInsights: this.generateCourseInsights(data),
+    };
+  }
+}
+```

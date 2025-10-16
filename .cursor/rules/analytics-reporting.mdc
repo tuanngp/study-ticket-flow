@@ -1,0 +1,712 @@
+---
+globs: src/pages/Dashboard.tsx,src/services/*Service.ts
+description: Analytics and reporting patterns for educational insights and dashboard features in EduTicket AI
+---
+
+# Analytics & Reporting Patterns
+
+## Educational Analytics Architecture
+
+### Analytics Service Layer
+```typescript
+// services/analyticsService.ts
+export class AnalyticsService {
+  /**
+   * Comprehensive analytics for different educational stakeholders
+   */
+  static async getAnalyticsDashboard(
+    userId: string,
+    userRole: UserRole,
+    context: AnalyticsContext
+  ): Promise<AnalyticsDashboard> {
+    switch (userRole) {
+      case 'student':
+        return this.getStudentAnalytics(userId, context);
+
+      case 'lead':
+      case 'instructor':
+        return this.getInstructorAnalytics(userId, context);
+
+      case 'manager':
+        return this.getManagerAnalytics(userId, context);
+
+      case 'admin':
+        return this.getAdminAnalytics(context);
+
+      default:
+        throw new Error('Unsupported user role for analytics');
+    }
+  }
+
+  /**
+   * Student analytics: personal learning journey and support patterns
+   */
+  private static async getStudentAnalytics(
+    studentId: string,
+    context: AnalyticsContext
+  ): Promise<StudentAnalytics> {
+    const [
+      ticketHistory,
+      courseProgress,
+      learningPatterns,
+      peerComparison
+    ] = await Promise.all([
+      this.getStudentTicketHistory(studentId, context.timeRange),
+      this.getCourseProgressAnalytics(studentId, context.courseCode),
+      this.analyzeLearningPatterns(studentId),
+      this.getPeerComparisonAnalytics(studentId, context.classId)
+    ]);
+
+    return {
+      ticketAnalytics: ticketHistory,
+      courseProgress,
+      learningPatterns,
+      peerComparison,
+      insights: this.generateStudentInsights(ticketHistory, learningPatterns),
+      recommendations: this.generateStudentRecommendations(ticketHistory, courseProgress)
+    };
+  }
+
+  /**
+   * Instructor analytics: teaching effectiveness and student support
+   */
+  private static async getInstructorAnalytics(
+    instructorId: string,
+    context: AnalyticsContext
+  ): Promise<InstructorAnalytics> {
+    const [
+      ticketResolutionStats,
+      studentPerformance,
+      courseEffectiveness,
+      aiAssistanceImpact
+    ] = await Promise.all([
+      this.getTicketResolutionAnalytics(instructorId, context.timeRange),
+      this.getStudentPerformanceAnalytics(context.classId),
+      this.getCourseEffectivenessAnalytics(context.courseCode),
+      this.getAIAssistanceImpactAnalytics(instructorId)
+    ]);
+
+    return {
+      ticketResolutionStats,
+      studentPerformance,
+      courseEffectiveness,
+      aiAssistanceImpact,
+      insights: this.generateInstructorInsights(ticketResolutionStats, studentPerformance),
+      recommendations: this.generateInstructorRecommendations(courseEffectiveness, aiAssistanceImpact)
+    };
+  }
+
+  /**
+   * Department manager analytics: curriculum and teaching quality oversight
+   */
+  private static async getManagerAnalytics(
+    managerId: string,
+    context: AnalyticsContext
+  ): Promise<ManagerAnalytics> {
+    const [
+      departmentOverview,
+      courseComparison,
+      instructorEffectiveness,
+      curriculumInsights
+    ] = await Promise.all([
+      this.getDepartmentOverviewAnalytics(context.departmentId),
+      this.getCourseComparisonAnalytics(context.departmentId),
+      this.getInstructorEffectivenessAnalytics(context.departmentId),
+      this.getCurriculumInsightsAnalytics(context.departmentId)
+    ]);
+
+    return {
+      departmentOverview,
+      courseComparison,
+      instructorEffectiveness,
+      curriculumInsights,
+      insights: this.generateManagerInsights(departmentOverview, courseComparison),
+      recommendations: this.generateManagerRecommendations(curriculumInsights, instructorEffectiveness)
+    };
+  }
+}
+```
+
+## Dashboard Components
+
+### Student Dashboard
+```typescript
+// components/dashboards/StudentDashboard.tsx
+export const StudentDashboard = ({ studentId }: { studentId: string }) => {
+  const { data: analytics, isLoading } = useQuery({
+    queryKey: ['student-analytics', studentId],
+    queryFn: () => AnalyticsService.getStudentAnalytics(studentId, {
+      timeRange: 'current_semester',
+      includePeerComparison: true
+    }),
+  });
+
+  if (isLoading) return <DashboardSkeleton />;
+
+  return (
+    <div className="space-y-6">
+      {/* Learning Progress Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Active Tickets</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{analytics?.ticketAnalytics.activeCount}</div>
+            <p className="text-xs text-muted-foreground">
+              {analytics?.ticketAnalytics.resolutionRate}% resolution rate
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Avg Response Time</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {analytics?.ticketAnalytics.averageResponseTime}h
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Industry avg: 24h
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Learning Score</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{analytics?.learningPatterns.learningScore}/100</div>
+            <Progress value={analytics?.learningPatterns.learningScore} className="mt-2" />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Learning Insights */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Learning Insights</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {analytics?.insights.map((insight, index) => (
+              <div key={index} className="flex items-start gap-3">
+                <Lightbulb className="h-5 w-5 text-yellow-500 mt-0.5" />
+                <div>
+                  <p className="font-medium">{insight.title}</p>
+                  <p className="text-sm text-muted-foreground">{insight.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Peer Comparison */}
+      <Card>
+        <CardHeader>
+          <CardTitle>How You Compare</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Ticket Resolution Speed</span>
+              <Badge variant={analytics?.peerComparison.resolutionPercentile > 75 ? "default" : "secondary"}>
+                {analytics?.peerComparison.resolutionPercentile}th percentile
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Learning Engagement</span>
+              <Badge variant={analytics?.peerComparison.engagementPercentile > 75 ? "default" : "secondary"}>
+                {analytics?.peerComparison.engagementPercentile}th percentile
+              </Badge>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+```
+
+### Instructor Dashboard
+```typescript
+// components/dashboards/InstructorDashboard.tsx
+export const InstructorDashboard = ({ instructorId }: { instructorId: string }) => {
+  const { data: analytics, isLoading } = useQuery({
+    queryKey: ['instructor-analytics', instructorId],
+    queryFn: () => AnalyticsService.getInstructorAnalytics(instructorId, {
+      timeRange: 'current_semester',
+      includeStudentBreakdown: true
+    }),
+  });
+
+  return (
+    <div className="space-y-6">
+      {/* Teaching Effectiveness Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Resolution Rate</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{analytics?.ticketResolutionStats.resolutionRate}%</div>
+            <p className="text-xs text-muted-foreground">
+              +{analytics?.ticketResolutionStats.resolutionTrend}% from last month
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Avg Response Time</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{analytics?.ticketResolutionStats.averageResponseTime}h</div>
+            <p className="text-xs text-muted-foreground">
+              Target: <12h
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Student Satisfaction</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{analytics?.studentPerformance.satisfactionScore}/5</div>
+            <p className="text-xs text-muted-foreground">
+              Based on ticket feedback
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">AI Assistance Rate</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{analytics?.aiAssistanceImpact.assistanceRate}%</div>
+            <p className="text-xs text-muted-foreground">
+              Tickets assisted by AI
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Student Performance Breakdown */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Student Performance by Topic</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {analytics?.studentPerformance.topicBreakdown.map((topic) => (
+              <div key={topic.name} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{topic.name}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {topic.ticketCount} tickets
+                  </span>
+                </div>
+                <Progress value={topic.averageScore} className="h-2" />
+                <p className="text-xs text-muted-foreground">
+                  Average resolution score: {topic.averageScore}/100
+                </p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Course Effectiveness Insights */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Course Effectiveness Insights</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {analytics?.insights.map((insight, index) => (
+              <div key={index} className="flex items-start gap-3 p-4 border rounded-lg">
+                <TrendingUp className="h-5 w-5 text-green-500 mt-0.5" />
+                <div>
+                  <p className="font-medium">{insight.title}</p>
+                  <p className="text-sm text-muted-foreground">{insight.description}</p>
+                  {insight.recommendation && (
+                    <p className="text-sm font-medium text-blue-600 mt-2">
+                      💡 {insight.recommendation}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+```
+
+## Data Collection & Processing
+
+### Analytics Data Pipeline
+```typescript
+// services/analyticsDataService.ts
+export class AnalyticsDataService {
+  /**
+   * Collect and process analytics data from various sources
+   */
+  static async collectAnalyticsData(eventType: AnalyticsEventType, data: any) {
+    const timestamp = new Date().toISOString();
+
+    // Store raw event data
+    await supabase.from('analytics_events').insert({
+      event_type: eventType,
+      data,
+      timestamp,
+      processed: false,
+    });
+
+    // Process event based on type
+    await this.processAnalyticsEvent(eventType, data, timestamp);
+  }
+
+  /**
+   * Process different types of analytics events
+   */
+  private static async processAnalyticsEvent(
+    eventType: AnalyticsEventType,
+    data: any,
+    timestamp: string
+  ) {
+    switch (eventType) {
+      case 'ticket_created':
+        await this.processTicketCreated(data, timestamp);
+        break;
+      case 'ticket_resolved':
+        await this.processTicketResolved(data, timestamp);
+        break;
+      case 'ai_assistance_used':
+        await this.processAIAssistance(data, timestamp);
+        break;
+      case 'learning_resource_accessed':
+        await this.processLearningResourceAccess(data, timestamp);
+        break;
+    }
+  }
+
+  /**
+   * Process ticket creation analytics
+   */
+  private static async processTicketCreated(ticketData: any, timestamp: string) {
+    // Update course ticket statistics
+    await supabase.rpc('increment_course_ticket_count', {
+      course_code: ticketData.courseCode,
+      ticket_type: ticketData.type,
+      academic_level: ticketData.academicLevel,
+    });
+
+    // Update student ticket patterns
+    await this.updateStudentTicketPatterns(ticketData.creatorId, ticketData);
+
+    // Update real-time dashboards
+    await this.updateRealtimeMetrics('ticket_created', ticketData);
+  }
+
+  /**
+   * Process ticket resolution analytics
+   */
+  private static async processTicketResolved(ticketData: any, timestamp: string) {
+    const resolutionTime = Date.parse(timestamp) - Date.parse(ticketData.createdAt);
+
+    // Update resolution statistics
+    await supabase.from('ticket_resolution_stats').insert({
+      ticket_id: ticketData.id,
+      resolver_id: ticketData.resolverId,
+      resolution_time_hours: resolutionTime / (1000 * 60 * 60),
+      satisfaction_rating: ticketData.satisfactionRating,
+      ai_assisted: ticketData.aiAssisted,
+      course_code: ticketData.courseCode,
+      ticket_type: ticketData.type,
+    });
+
+    // Update instructor performance metrics
+    await this.updateInstructorMetrics(ticketData.resolverId, {
+      resolutionTime,
+      satisfactionRating: ticketData.satisfactionRating,
+      aiAssisted: ticketData.aiAssisted,
+    });
+  }
+}
+```
+
+## Reporting Engine
+
+### Automated Report Generation
+```typescript
+// services/reportingService.ts
+export class ReportingService {
+  /**
+   * Generate comprehensive educational reports
+   */
+  static async generateReport(
+    reportType: ReportType,
+    parameters: ReportParameters
+  ): Promise<GeneratedReport> {
+    switch (reportType) {
+      case 'student_progress':
+        return this.generateStudentProgressReport(parameters);
+
+      case 'course_effectiveness':
+        return this.generateCourseEffectivenessReport(parameters);
+
+      case 'instructor_performance':
+        return this.generateInstructorPerformanceReport(parameters);
+
+      case 'department_overview':
+        return this.generateDepartmentOverviewReport(parameters);
+
+      default:
+        throw new Error(`Unsupported report type: ${reportType}`);
+    }
+  }
+
+  /**
+   * Generate student progress report
+   */
+  private static async generateStudentProgressReport(
+    params: StudentReportParameters
+  ): Promise<StudentProgressReport> {
+    const [
+      ticketHistory,
+      coursePerformance,
+      learningAnalytics,
+      peerComparison
+    ] = await Promise.all([
+      AnalyticsService.getStudentTicketHistory(params.studentId, params.timeRange),
+      CourseService.getStudentCoursePerformance(params.studentId, params.courseCode),
+      LearningAnalyticsService.getStudentLearningPatterns(params.studentId),
+      AnalyticsService.getPeerComparison(params.studentId, params.classId)
+    ]);
+
+    const report = {
+      title: `Student Progress Report - ${params.studentName}`,
+      generatedAt: new Date().toISOString(),
+      timeRange: params.timeRange,
+      summary: {
+        totalTickets: ticketHistory.totalCount,
+        resolutionRate: ticketHistory.resolutionRate,
+        averageResponseTime: ticketHistory.averageResponseTime,
+        learningScore: learningAnalytics.overallScore,
+      },
+      sections: [
+        {
+          title: 'Ticket Resolution Performance',
+          content: ticketHistory,
+          charts: ['resolution_trend', 'response_time_distribution'],
+        },
+        {
+          title: 'Course Performance',
+          content: coursePerformance,
+          charts: ['grade_trend', 'assignment_completion'],
+        },
+        {
+          title: 'Learning Patterns',
+          content: learningAnalytics,
+          charts: ['topic_mastery', 'study_time_distribution'],
+        },
+        {
+          title: 'Peer Comparison',
+          content: peerComparison,
+          charts: ['percentile_rankings'],
+        }
+      ],
+      recommendations: this.generateStudentRecommendations(
+        ticketHistory,
+        coursePerformance,
+        learningAnalytics
+      ),
+    };
+
+    // Store report for future reference
+    await this.storeGeneratedReport(report, params);
+
+    return report;
+  }
+
+  /**
+   * Schedule automated report generation
+   */
+  static async scheduleAutomatedReports() {
+    const schedules = [
+      {
+        name: 'Weekly Student Progress',
+        frequency: 'weekly',
+        reportType: 'student_progress' as ReportType,
+        recipients: 'students',
+        parameters: { timeRange: 'last_week' }
+      },
+      {
+        name: 'Monthly Course Effectiveness',
+        frequency: 'monthly',
+        reportType: 'course_effectiveness' as ReportType,
+        recipients: 'instructors',
+        parameters: { timeRange: 'last_month' }
+      },
+      {
+        name: 'Quarterly Department Overview',
+        frequency: 'quarterly',
+        reportType: 'department_overview' as ReportType,
+        recipients: 'managers',
+        parameters: { timeRange: 'last_quarter' }
+      }
+    ];
+
+    for (const schedule of schedules) {
+      await supabase.from('report_schedules').upsert({
+        name: schedule.name,
+        frequency: schedule.frequency,
+        report_type: schedule.reportType,
+        recipients: schedule.recipients,
+        parameters: schedule.parameters,
+        next_run: this.calculateNextRun(schedule.frequency),
+      });
+    }
+  }
+}
+```
+
+## Data Visualization Components
+
+### Chart Components for Analytics
+```typescript
+// components/charts/LearningProgressChart.tsx
+export const LearningProgressChart = ({ data }: { data: LearningProgressData[] }) => {
+  return (
+    <ResponsiveContainer width="100%" height={300}>
+      <LineChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis
+          dataKey="date"
+          tickFormatter={(value) => format(new Date(value), 'MMM dd')}
+        />
+        <YAxis />
+        <Tooltip
+          labelFormatter={(value) => format(new Date(value), 'PPP')}
+          formatter={(value: number, name: string) => [
+            `${value}%`,
+            name === 'learningScore' ? 'Learning Score' : name
+          ]}
+        />
+        <Line
+          type="monotone"
+          dataKey="learningScore"
+          stroke="#2563eb"
+          strokeWidth={2}
+          name="learningScore"
+        />
+        <Line
+          type="monotone"
+          dataKey="ticketResolutionRate"
+          stroke="#16a34a"
+          strokeWidth={2}
+          name="ticketResolutionRate"
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+};
+
+// components/charts/CourseComparisonChart.tsx
+export const CourseComparisonChart = ({ data }: { data: CourseComparisonData[] }) => {
+  return (
+    <ResponsiveContainer width="100%" height={400}>
+      <BarChart data={data} layout="horizontal">
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis type="number" />
+        <YAxis dataKey="courseName" type="category" width={100} />
+        <Tooltip />
+        <Bar dataKey="averageTicketsPerStudent" fill="#2563eb" name="Avg Tickets/Student" />
+        <Bar dataKey="resolutionRate" fill="#16a34a" name="Resolution Rate %" />
+        <Bar dataKey="studentSatisfaction" fill="#f59e0b" name="Satisfaction Score" />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+};
+```
+
+## Export & Integration Features
+
+### Report Export Functionality
+```typescript
+// services/exportService.ts
+export class ExportService {
+  /**
+   * Export analytics data in various formats
+   */
+  static async exportAnalyticsData(
+    data: any,
+    format: 'pdf' | 'excel' | 'csv' | 'json',
+    filename: string
+  ): Promise<Blob> {
+    switch (format) {
+      case 'pdf':
+        return this.exportAsPDF(data, filename);
+      case 'excel':
+        return this.exportAsExcel(data, filename);
+      case 'csv':
+        return this.exportAsCSV(data, filename);
+      case 'json':
+        return this.exportAsJSON(data, filename);
+      default:
+        throw new Error(`Unsupported export format: ${format}`);
+    }
+  }
+
+  /**
+   * Generate PDF report with charts and data
+   */
+  private static async exportAsPDF(data: any, filename: string): Promise<Blob> {
+    const pdfContent = await this.generatePDFContent(data);
+
+    // Use a PDF generation library (e.g., jsPDF, Puppeteer)
+    const pdfBlob = await generatePDF(pdfContent);
+
+    // Store export record
+    await this.recordExport('pdf', filename, data);
+
+    return pdfBlob;
+  }
+
+  /**
+   * Export to Excel with multiple worksheets
+   */
+  private static async exportAsExcel(data: any, filename: string): Promise<Blob> {
+    const workbook = XLSX.utils.book_new();
+
+    // Create different worksheets for different data types
+    if (data.ticketAnalytics) {
+      const ticketWorksheet = XLSX.utils.json_to_sheet(data.ticketAnalytics);
+      XLSX.utils.book_append_sheet(workbook, ticketWorksheet, 'Ticket Analytics');
+    }
+
+    if (data.coursePerformance) {
+      const courseWorksheet = XLSX.utils.json_to_sheet(data.coursePerformance);
+      XLSX.utils.book_append_sheet(workbook, courseWorksheet, 'Course Performance');
+    }
+
+    // Generate Excel file
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+
+    // Store export record
+    await this.recordExport('excel', filename, data);
+
+    return new Blob([excelBuffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+  }
+}
+```

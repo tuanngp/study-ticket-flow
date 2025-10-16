@@ -1,0 +1,374 @@
+---
+globs: src/components/*.tsx,src/pages/*.tsx
+description: UI/UX design patterns, accessibility guidelines, and user experience best practices
+---
+
+# UI/UX & Accessibility Guidelines
+
+## Design System (shadcn/ui + Tailwind)
+
+### Color Palette & Theming
+```typescript
+// Use CSS custom properties for theming
+// tailwind.config.ts
+export default {
+  darkMode: ["class"],
+  content: ["./src/**/*.{ts,tsx}"],
+  theme: {
+    extend: {
+      colors: {
+        // Base colors
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+
+        // Semantic colors
+        success: "hsl(var(--success))",
+        warning: "hsl(var(--warning))",
+        error: "hsl(var(--destructive))",
+
+        // Component colors
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))"
+        },
+
+        // Custom app colors
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))"
+        }
+      }
+    }
+  }
+}
+```
+
+### Consistent Spacing Scale
+```typescript
+// Use Tailwind's spacing scale consistently
+<div className="space-y-4"> {/* 1rem gap between children */}
+  <div className="p-4"> {/* 1rem padding */}
+    <h2 className="mb-2">Title</h2> {/* 0.5rem margin bottom */}
+    <p className="text-sm text-muted-foreground">Description</p>
+  </div>
+</div>
+```
+
+## Component Patterns
+
+### Status & Priority Indicators
+```typescript
+// Consistent color coding for ticket statuses
+const getStatusColor = (status: string) => {
+  const colors = {
+    open: "bg-warning/10 text-warning border-warning/20",
+    in_progress: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+    resolved: "bg-success/10 text-success border-success/20",
+    closed: "bg-muted text-muted-foreground border-muted",
+  };
+  return colors[status as keyof typeof colors] || colors.open;
+};
+
+// Priority levels with consistent visual hierarchy
+const getPriorityColor = (priority: string) => {
+  const colors = {
+    low: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+    medium: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
+    high: "bg-orange-500/10 text-orange-500 border-orange-500/20",
+    critical: "bg-red-500/10 text-red-500 border-red-500/20",
+  };
+  return colors[priority as keyof typeof colors] || colors.medium;
+};
+
+// Usage in components
+<Badge className={getPriorityColor(ticket.priority)}>
+  {ticket.priority}
+</Badge>
+```
+
+### Loading States
+```typescript
+// Skeleton loading for better UX
+const TicketListSkeleton = () => (
+  <div className="space-y-4">
+    {[1, 2, 3].map((i) => (
+      <div key={i} className="h-24 bg-muted animate-pulse rounded-lg" />
+    ))}
+  </div>
+);
+
+// Loading spinner for actions
+<Button disabled={isLoading}>
+  {isLoading ? (
+    <>
+      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      Creating...
+    </>
+  ) : (
+    'Create Ticket'
+  )}
+</Button>
+```
+
+### Empty States
+```typescript
+const EmptyState = () => (
+  <div className="text-center py-12 text-muted-foreground">
+    <FileX className="mx-auto h-12 w-12 mb-4 opacity-50" />
+    <h3 className="text-lg font-semibold mb-2">No tickets found</h3>
+    <p className="mb-4">Create your first ticket to get started!</p>
+    <Button>
+      <Plus className="mr-2 h-4 w-4" />
+      Create Ticket
+    </Button>
+  </div>
+);
+```
+
+## Accessibility (WCAG 2.1 AA)
+
+### Semantic HTML
+```typescript
+// Use semantic elements
+<main className="flex-1">
+  <section aria-labelledby="tickets-heading">
+    <h1 id="tickets-heading">My Tickets</h1>
+    <div role="list" aria-label="Ticket list">
+      {tickets.map((ticket) => (
+        <article
+          key={ticket.id}
+          role="listitem"
+          aria-labelledby={`ticket-${ticket.id}-title`}
+        >
+          <h2 id={`ticket-${ticket.id}-title`}>{ticket.title}</h2>
+          <p>{ticket.description}</p>
+        </article>
+      ))}
+    </div>
+  </section>
+</main>
+```
+
+### ARIA Labels & Descriptions
+```typescript
+// Form inputs with proper labeling
+<FormField
+  control={form.control}
+  name="title"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel htmlFor="ticket-title">
+        Ticket Title
+      </FormLabel>
+      <FormControl>
+        <Input
+          id="ticket-title"
+          placeholder="Enter a descriptive title..."
+          aria-describedby="title-help"
+          {...field}
+        />
+      </FormControl>
+      <FormDescription id="title-help">
+        A clear, concise title that describes the issue or request
+      </FormDescription>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+```
+
+### Keyboard Navigation
+```typescript
+// Ensure interactive elements are keyboard accessible
+const TicketCard = ({ ticket, onClick }: TicketCardProps) => (
+  <div
+    onClick={onClick}
+    onKeyDown={(e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onClick();
+      }
+    }}
+    tabIndex={0}
+    role="button"
+    aria-label={`View details for ticket: ${ticket.title}`}
+    className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-lg"
+  >
+    {/* Content */}
+  </div>
+);
+```
+
+### Color Contrast
+```typescript
+// Ensure sufficient contrast ratios
+// Use design system colors that meet WCAG standards
+
+// Text on background
+<p className="text-foreground">Normal text</p> // High contrast
+<p className="text-muted-foreground">Muted text</p> // Sufficient contrast
+
+// Interactive elements
+<Button variant="default">Primary action</Button> // High contrast
+<Button variant="secondary">Secondary action</Button> // Sufficient contrast
+<Button variant="ghost">Tertiary action</Button> // Sufficient contrast
+```
+
+### Focus Management
+```typescript
+// Manage focus for dynamic content
+const TicketForm = () => {
+  const titleInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // Focus first input when form opens
+    titleInputRef.current?.focus();
+  }, []);
+
+  return (
+    <form>
+      <Input
+        ref={titleInputRef}
+        name="title"
+        placeholder="Ticket title"
+      />
+    </form>
+  );
+};
+```
+
+## Responsive Design
+
+### Mobile-First Approach
+```typescript
+// Use responsive utilities
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  {/* Responsive grid */}
+</div>
+
+// Responsive navigation
+<nav className="flex flex-col md:flex-row gap-4">
+  {/* Navigation items */}
+</nav>
+
+// Responsive text sizes
+<h1 className="text-2xl md:text-3xl lg:text-4xl font-bold">
+  Dashboard
+</h1>
+```
+
+### Touch Targets
+```typescript
+// Ensure minimum touch target size (44px)
+<Button className="min-h-[44px] px-4 py-2">
+  Action
+</Button>
+
+// Adequate spacing between interactive elements
+<div className="flex gap-2">
+  <Button>Cancel</Button>
+  <Button>Save</Button>
+</div>
+```
+
+## Animation & Transitions
+
+### Consistent Timing
+```typescript
+// Use consistent transition durations
+const buttonClasses = "transition-colors duration-200 ease-in-out";
+
+// Consistent animation timing
+<div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-300">
+  {/* Content */}
+</div>
+```
+
+### Reduced Motion Support
+```typescript
+// Respect user's motion preferences
+const AnimatedDiv = ({ children }: { children: React.ReactNode }) => (
+  <div className="motion-reduce:animate-none animate-fade-in">
+    {children}
+  </div>
+);
+
+// CSS for reduced motion
+// @media (prefers-reduced-motion: reduce) {
+//   *, *::before, *::after {
+//     animation-duration: 0.01ms !important;
+//     animation-iteration-count: 1 !important;
+//     transition-duration: 0.01ms !important;
+//   }
+// }
+```
+
+## Error States & Validation
+
+### User-Friendly Error Messages
+```typescript
+// Clear, actionable error messages
+const FormError = ({ error }: { error: string }) => (
+  <div className="flex items-center gap-2 text-sm text-destructive">
+    <AlertCircle className="h-4 w-4" />
+    <span>{error}</span>
+  </div>
+);
+
+// Inline validation feedback
+<FormField
+  control={form.control}
+  name="email"
+  render={({ field, fieldState }) => (
+    <FormItem>
+      <FormLabel>Email</FormLabel>
+      <FormControl>
+        <Input
+          type="email"
+          placeholder="Enter your email"
+          className={fieldState.error ? "border-destructive" : ""}
+          {...field}
+        />
+      </FormControl>
+      {fieldState.error ? (
+        <FormMessage />
+      ) : (
+        <FormDescription>
+          We'll use this to send you updates
+        </FormDescription>
+      )}
+    </FormItem>
+  )}
+/>
+```
+
+## Performance Considerations
+
+### Image Optimization
+```typescript
+// Use Next.js Image component or similar optimization
+// For Vite, consider using vite-plugin-imagemin
+
+// Lazy loading for images
+<img
+  loading="lazy"
+  src={ticket.creator.avatarUrl}
+  alt={`${ticket.creator.fullName}'s avatar`}
+  className="w-8 h-8 rounded-full"
+/>
+```
+
+### Bundle Splitting
+```typescript
+// Code splitting for routes
+const Dashboard = lazy(() => import('@/pages/Dashboard'));
+const TicketDetail = lazy(() => import('@/pages/TicketDetail'));
+
+// Usage with Suspense
+<Suspense fallback={<PageSkeleton />}>
+  <Routes>
+    <Route path="/dashboard" element={<Dashboard />} />
+    <Route path="/tickets/:id" element={<TicketDetail />} />
+  </Routes>
+</Suspense>
+```

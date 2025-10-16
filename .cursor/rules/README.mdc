@@ -1,0 +1,185 @@
+---
+alwaysApply: true
+description: Overview and usage guide for all Cursor Rules in the EduTicket AI educational technology platform
+---
+
+# Cursor Rules for EduTicket AI
+
+This document outlines the Cursor Rules that guide development in the EduTicket AI system - a comprehensive educational technology platform designed for FPT University to manage learning support requests, technical issues, and project-related problems with AI-powered intelligent triage and analytics.
+
+## 📋 Rules Overview
+
+### 🎯 Always Applied Rules
+These rules apply to all files and contexts:
+
+- **[Project Structure](project-structure.mdc)**: Directory organization, file naming, and import patterns
+- **[Testing & Development](testing-development.mdc)**: Development workflow, code quality, and deployment practices
+- **[README](README.mdc)**: This overview document
+
+### 📁 File-Specific Rules
+These rules apply based on file patterns:
+
+- **[TypeScript Conventions](typescript-conventions.mdc)** (`*.ts,*.tsx`): TypeScript patterns, database schemas, and type safety
+- **[React Patterns](react-patterns.mdc)** (`*.tsx`): React component architecture and state management
+- **[Database & API](database-api-patterns.mdc)** (`src/db/*.ts,src/services/*.ts,src/integrations/supabase/*.ts`): Database operations and API integration
+- **[UI/UX & Accessibility](ui-ux-accessibility.mdc)** (`src/components/*.tsx,src/pages/*.tsx`): Design system and accessibility guidelines
+
+### 🎓 Education-Specific Rules
+These rules apply to educational technology features:
+
+- **[AI Integration Patterns](ai-integration-patterns.mdc)** (`src/services/*Service.ts,supabase/functions/**/*.ts`): AI triage, auto-assignment, and learning assistant patterns
+- **[Educational Context](educational-context.mdc)** (`src/**/*.ts,src/**/*.tsx`): Academic user roles, course structures, and learning analytics
+- **[Analytics & Reporting](analytics-reporting.mdc)** (`src/pages/Dashboard.tsx,src/services/*Service.ts`): Dashboard analytics, reporting patterns, and educational insights
+
+## 🏗️ Architecture Overview
+
+### Tech Stack
+- **Frontend**: React 18 + TypeScript + Vite
+- **UI Library**: shadcn/ui + Radix UI + Tailwind CSS
+- **State Management**: React Query (TanStack Query)
+- **Backend**: Supabase (PostgreSQL + Auth + Real-time)
+- **Forms**: React Hook Form + Zod validation
+- **Database**: Drizzle ORM for type-safe queries
+
+### Key Patterns
+- **Service Layer**: Static classes for business logic separation
+- **Component Architecture**: Functional components with TypeScript
+- **Database Schema**: Enums for type safety, relations for data integrity
+- **Real-time Updates**: Supabase subscriptions for live data
+- **AI Integration**: Edge functions for intelligent ticket triage, auto-assignment, and learning assistance
+- **Educational Hierarchy**: Faculty → Course → Class → Project Group → Individual Tickets
+- **Multi-role System**: Student, Teaching Assistant (TA), Lecturer, Department Manager roles
+- **Analytics-Driven**: Data collection for learning insights and curriculum improvement
+
+## 📖 How to Use These Rules
+
+### For New Features
+1. **Context**: Review [Educational Context](educational-context.mdc) and understand user roles (Student, TA, Lecturer, Manager)
+2. **AI Integration**: Check [AI Integration Patterns](ai-integration-patterns.mdc) for triage, auto-assignment, and learning assistance
+3. **Analytics**: Consider [Analytics & Reporting](analytics-reporting.mdc) for dashboard and reporting features
+4. **Plan**: Review relevant technical rules before starting
+5. **Structure**: Follow component and service patterns
+6. **Type**: Ensure full TypeScript coverage
+7. **Test**: Add validation and error handling
+8. **UI**: Follow design system and accessibility guidelines
+
+### For Code Reviews
+- [ ] **Educational Context**: Code respects academic user roles and educational workflows
+- [ ] **AI Integration**: AI features follow established patterns and error handling
+- [ ] **Analytics**: Dashboard and reporting features collect appropriate learning data
+- [ ] **Type Safety**: All code properly typed
+- [ ] **Architecture**: Follows established patterns
+- [ ] **Error Handling**: Appropriate user feedback
+- [ ] **Accessibility**: ARIA labels and keyboard navigation
+- [ ] **Performance**: No unnecessary re-renders
+
+### For Database Changes
+- [ ] **Educational Schema**: Database reflects academic hierarchy (Faculty → Course → Class → Group)
+- [ ] **Analytics Data**: Schema supports learning analytics and reporting requirements
+- [ ] **Schema**: Use Drizzle ORM patterns
+- [ ] **Migrations**: Test migrations thoroughly
+- [ ] **Relations**: Define proper foreign key relationships
+- [ ] **Types**: Update TypeScript types after schema changes
+
+## 🔧 Development Workflow
+
+### Daily Development
+```bash
+# Start development server
+npm run dev
+
+# Run linting
+npm run lint
+
+# Build for production
+npm run build
+
+# Push database changes
+npm run db:push
+```
+
+### Code Quality
+- ESLint for code style and potential issues
+- TypeScript for type safety
+- Pre-commit hooks for quality gates
+- Manual code reviews for complex changes
+
+### Database Development
+- Use Drizzle Kit for schema changes
+- Generate migrations for production
+- Test schema changes locally first
+- Update TypeScript types after migrations
+
+## 🚀 Deployment
+
+### Environment Setup
+- Configure Supabase project and environment variables
+- Run database migrations
+- Set up AI triage edge function (optional)
+- Configure authentication providers
+
+### Build Process
+```bash
+# Production build
+npm run build
+
+# Preview build
+npm run preview
+```
+
+### Deployment Checklist
+- [ ] All tests pass
+- [ ] ESLint passes
+- [ ] Production build succeeds
+- [ ] Environment variables configured
+- [ ] Database migrations applied
+- [ ] Authentication working
+- [ ] Real-time features functional
+
+## 🤝 Contributing
+
+### Code Standards
+- Follow established naming conventions
+- Use TypeScript for all new code
+- Add JSDoc comments for public APIs
+- Follow component composition patterns
+- Ensure accessibility compliance
+
+### Git Workflow
+- Use descriptive branch names (`feature/add-ticket-filtering`)
+- Write clear commit messages (`feat: add priority filtering to ticket list`)
+- Create focused pull requests
+- Request reviews for significant changes
+
+## 📚 Resources
+
+### External Documentation
+- [React Documentation](https://react.dev)
+- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
+- [Supabase Docs](https://supabase.com/docs)
+- [Drizzle ORM Guide](https://orm.drizzle.team)
+- [shadcn/ui Components](https://ui.shadcn.com)
+
+### Project Documentation
+- [Main README](../README.md): Setup and usage instructions
+- [Project Context](../docs/context.md): EduTicket AI vision and educational goals
+- [Database Guide](../docs/DRIZZLE_ORM_GUIDE.md): Database patterns and examples
+- [AI Triage Guide](../docs/AI_TRIAGE_MIGRATION_GUIDE.md): AI integration details
+
+## ❓ Troubleshooting
+
+### Common Issues
+- **Type errors**: Check import paths and type definitions
+- **Build failures**: Run `npm run lint` and fix issues
+- **Database errors**: Verify migrations and Supabase configuration
+- **Auth issues**: Check environment variables and Supabase settings
+
+### Getting Help
+1. Check existing documentation
+2. Review relevant Cursor Rules
+3. Ask team members for clarification
+4. Create an issue for complex problems
+
+---
+
+*These rules ensure consistency, quality, and maintainability across the EduTicket AI codebase. Follow them diligently to build an effective educational technology platform that serves FPT University's learning community.*

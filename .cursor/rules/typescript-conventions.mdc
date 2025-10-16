@@ -1,0 +1,135 @@
+---
+globs: *.ts,*.tsx
+description: TypeScript coding conventions and patterns used in the Study Ticket Flow project
+---
+
+# TypeScript Conventions
+
+## Naming Conventions
+
+### Variables and Functions
+- Use `camelCase` for variables and functions: `ticketData`, `getTickets()`, `handleSubmit`
+- Use `PascalCase` for types, interfaces, and classes: `TicketFormData`, `AuthService`
+- Use `UPPER_SNAKE_CASE` for constants: `API_BASE_URL`, `DEFAULT_PRIORITY`
+
+### Database Schema
+- Table names: snake_case (`ticket_comments`, `user_profiles`)
+- Column names: snake_case (`created_at`, `user_id`, `full_name`)
+- Enum names: snake_case (`ticket_status`, `user_role`)
+- Enum values: snake_case (`in_progress`, `high_priority`)
+
+## Type Definitions
+
+### Interfaces vs Types
+- Use `interface` for object shapes that may be extended
+- Use `type` for unions, primitives, and complex types
+
+```typescript
+// Interface for extendable objects
+interface Ticket {
+  id: string;
+  title: string;
+  status: TicketStatus;
+}
+
+// Type for specific use cases
+type TicketFormData = Omit<Ticket, 'id' | 'createdAt' | 'updatedAt'>;
+
+// Union types
+type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+type UserRole = 'student' | 'lead' | 'instructor';
+```
+
+### Service Method Signatures
+```typescript
+export class TicketService {
+  // Static methods for service operations
+  static async createTicket(
+    formData: TicketFormData,
+    creatorId: string
+  ): Promise<CreatedTicket> {
+    // Implementation
+  }
+
+  // Validation methods
+  static validateTicketData(formData: TicketFormData): {
+    isValid: boolean;
+    errors: string[];
+  } {
+    // Implementation
+  }
+}
+```
+
+## Database Types
+
+### Drizzle ORM Patterns
+```typescript
+// Enums
+export const ticketStatusEnum = pgEnum("ticket_status", [
+  "open",
+  "in_progress",
+  "resolved",
+  "closed"
+]);
+
+// Tables
+export const tickets = pgTable("tickets", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  status: ticketStatusEnum("status").notNull().default("open"),
+  creatorId: uuid("creator_id")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+});
+
+// Relations
+export const ticketsRelations = relations(tickets, ({ one, many }) => ({
+  creator: one(profiles, {
+    fields: [tickets.creatorId],
+    references: [profiles.id],
+    relationName: "creator",
+  }),
+  comments: many(ticketComments),
+}));
+```
+
+## Error Handling
+
+### Service Layer Error Handling
+```typescript
+try {
+  const { data, error } = await supabase
+    .from("tickets")
+    .insert(ticketData)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(error.message || 'Failed to create ticket');
+  }
+
+  return data;
+} catch (error: any) {
+  console.error('Error in createTicket:', error);
+  throw new Error(error.message || 'Failed to create ticket');
+}
+```
+
+### Component Error Boundaries
+```typescript
+// Use React Query's error handling
+const { data: tickets, error, isLoading } = useQuery({
+  queryKey: ['tickets'],
+  queryFn: TicketOperationsService.getTickets,
+  onError: (error) => {
+    console.error('Failed to fetch tickets:', error);
+    toast({
+      title: "Error",
+      description: "Failed to load tickets. Please try again.",
+      variant: "destructive",
+    });
+  }
+});
+```
