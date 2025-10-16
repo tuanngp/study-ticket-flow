@@ -4,8 +4,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const GEMINI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY")!;
-const GEMINI_MODEL = "gemini-2.0-flash-exp";
-const EMBEDDING_MODEL = "models/text-embedding-004";
+const GEMINI_MODEL = "gemini-2.0-flash";
+const EMBEDDING_MODEL = "models/gemini-embedding-001";
 
 interface RAGRequest {
   query: string;
@@ -82,6 +82,7 @@ serve(async (req: Request) => {
         body: JSON.stringify({
           model: EMBEDDING_MODEL,
           content: { parts: [{ text: query }] },
+          output_dimensionality: 768
         }),
       }
     );

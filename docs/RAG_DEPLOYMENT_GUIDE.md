@@ -290,7 +290,7 @@ npm run db:push
 curl -X POST \
   "https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=YOUR_KEY" \
   -H 'Content-Type: application/json' \
-  -d '{"model":"models/text-embedding-004","content":{"parts":[{"text":"test"}]}}'
+  -d '{"model":"models/gemini-embedding-001","content":{"parts":[{"text":"test"}]}}'
 ```
 
 ### Issue: "Edge function returns 500 error"

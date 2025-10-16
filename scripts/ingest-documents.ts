@@ -31,8 +31,8 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !GEMINI_API_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-const EMBEDDING_MODEL = 'models/text-embedding-004';
-const CHUNK_SIZE = 1000;
+const EMBEDDING_MODEL = 'models/gemini-embedding-001';
+const CHUNK_SIZE = 2048;
 const CHUNK_OVERLAP = 200;
 
 /**
@@ -47,7 +47,8 @@ async function generateEmbedding(text: string): Promise<number[]> {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: EMBEDDING_MODEL,
-          content: { parts: [{ text }] }
+          content: { parts: [{ text }] },
+          output_dimensionality: 768
         })
       }
     );
