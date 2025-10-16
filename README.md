@@ -9,6 +9,7 @@ Study Ticket Flow là một ứng dụng web hiện đại giúp sinh viên và 
 ### ✨ Tính năng chính
 
 - **AI-Powered Triage**: Tự động phân tích và gợi ý priority dựa trên nội dung ticket
+- **RAG AI Learning Assistant**: Chatbot thông minh trả lời câu hỏi dựa trên tài liệu FPTU (NEW! 🎉)
 - **Role-based Access**: Hỗ trợ 3 role: Student, Lead, Instructor
 - **Real-time Updates**: Cập nhật trạng thái ticket theo thời gian thực
 - **Comment System**: Hệ thống bình luận và theo dõi tiến độ
@@ -20,7 +21,8 @@ Study Ticket Flow là một ứng dụng web hiện đại giúp sinh viên và 
 - **Frontend**: React 18 + TypeScript + Vite
 - **UI Library**: shadcn/ui + Radix UI + Tailwind CSS
 - **State Management**: React Query (TanStack Query)
-- **Backend**: Supabase (PostgreSQL + Auth + Real-time)
+- **Backend**: Supabase (PostgreSQL + Auth + Real-time + pgvector)
+- **AI/ML**: Google Gemini API (Embeddings + Chat)
 - **Forms**: React Hook Form + Zod validation
 - **Charts**: Recharts
 - **Icons**: Lucide React
@@ -68,13 +70,23 @@ bun install
 Tạo file `.env.local` trong thư mục root:
 
 ```env
+# Supabase Configuration
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+# Google Gemini API (cho RAG Assistant)
+VITE_GEMINI_API_KEY=your_gemini_api_key
 ```
 
 **Lấy thông tin từ Supabase:**
 - URL: Settings → API → Project URL
-- Key: Settings → API → Project API keys → anon/public
+- Anon Key: Settings → API → Project API keys → anon/public
+- Service Role Key: Settings → API → Project API keys → service_role
+
+**Lấy Gemini API Key:**
+- Truy cập [Google AI Studio](https://makersuite.google.com/app/apikey)
+- Tạo API key mới (miễn phí)
 
 #### Chạy database migrations
 
@@ -97,14 +109,37 @@ supabase db push
 - Copy nội dung file `supabase/migrations/20251007030639_840041cb-20aa-4565-bf66-d3610f6a9dd7.sql`
 - Chạy query
 
-### 4. Cấu hình AI Triage (tùy chọn)
+### 4. Deploy Edge Functions
 
-Tạo Supabase Edge Function cho AI triage:
+#### AI Triage Function
+```bash
+supabase functions deploy ai-triage
+```
 
-1. Vào Supabase Dashboard → Edge Functions
-2. Tạo function mới tên `ai-triage`
-3. Copy code từ `supabase/functions/ai-triage/index.ts`
-4. Cấu hình AI API key (OpenAI/Gemini/etc.)
+#### RAG Assistant Function (NEW!)
+```bash
+# Set secrets
+supabase secrets set GEMINI_API_KEY=your_gemini_api_key
+supabase secrets set SUPABASE_URL=your_supabase_url
+supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your_service_key
+
+# Deploy
+supabase functions deploy rag-assistant
+```
+
+#### Ingest Documents for RAG
+```bash
+# Install dependencies
+npm install
+
+# Run document ingestion
+npm run ingest-docs
+
+# Or specify custom directory
+tsx scripts/ingest-documents.ts /path/to/docs
+```
+
+**Chi tiết deployment RAG Assistant**: Xem [docs/RAG_DEPLOYMENT_GUIDE.md](docs/RAG_DEPLOYMENT_GUIDE.md)
 
 ### 5. Chạy development server
 
@@ -130,6 +165,7 @@ src/
 │   ├── Navbar.tsx       # Navigation bar
 │   ├── StatsCards.tsx   # Dashboard statistics
 │   ├── TicketList.tsx   # Ticket listing component
+│   ├── AIAssistantWidget.tsx  # RAG chatbot widget (NEW!)
 │   └── ...
 ├── pages/               # Page components
 │   ├── Index.tsx        # Landing page
@@ -137,6 +173,7 @@ src/
 │   ├── Dashboard.tsx    # Main dashboard
 │   ├── TicketDetail.tsx # Ticket detail view
 │   ├── NewTicket.tsx    # Create ticket form
+│   ├── AdminDocuments.tsx # Document management (NEW!)
 │   └── NotFound.tsx     # 404 page
 ├── services/            # Business logic layer
 │   ├── authService.ts           # Authentication
@@ -144,6 +181,9 @@ src/
 │   ├── ticketOperationsService.ts # CRUD operations
 │   ├── commentService.ts        # Comment management
 │   ├── statisticsService.ts     # Analytics
+│   ├── embeddingService.ts      # Gemini embeddings (NEW!)
+│   ├── documentIngestionService.ts # Document processing (NEW!)
+│   ├── ragAssistantService.ts   # RAG chat API (NEW!)
 │   └── README.md               # Services documentation
 ├── hooks/               # Custom React hooks
 ├── lib/                 # Utilities
@@ -283,13 +323,18 @@ npm run preview
   "build": "vite build",            // Production build
   "build:dev": "vite build --mode development",  // Dev build
   "lint": "eslint .",               // Code linting
-  "preview": "vite preview"         // Preview production build
+  "preview": "vite preview",        // Preview production build
+  "db:push": "drizzle-kit push",    // Push database migrations
+  "db:studio": "drizzle-kit studio", // Open Drizzle Studio
+  "ingest-docs": "tsx scripts/ingest-documents.ts docs/knowledge-base" // Ingest RAG documents
 }
 ```
 
 ## 🚀 Deployment
 
-### Với Vercel
+### Frontend Deployment
+
+#### Với Vercel
 
 ```bash
 # Install Vercel CLI
@@ -299,7 +344,7 @@ npm i -g vercel
 vercel --prod
 ```
 
-### Với Netlify
+#### Với Netlify
 
 ```bash
 # Install Netlify CLI
@@ -310,6 +355,24 @@ npm run build
 
 # Deploy
 netlify deploy --prod --dir=dist
+```
+
+### RAG Assistant Deployment
+
+Xem hướng dẫn chi tiết tại: [docs/RAG_DEPLOYMENT_GUIDE.md](docs/RAG_DEPLOYMENT_GUIDE.md)
+
+**Tóm tắt các bước:**
+1. Chạy database migrations (pgvector + tables)
+2. Deploy edge function `rag-assistant`
+3. Set secrets cho Gemini API
+4. Ingest documents vào knowledge base
+5. Test chatbot widget
+
+```bash
+# Quick deployment
+npm run db:push
+supabase functions deploy rag-assistant
+npm run ingest-docs
 ```
 
 ## 🤝 Đóng góp
@@ -324,9 +387,28 @@ netlify deploy --prod --dir=dist
 
 This project is licensed under the MIT License.
 
+## 📚 Documentation
+
+- **[RAG Assistant README](docs/RAG_ASSISTANT_README.md)**: Chi tiết về AI Learning Assistant
+- **[RAG Deployment Guide](docs/RAG_DEPLOYMENT_GUIDE.md)**: Hướng dẫn triển khai đầy đủ
+- **[Drizzle ORM Guide](docs/DRIZZLE_ORM_GUIDE.md)**: Database patterns
+- **[AI Triage Migration](docs/AI_TRIAGE_MIGRATION_GUIDE.md)**: AI triage setup
+
+## 🆕 What's New
+
+### Version 2.0 - RAG AI Assistant (January 2025)
+- ✨ **AI Learning Assistant**: Chatbot trả lời câu hỏi 24/7 từ tài liệu FPTU
+- 🔍 **Vector Search**: Semantic search với pgvector
+- 📚 **Knowledge Base**: Admin có thể upload và quản lý documents
+- 🤖 **Powered by Gemini**: Google Gemini API cho embeddings và chat
+- 💬 **Floating Widget**: Chat widget luôn sẵn sàng trên mọi trang
+- 📊 **Source Citations**: Trích dẫn nguồn tài liệu trong mọi câu trả lời
+
 ## 📞 Liên hệ
 - **GitHub Issues**: Báo bug và yêu cầu tính năng mới
+- **RAG Assistant Issues**: Tag với label `rag-assistant`
 
 ---
 
-*Built with ❤️ for FPT University students and instructors*
+*Built with ❤️ for FPT University students and instructors*  
+*Powered by React + Supabase + Google Gemini AI*

@@ -1,7 +1,7 @@
 CREATE TYPE "public"."ticket_priority" AS ENUM('low', 'medium', 'high', 'critical');--> statement-breakpoint
 CREATE TYPE "public"."ticket_status" AS ENUM('open', 'in_progress', 'resolved', 'closed');--> statement-breakpoint
 CREATE TYPE "public"."ticket_type" AS ENUM('bug', 'feature', 'question', 'task');--> statement-breakpoint
-CREATE TYPE "public"."user_role" AS ENUM('student', 'lead', 'instructor');--> statement-breakpoint
+CREATE TYPE "public"."user_role" AS ENUM('student', 'instructor', 'admin');--> statement-breakpoint
 CREATE TABLE "profiles" (
 	"id" uuid PRIMARY KEY NOT NULL,
 	"email" text NOT NULL,
