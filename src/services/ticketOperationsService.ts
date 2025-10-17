@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { NotificationService } from "./notificationService";
 
 export interface Ticket {
   id: string;
@@ -109,6 +110,9 @@ export class TicketOperationsService {
     status: 'open' | 'in_progress' | 'resolved' | 'closed'
   ): Promise<{ success: boolean; error?: string }> {
     try {
+      // Get ticket details first
+      const ticket = await this.getTicketById(ticketId);
+      
       const { error } = await supabase
         .from("tickets")
         .update({ status })
@@ -116,6 +120,43 @@ export class TicketOperationsService {
 
       if (error) {
         throw new Error(error.message);
+      }
+
+      // Send notifications based on status
+      if (ticket) {
+        const recipients = await NotificationService.determineRecipients(
+          status === 'resolved' ? 'ticket_resolved' : 'ticket_status_changed',
+          {
+            ticketId,
+            creatorId: ticket.creator_id,
+            assigneeId: ticket.assignee_id || undefined,
+          }
+        );
+
+        const { title, message } = NotificationService.formatNotificationContent(
+          status === 'resolved' ? 'ticket_resolved' : 'ticket_status_changed',
+          {
+            ticketTitle: ticket.title,
+            ticketId,
+            status,
+          }
+        );
+
+        await NotificationService.send({
+          type: status === 'resolved' ? 'ticket_resolved' : 'ticket_status_changed',
+          title,
+          message,
+          recipients,
+          priority: status === 'resolved' ? 'medium' : 'low',
+          channels: ['in_app', 'email'],
+          metadata: {
+            ticketId,
+            status,
+          },
+          actions: [
+            { label: 'View Ticket', url: `/tickets/${ticketId}` },
+          ],
+        });
       }
 
       return { success: true };
@@ -133,6 +174,9 @@ export class TicketOperationsService {
     assigneeId: string | null
   ): Promise<{ success: boolean; error?: string }> {
     try {
+      // Get ticket details first
+      const ticket = await this.getTicketById(ticketId);
+      
       const { error } = await supabase
         .from("tickets")
         .update({ assignee_id: assigneeId })
@@ -140,6 +184,34 @@ export class TicketOperationsService {
 
       if (error) {
         throw new Error(error.message);
+      }
+
+      // Send notification to new assignee
+      if (ticket && assigneeId) {
+        const { title, message } = NotificationService.formatNotificationContent(
+          'ticket_assigned',
+          {
+            ticketTitle: ticket.title,
+            ticketId,
+          }
+        );
+
+        await NotificationService.send({
+          type: 'ticket_assigned',
+          title,
+          message,
+          recipients: [assigneeId],
+          priority: ticket.priority === 'critical' || ticket.priority === 'high' ? 'high' : 'medium',
+          channels: ['in_app', 'email'],
+          metadata: {
+            ticketId,
+            assigneeId,
+          },
+          actions: [
+            { label: 'View Ticket', url: `/tickets/${ticketId}` },
+            { label: 'Accept Assignment', url: `/tickets/${ticketId}#accept` },
+          ],
+        });
       }
 
       return { success: true };

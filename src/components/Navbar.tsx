@@ -1,8 +1,9 @@
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
-import { Ticket, LogOut, Home, LayoutDashboard } from "lucide-react";
 import { AuthService } from "@/services/authService";
+import { Home, LayoutDashboard, LogOut, Ticket } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { NotificationBell } from "./NotificationBell";
 
 interface NavbarProps {
   user: any;
@@ -62,6 +63,7 @@ export const Navbar = ({ user, profile }: NavbarProps) => {
           <div className="flex items-center gap-4">
             {user ? (
               <>
+                <NotificationBell userId={user?.id} />
                 <div className="hidden sm:flex flex-col items-end">
                   <p className="text-sm font-medium">
                     {profile?.full_name || user.email}

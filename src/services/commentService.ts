@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { NotificationService } from "./notificationService";
 
 export interface Comment {
   id: string;
@@ -66,6 +67,86 @@ export class CommentService {
 
       if (error) {
         throw new Error(error.message);
+      }
+
+      // Get ticket details
+      const { data: ticket } = await supabase
+        .from("tickets")
+        .select("title, creator_id, assignee_id")
+        .eq("id", data.ticketId)
+        .single();
+
+      if (ticket && result) {
+        // Detect @mentions in comment
+        const mentionRegex = /@(\w+)/g;
+        const mentions = data.content.match(mentionRegex);
+        
+        if (mentions) {
+          // Get mentioned users
+          const mentionedUsernames = mentions.map(m => m.substring(1));
+          const { data: mentionedUsers } = await supabase
+            .from("profiles")
+            .select("id, full_name")
+            .in("full_name", mentionedUsernames);
+
+          if (mentionedUsers && mentionedUsers.length > 0) {
+            // Send mention notifications
+            await NotificationService.send({
+              type: 'mention',
+              title: 'You Were Mentioned',
+              message: `${result.user?.full_name || 'Someone'} mentioned you in a comment on "${ticket.title}".`,
+              recipients: mentionedUsers.map(u => u.id),
+              priority: 'medium',
+              channels: ['in_app', 'email'],
+              metadata: {
+                ticketId: data.ticketId,
+                commentId: result.id,
+              },
+              actions: [
+                { label: 'View Comment', url: `/tickets/${data.ticketId}` },
+              ],
+            });
+          }
+        }
+
+        // Send comment notification to ticket participants
+        const recipients = await NotificationService.determineRecipients(
+          'comment_added',
+          {
+            ticketId: data.ticketId,
+            creatorId: ticket.creator_id,
+            assigneeId: ticket.assignee_id || undefined,
+            commentAuthorId: data.userId,
+          }
+        );
+
+        if (recipients.length > 0) {
+          const { title, message } = NotificationService.formatNotificationContent(
+            'comment_added',
+            {
+              ticketTitle: ticket.title,
+              ticketId: data.ticketId,
+              userName: result.user?.full_name || 'Someone',
+            }
+          );
+
+          await NotificationService.send({
+            type: 'comment_added',
+            title,
+            message,
+            recipients,
+            priority: 'low',
+            channels: ['in_app'],
+            metadata: {
+              ticketId: data.ticketId,
+              commentId: result.id,
+            },
+            actions: [
+              { label: 'View Comment', url: `/tickets/${data.ticketId}` },
+              { label: 'Reply', url: `/tickets/${data.ticketId}#reply` },
+            ],
+          });
+        }
       }
 
       return { success: true, comment: result };

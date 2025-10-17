@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import Index from "./pages/Index";
 import NewTicket from "./pages/NewTicket";
 import NotFound from "./pages/NotFound";
+import Notifications from "./pages/Notifications";
 import TicketDetail from "./pages/TicketDetail";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/tickets/:id" element={<TicketDetail />} />
           <Route path="/tickets/new" element={<NewTicket />} />
+          <Route path="/notifications" element={<Notifications />} />
           <Route path="/admin/documents" element={<AdminDocuments />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
