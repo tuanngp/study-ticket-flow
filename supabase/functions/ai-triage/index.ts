@@ -1,4 +1,12 @@
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+// @ts-ignore - Deno import
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
+// Deno type declarations
+declare const Deno: {
+  env: {
+    get(key: string): string | undefined;
+  };
+};
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

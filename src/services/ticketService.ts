@@ -5,6 +5,9 @@ export interface TicketFormData {
   description: string;
   type: 'bug' | 'feature' | 'question' | 'task';
   priority: 'low' | 'medium' | 'high' | 'critical';
+  courseCode?: string;
+  className?: string;
+  projectGroup?: string;
 }
 
 export interface AITriageResult {

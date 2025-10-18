@@ -7,10 +7,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { 
+  ArrowLeft, 
+  Sparkles, 
+  Brain, 
+  BookOpen, 
+  Users, 
+  AlertCircle, 
+  CheckCircle,
+  Zap,
+  Wand2,
+  Rocket,
+  Star,
+  TrendingUp,
+  Clock,
+  Target
+} from "lucide-react";
 import { AuthService, UserProfile } from "@/services/authService";
-import { TicketService, TicketFormData } from "@/services/ticketService";
+import { TicketService, TicketFormData, AITriageResult } from "@/services/ticketService";
+import { UnifiedTicketCreation } from "@/components/UnifiedTicketCreation";
 
 const NewTicket = () => {
   const navigate = useNavigate();
@@ -24,6 +43,19 @@ const NewTicket = () => {
     type: "task",
     priority: "medium",
   });
+  
+  // Educational context
+  const [courseCode, setCourseCode] = useState("");
+  const [className, setClassName] = useState("");
+  const [projectGroup, setProjectGroup] = useState("");
+  
+  // AI suggestions
+  const [aiSuggestions, setAiSuggestions] = useState<AITriageResult | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  
+  // Unified creation system
+  const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -47,6 +79,27 @@ const NewTicket = () => {
 
     checkAuth();
   }, [navigate]);
+
+  // Auto-analyze when form data changes
+  useEffect(() => {
+    const analyzeTicket = async () => {
+      if (formData.title.length > 10 && formData.description.length > 20) {
+        setIsAnalyzing(true);
+        try {
+          const suggestions = await TicketService.getAITriageSuggestions(formData);
+          setAiSuggestions(suggestions);
+          setShowSuggestions(true);
+        } catch (error) {
+          console.error('AI analysis failed:', error);
+        } finally {
+          setIsAnalyzing(false);
+        }
+      }
+    };
+
+    const timeoutId = setTimeout(analyzeTicket, 1000); // Debounce
+    return () => clearTimeout(timeoutId);
+  }, [formData.title, formData.description]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,107 +155,41 @@ const NewTicket = () => {
           Back to Dashboard
         </Button>
 
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-2xl flex items-center gap-2">
-              Create New Ticket
-              <Sparkles className="h-5 w-5 text-primary" />
-            </CardTitle>
-            <CardDescription>
-              AI will analyze and suggest the best priority and assignee for your ticket
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="title">Title *</Label>
-                <Input
-                  id="title"
-                  placeholder="Brief description of the issue"
-                  value={formData.title}
-                  onChange={(e) =>
-                    setFormData({ ...formData, title: e.target.value })
-                  }
-                  required
-                />
-              </div>
+        {/* Unified Ticket Creation */}
+        <UnifiedTicketCreation
+          onSubmit={async (data) => {
+            setIsCreating(true);
+            try {
+              const session = await AuthService.getCurrentSession();
+              if (!session?.user) {
+                toast.error("You must be logged in to create a ticket");
+                return;
+              }
 
-              <div className="space-y-2">
-                <Label htmlFor="description">Description *</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Detailed explanation of the issue, steps to reproduce, expected behavior, etc."
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  required
-                  rows={8}
-                />
-              </div>
+              const ticketData = {
+                title: data.title,
+                description: data.description,
+                type: data.type,
+                priority: data.priority,
+              };
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="type">Type *</Label>
-                  <Select
-                    value={formData.type}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, type: value as TicketFormData['type'] })
-                    }
-                  >
-                    <SelectTrigger id="type">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="bug">Bug</SelectItem>
-                      <SelectItem value="feature">Feature Request</SelectItem>
-                      <SelectItem value="question">Question</SelectItem>
-                      <SelectItem value="task">Task</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="priority">Priority *</Label>
-                  <Select
-                    value={formData.priority}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, priority: value as TicketFormData['priority'] })
-                    }
-                  >
-                    <SelectTrigger id="priority">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="critical">Critical</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="flex gap-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate("/dashboard")}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="flex-1 bg-gradient-primary hover:shadow-glow"
-                >
-                  {isLoading ? "Creating..." : "Create Ticket"}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+              const createdTicket = await TicketService.createTicket(ticketData, session.user.id);
+              toast.success("Ticket created successfully!");
+              navigate("/dashboard");
+            } catch (error: any) {
+              console.error('Failed to create ticket:', error);
+              toast.error(error.message || "Failed to create ticket. Please try again.");
+            } finally {
+              setIsCreating(false);
+            }
+          }}
+          onCancel={() => navigate("/dashboard")}
+          initialData={{
+            courseCode,
+            className,
+            projectGroup
+          }}
+        />
       </main>
     </div>
   );
