@@ -4,6 +4,7 @@ import { Home, LayoutDashboard, LogOut, Ticket } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { NotificationBell } from "./NotificationBell";
+import { SmartAvatar } from "./SmartAvatar";
 
 interface NavbarProps {
   user: any;
@@ -57,6 +58,16 @@ export const Navbar = ({ user, profile }: NavbarProps) => {
                 <LayoutDashboard className="h-4 w-4" />
                 Dashboard
               </Button>
+              {user && (
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate("/profile")}
+                  className="gap-2"
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                  User Home
+                </Button>
+              )}
             </div>
           </div>
 
@@ -64,13 +75,20 @@ export const Navbar = ({ user, profile }: NavbarProps) => {
             {user ? (
               <>
                 <NotificationBell userId={user?.id} />
-                <div className="hidden sm:flex flex-col items-end">
-                  <p className="text-sm font-medium">
-                    {profile?.full_name || user.email}
-                  </p>
-                  <p className="text-xs text-muted-foreground capitalize">
-                    {profile?.role || "student"}
-                  </p>
+                <div className="flex items-center gap-3">
+                  <SmartAvatar 
+                    name={profile?.full_name || user.email || 'User'} 
+                    avatarUrl={profile?.avatar_url}
+                    size="lg"
+                  />
+                  <div className="hidden sm:flex flex-col items-end">
+                    <p className="text-sm font-medium">
+                      {profile?.full_name || user.email}
+                    </p>
+                    <p className="text-xs text-muted-foreground capitalize">
+                      {profile?.role || "student"}
+                    </p>
+                  </div>
                 </div>
                 <Button
                   variant="outline"

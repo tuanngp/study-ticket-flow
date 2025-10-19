@@ -68,8 +68,17 @@ export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey(),
   email: text("email").notNull(),
   fullName: text("full_name"),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
   role: userRoleEnum("role").notNull().default("student"),
   avatarUrl: text("avatar_url"),
+  career: text("career"),
+  phone: text("phone"),
+  bio: text("bio"),
+  country: text("country"),
+  state: text("state"),
+  postalCode: text("postal_code"),
+  taxId: text("tax_id"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
