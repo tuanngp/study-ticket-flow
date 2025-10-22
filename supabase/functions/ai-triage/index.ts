@@ -51,43 +51,86 @@ function validateInput(data: any): TriageRequest {
   };
 }
 
-// Validate and normalize priority response
-function validatePriorityResponse(response: string): Priority {
-  const normalized = response.trim().toLowerCase();
+// Supported type categories (extended set for education use-cases)
+const SUPPORTED_TYPES = [
+  'bug',
+  'feature',
+  'question',
+  'task',
+  // extended categories (may be normalized by client)
+  'grading',
+  'report',
+  'config',
+  'assignment',
+  'exam',
+  'submission',
+  'technical',
+  'academic',
+] as const;
+type TicketTypeCandidate = typeof SUPPORTED_TYPES[number];
 
-  if (VALID_PRIORITIES.includes(normalized as Priority)) {
-    return normalized as Priority;
-  }
+// Validate and normalize a simple "type priority" response or single priority
+function parseTypeAndPriority(response: string): { suggested_type: TicketTypeCandidate; suggested_priority: Priority } {
+  const normalized = response.trim().toLowerCase().replace(/\s+/g, ' ');
+  const parts = normalized.split(' ');
 
-  // Fallback: try to extract priority from longer response
-  for (const priority of VALID_PRIORITIES) {
-    if (normalized.includes(priority)) {
-      return priority;
+  // default fallbacks
+  let typeCandidate: TicketTypeCandidate = 'question';
+  let priorityCandidate: Priority = 'medium';
+
+  // Try to detect priority first (whether one-word or two-word format)
+  for (const p of VALID_PRIORITIES) {
+    if (normalized.includes(p)) {
+      priorityCandidate = p as Priority;
+      break;
     }
   }
 
-  // Default fallback
-  return 'medium';
+  // Try to detect a supported type token
+  for (const t of SUPPORTED_TYPES) {
+    if (normalized.includes(t)) {
+      typeCandidate = t as TicketTypeCandidate;
+      break;
+    }
+  }
+
+  return { suggested_type: typeCandidate, suggested_priority: priorityCandidate };
 }
 
 // Create AI prompt
 function createPrompt(data: TriageRequest): string {
   return `You are a ticket triage assistant for a university study management system.
 
-Analyze this student ticket and suggest the appropriate priority level based on urgency and impact:
+Analyze this student ticket and suggest BOTH the ticket TYPE and PRIORITY.
 
 TICKET DETAILS:
 - Title: ${data.title}
 - Description: ${data.description}
-- Type: ${data.type}
 
-PRIORITY GUIDELINES:
-- critical: Immediate attention needed (system down, security issues, exam deadlines, urgent assignments)
-- high: Important but not immediate (bug affecting many users, important deadlines approaching)
-- medium: Standard priority (feature requests, general questions, non-urgent issues)
-- low: Low impact (minor UI issues, documentation updates, nice-to-have features)
+TYPE CATEGORIES (choose the single best):
+- bug: Software errors, crashes, malfunctions
+- feature: New functionality requests
+- question: General questions or clarifications
+- task: General tasks or requests
+- grading: Grade disputes, scoring questions, grade appeals
+- report: Academic reports, system issues, complaints
+- config: Setup help, configuration issues, environment setup
+- assignment: Assignment help, project guidance, homework support
+- exam: Exam-related questions, test issues, exam preparation
+- submission: File upload problems, submission errors, deadline issues
+- technical: Technical difficulties, software setup, system problems
+- academic: General academic support, course content questions
 
-Respond with ONLY one word: low, medium, high, or critical.
+PRIORITY LEVELS (choose one):
+- critical: System down, major deadline issues, blocking problems
+- high: Important issues affecting learning, urgent assignments
+- medium: Normal academic questions, standard support needs
+- low: General questions, non-urgent requests
+
+Respond with ONLY two lowercase words separated by a space in the format:
+"<type> <priority>"
+
+Examples: "grading high", "assignment medium", "technical critical", "question low"
 
 Do not include any explanation or additional text.`;
 }
@@ -128,18 +171,19 @@ async function callGeminiAI(prompt: string, apiKey: string): Promise<string> {
     }
 
     return data.choices[0].message.content;
-  } catch (error) {
+  } catch (error: unknown) {
     clearTimeout(timeoutId);
 
-    if (error.name === 'AbortError') {
+    const errorName = error && typeof error === 'object' && 'name' in error ? (error as any).name : '';
+    if (errorName === 'AbortError') {
       throw new Error('Request timeout - AI service took too long to respond');
     }
 
-    throw error;
+    throw error instanceof Error ? error : new Error(String(error));
   }
 }
 
-serve(async (req) => {
+serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -162,12 +206,13 @@ serve(async (req) => {
     try {
       const body = await req.json();
       requestData = validateInput(body);
-    } catch (error) {
-      console.error('Input validation error:', error.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('Input validation error:', message);
       return new Response(
         JSON.stringify({
           error: 'Invalid input',
-          details: error.message,
+          details: message,
           suggested_priority: 'medium' // Fallback
         }),
         {
@@ -201,13 +246,14 @@ serve(async (req) => {
     });
 
     const aiResponse = await callGeminiAI(prompt, geminiApiKey);
-    const suggestedPriority = validatePriorityResponse(aiResponse);
+    const parsed = parseTypeAndPriority(aiResponse);
 
-    console.log('AI triage completed:', { suggestedPriority });
+    console.log('AI triage completed:', parsed);
 
     return new Response(
       JSON.stringify({
-        suggested_priority: suggestedPriority,
+        suggested_type: parsed.suggested_type,
+        suggested_priority: parsed.suggested_priority,
         processed_at: new Date().toISOString()
       }),
       {
@@ -215,17 +261,18 @@ serve(async (req) => {
       }
     );
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("AI triage error:", error);
 
+    const message = error instanceof Error ? error.message : String(error);
     // Determine if it's a client error or server error
-    const isClientError = error.message.includes('Invalid input') ||
-                         error.message.includes('Method not allowed');
+    const isClientError = message.includes('Invalid input') ||
+                         message.includes('Method not allowed');
 
     return new Response(
       JSON.stringify({
         error: isClientError ? 'Invalid request' : 'AI service temporarily unavailable',
-        details: process.env.DENO_ENV === 'development' ? error.message : undefined,
+        details: (Deno.env.get('DENO_ENV') === 'development') ? message : undefined,
         suggested_priority: 'medium', // Always provide fallback priority
         processed_at: new Date().toISOString()
       }),

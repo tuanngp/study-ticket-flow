@@ -11,9 +11,14 @@ export interface TicketFormData {
 }
 
 export interface AITriageResult {
+  // Raw fields from edge function (snake_case)
   suggested_priority?: 'low' | 'medium' | 'high' | 'critical';
+  suggested_type?: string;
   suggested_assignee?: string;
   analysis?: string;
+  // Normalized camelCase fields for UI convenience
+  suggestedPriority?: 'low' | 'medium' | 'high' | 'critical';
+  suggestedType?: string;
 }
 
 export interface CreatedTicket {
@@ -47,7 +52,16 @@ export class TicketService {
         return null;
       }
 
-      return data;
+      if (!data) return null;
+
+      // Normalize edge response to camelCase while preserving originals
+      const normalized: AITriageResult = {
+        ...data,
+        suggestedPriority: (data as any).suggested_priority,
+        suggestedType: (data as any).suggested_type,
+      };
+
+      return normalized;
     } catch (error) {
       console.error('Error in getAITriageSuggestions:', error);
       return null;
@@ -62,6 +76,12 @@ export class TicketService {
     creatorId: string
   ): Promise<CreatedTicket> {
     try {
+      // Validate form data first
+      const validation = this.validateTicketData(formData);
+      if (!validation.isValid) {
+        throw new Error(validation.errors.join(', '));
+      }
+
       // Get AI triage suggestions first
       const aiSuggestions = await this.getAITriageSuggestions(formData);
 
@@ -69,8 +89,8 @@ export class TicketService {
       const { data, error } = await supabase
         .from("tickets")
         .insert({
-          title: formData.title,
-          description: formData.description,
+          title: formData.title.trim(),
+          description: formData.description.trim(),
           type: formData.type,
           priority: formData.priority,
           creator_id: creatorId,
@@ -102,6 +122,11 @@ export class TicketService {
 
     if (!formData.description.trim()) {
       errors.push('Description is required');
+    }
+
+    // Additional validation for description length
+    if (formData.description.trim().length < 10) {
+      errors.push('Description must be at least 10 characters long');
     }
 
     if (!formData.type) {

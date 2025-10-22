@@ -19,6 +19,7 @@ export interface SignUpData {
   email: string;
   password: string;
   fullName: string;
+  role: 'student' | 'instructor' | 'admin';
 }
 
 export interface SignInData {
@@ -38,6 +39,7 @@ export class AuthService {
         options: {
           data: {
             full_name: data.fullName,
+            role: data.role,
           },
           emailRedirectTo: `${window.location.origin}/`,
         },
@@ -157,6 +159,7 @@ export class AuthService {
             id: user.id,
             email: user.email,
             full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+            role: user.user_metadata?.role || 'student',
           })
           .select()
           .single();

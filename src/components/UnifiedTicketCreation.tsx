@@ -33,7 +33,8 @@ import {
   Filter,
   Wand2,
   Rocket,
-  Loader2
+  Loader2,
+  Upload
 } from "lucide-react";
 import { AIAutoComplete } from "./AIAutoComplete";
 import { EnhancedTicketTemplates } from "./EnhancedTicketTemplates";
@@ -66,13 +67,30 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
   const [aiSuggestions, setAiSuggestions] = useState<any>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [showAllTypes, setShowAllTypes] = useState(false);
 
-  const ticketTypes = [
+  // Basic ticket types (always visible)
+  const basicTicketTypes = [
     { value: "bug", label: "Bug Report", icon: <Bug className="h-4 w-4" />, color: "bg-red-500", description: "Report errors and issues" },
     { value: "feature", label: "Feature Request", icon: <Lightbulb className="h-4 w-4" />, color: "bg-blue-500", description: "Request new functionality" },
     { value: "question", label: "Question", icon: <HelpCircle className="h-4 w-4" />, color: "bg-green-500", description: "Ask for help or clarification" },
     { value: "task", label: "Task", icon: <Settings className="h-4 w-4" />, color: "bg-purple-500", description: "General task or request" }
   ];
+
+  // Educational ticket types (shown when expanded)
+  const educationalTicketTypes = [
+    { value: "grading", label: "Grading Issue", icon: <Star className="h-4 w-4" />, color: "bg-yellow-500", description: "Question about grades or scoring" },
+    { value: "report", label: "Report Problem", icon: <FileText className="h-4 w-4" />, color: "bg-orange-500", description: "Report academic or system issues" },
+    { value: "config", label: "Configuration", icon: <Settings className="h-4 w-4" />, color: "bg-indigo-500", description: "Setup or configuration help" },
+    { value: "assignment", label: "Assignment Help", icon: <BookOpen className="h-4 w-4" />, color: "bg-teal-500", description: "Help with assignments or projects" },
+    { value: "exam", label: "Exam Related", icon: <Target className="h-4 w-4" />, color: "bg-pink-500", description: "Questions about exams or tests" },
+    { value: "submission", label: "Submission Issue", icon: <Upload className="h-4 w-4" />, color: "bg-cyan-500", description: "Problems with file submissions" },
+    { value: "technical", label: "Technical Support", icon: <Code className="h-4 w-4" />, color: "bg-gray-500", description: "Technical difficulties or setup" },
+    { value: "academic", label: "Academic Support", icon: <Users className="h-4 w-4" />, color: "bg-emerald-500", description: "General academic assistance" }
+  ];
+
+  // All ticket types for reference
+  const allTicketTypes = [...basicTicketTypes, ...educationalTicketTypes];
 
   const priorities = [
     { value: "low", label: "Low", color: "bg-green-100 text-green-800 border-green-200", description: "Can wait" },
@@ -103,15 +121,19 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
       if (formData.title.length > 10 && formData.description.length > 20) {
         setIsAnalyzing(true);
         try {
-          // Simulate AI analysis
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          setAiSuggestions({
-            suggestedPriority: formData.priority === 'medium' ? 'high' : formData.priority,
-            suggestedType: formData.type,
-            confidence: 85,
-            reasoning: "Based on content analysis, this appears to be a high-priority issue."
+          // Call real AI triage service
+          const { TicketService } = await import('@/services/ticketService');
+          const suggestions = await TicketService.getAITriageSuggestions({
+            title: formData.title,
+            description: formData.description,
+            type: formData.type,
+            priority: formData.priority
           });
-          setShowSuggestions(true);
+          
+          if (suggestions) {
+            setAiSuggestions(suggestions);
+            setShowSuggestions(true);
+          }
         } catch (error) {
           console.error('AI analysis failed:', error);
         } finally {
@@ -120,11 +142,24 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
       }
     };
 
-    analyzeTicket();
+    const timeoutId = setTimeout(analyzeTicket, 1000); // Debounce
+    return () => clearTimeout(timeoutId);
   }, [formData.title, formData.description]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate form data before submission
+    if (!formData.title.trim()) {
+      alert('Vui lòng nhập tiêu đề cho ticket');
+      return;
+    }
+    
+    if (!formData.description.trim()) {
+      alert('Vui lòng nhập mô tả chi tiết cho ticket');
+      return;
+    }
+    
     setIsCreating(true);
     try {
       await onSubmit(formData);
@@ -162,11 +197,11 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
   };
 
   const getTypeIcon = (type: string) => {
-    return ticketTypes.find(t => t.value === type)?.icon || <Settings className="h-4 w-4" />;
+    return allTicketTypes.find(t => t.value === type)?.icon || <Settings className="h-4 w-4" />;
   };
 
   const getTypeColor = (type: string) => {
-    return ticketTypes.find(t => t.value === type)?.color || "bg-gray-500";
+    return allTicketTypes.find(t => t.value === type)?.color || "bg-gray-500";
   };
 
   return (
@@ -203,7 +238,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                 <div>
                   <label className="text-sm font-medium mb-3 block">What type of ticket is this?</label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {ticketTypes.map((type) => (
+                    {basicTicketTypes.map((type) => (
                       <Card
                         key={type.value}
                         className={`cursor-pointer transition-all ${
@@ -223,6 +258,60 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                       </Card>
                     ))}
                   </div>
+
+                  {/* Show More Button */}
+                  {!showAllTypes && (
+                    <div className="mt-4 text-center">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAllTypes(true)}
+                        className="gap-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Hiển thị thêm
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Educational Types (shown when expanded) */}
+                  {showAllTypes && (
+                    <div className="mt-6">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-medium text-muted-foreground">Educational Types</h4>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowAllTypes(false)}
+                          className="text-xs"
+                        >
+                          <X className="h-3 w-3 mr-1" />
+                          Thu gọn
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {educationalTicketTypes.map((type) => (
+                          <Card
+                            key={type.value}
+                            className={`cursor-pointer transition-all ${
+                              formData.type === type.value 
+                                ? 'ring-2 ring-primary border-primary' 
+                                : 'hover:shadow-md'
+                            }`}
+                            onClick={() => setFormData(prev => ({ ...prev, type: type.value as any }))}
+                          >
+                            <CardContent className="p-4 text-center">
+                              <div className={`w-8 h-8 mx-auto mb-2 rounded-lg ${type.color} text-white flex items-center justify-center`}>
+                                {type.icon}
+                              </div>
+                              <div className="text-sm font-medium">{type.label}</div>
+                              <div className="text-xs text-muted-foreground">{type.description}</div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Title with AI */}
@@ -294,20 +383,42 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                     </CardHeader>
                     <CardContent className="pt-0">
                       <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">Suggested Priority:</span>
-                          <Badge className={priorities.find(p => p.value === aiSuggestions.suggestedPriority)?.color}>
-                            {aiSuggestions.suggestedPriority}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{aiSuggestions.reasoning}</p>
+                        {aiSuggestions.suggested_type && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">Suggested Type:</span>
+                            <Badge variant="outline">
+                              {aiSuggestions.suggested_type}
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2"
+                              onClick={() => setFormData(prev => ({ ...prev, type: aiSuggestions.suggested_type }))}
+                            >
+                              Apply
+                            </Button>
+                          </div>
+                        )}
+                        {aiSuggestions.suggested_priority && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">Suggested Priority:</span>
+                            <Badge className={priorities.find(p => p.value === aiSuggestions.suggested_priority)?.color}>
+                              {aiSuggestions.suggested_priority}
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2"
+                              onClick={() => setFormData(prev => ({ ...prev, priority: aiSuggestions.suggested_priority }))}
+                            >
+                              Apply
+                            </Button>
+                          </div>
+                        )}
+                        {aiSuggestions.analysis && (
+                          <p className="text-sm text-muted-foreground">{aiSuggestions.analysis}</p>
+                        )}
                         <div className="flex gap-2">
-                          <Button 
-                            size="sm" 
-                            onClick={() => setFormData(prev => ({ ...prev, priority: aiSuggestions.suggestedPriority }))}
-                          >
-                            Apply Suggestion
-                          </Button>
                           <Button size="sm" variant="outline" onClick={() => setShowSuggestions(false)}>
                             Dismiss
                           </Button>
@@ -346,10 +457,6 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                         <Badge variant="secondary">Questions</Badge>
                         <Badge variant="secondary">Setup Help</Badge>
                       </div>
-                      <Button className="w-full">
-                        <Wand2 className="h-4 w-4 mr-2" />
-                        Browse Templates
-                      </Button>
                     </CardContent>
                   </Card>
 
@@ -641,7 +748,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                 )}
                 <Button 
                   type="submit" 
-                  disabled={!formData.title || !formData.description || isCreating}
+                  disabled={!formData.title.trim() || !formData.description.trim() || isCreating}
                   className="bg-gradient-primary hover:shadow-glow"
                 >
                   {isCreating ? (

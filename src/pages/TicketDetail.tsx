@@ -8,10 +8,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
-import { ArrowLeft, Send, User, Clock } from "lucide-react";
+import { ArrowLeft, Send, User, Clock, Star } from "lucide-react";
 import { AuthService, UserProfile } from "@/services/authService";
 import { TicketOperationsService, Ticket } from "@/services/ticketOperationsService";
 import { CommentService, Comment } from "@/services/commentService";
+import { ReviewButton, ReviewSummary } from "@/components/ReviewButton";
+import { ReviewDisplay } from "@/components/ReviewDisplay";
+import { ReviewService } from "@/services/reviewService";
+import { usePermissions } from "@/hooks/usePermissions";
 
 const TicketDetail = () => {
   const { id } = useParams();
@@ -23,6 +27,7 @@ const TicketDetail = () => {
   const [newComment, setNewComment] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const { canReviewTicket, canViewTicketReviews } = usePermissions();
 
   useEffect(() => {
     const checkAuthAndLoadData = async () => {
@@ -106,6 +111,26 @@ const TicketDetail = () => {
 
     // Update the ticket status locally for better UX
     setTicket(prev => prev ? { ...prev, status } : null);
+  };
+
+  const handleAISelfReview = async () => {
+    if (!id || !user) return;
+    try {
+      const ai = {
+        overall: 4,
+        quality: 4,
+        completeness: 3,
+        clarity: 4,
+        helpfulness: 3,
+        feedback: "AI đánh giá sơ bộ dựa trên nội dung ticket.",
+        suggestions: "Bổ sung log lỗi và các bước tái hiện chi tiết hơn.",
+        metadata: { source: 'ai', model: 'rule-based-v1' }
+      };
+      await ReviewService.createAISelfReview(id, user.id, ai);
+      toast.success("Đã tạo đánh giá AI cho ticket của bạn");
+    } catch (e: any) {
+      toast.error(e.message || "Không thể tạo đánh giá AI");
+    }
   };
 
   if (isAuthLoading) {
@@ -211,6 +236,21 @@ const TicketDetail = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Reviews Section */}
+            {id && canViewTicketReviews(id) && (
+              <Card className="shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Star className="h-5 w-5 text-primary" />
+                    Đánh giá từ giáo viên
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ReviewDisplay ticketId={id} />
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           <div className="space-y-6">
@@ -264,6 +304,33 @@ const TicketDetail = () => {
                           {ticket.ai_suggested_priority}
                         </Badge>
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Review Section */}
+                {id && (
+                  <div className="pt-4 border-t">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium">Đánh giá</p>
+                        <ReviewSummary ticketId={id} />
+                      </div>
+                      
+                      {canReviewTicket(id) && (
+                        <ReviewButton 
+                          ticketId={id} 
+                          variant="outline" 
+                          size="sm" 
+                          className="w-full"
+                        />
+                      )}
+
+                      {user && user.id === ticket?.creator_id && (
+                        <Button variant="secondary" size="sm" className="w-full" onClick={handleAISelfReview}>
+                          Tạo đánh giá AI cho ticket của tôi
+                        </Button>
+                      )}
                     </div>
                   </div>
                 )}

@@ -16,6 +16,7 @@ import NotFound from "./pages/NotFound";
 import Notifications from "./pages/Notifications";
 import Profile from "./pages/Profile";
 import TicketDetail from "./pages/TicketDetail";
+import TestEducationalTypes from "./pages/TestEducationalTypes";
 import UserHome from "./pages/UserHome";
 
 const queryClient = new QueryClient();
@@ -48,6 +49,7 @@ const App = () => (
             <Route path="/tickets/new" element={<NewTicket />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/admin/documents" element={<AdminDocuments />} />
+            <Route path="/test-educational-types" element={<TestEducationalTypes />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <AIAssistantWidget />

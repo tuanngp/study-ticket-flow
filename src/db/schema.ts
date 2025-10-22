@@ -20,9 +20,17 @@ export const userRoleEnum = pgEnum("user_role", [
 ]);
 export const ticketTypeEnum = pgEnum("ticket_type", [
   "bug",
-  "feature",
+  "feature", 
   "question",
   "task",
+  "grading",
+  "report",
+  "config",
+  "assignment",
+  "exam",
+  "submission",
+  "technical",
+  "academic",
 ]);
 export const ticketPriorityEnum = pgEnum("ticket_priority", [
   "low",
@@ -61,6 +69,22 @@ export const notificationPriorityEnum = pgEnum("notification_priority", [
   "medium", 
   "high",
   "urgent"
+]);
+
+// Review System Enums
+export const reviewTypeEnum = pgEnum("review_type", [
+  "quality",
+  "completeness", 
+  "clarity",
+  "helpfulness",
+  "overall"
+]);
+
+export const reviewStatusEnum = pgEnum("review_status", [
+  "pending",
+  "in_progress",
+  "completed",
+  "cancelled"
 ]);
 
 // Tables
@@ -254,6 +278,56 @@ export const notificationPreferences = pgTable("notification_preferences", {
   uniqueUserType: index("idx_notification_preferences_unique").on(table.userId, table.notificationType),
 }));
 
+// Review System Tables
+export const ticketReviews = pgTable("ticket_reviews", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ticketId: uuid("ticket_id")
+    .notNull()
+    .references(() => tickets.id, { onDelete: "cascade" }),
+  reviewerId: uuid("reviewer_id")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  status: reviewStatusEnum("status").notNull().default("pending"),
+  overallRating: integer("overall_rating").notNull(), // 1-5 scale
+  qualityRating: integer("quality_rating"), // 1-5 scale
+  completenessRating: integer("completeness_rating"), // 1-5 scale
+  clarityRating: integer("clarity_rating"), // 1-5 scale
+  helpfulnessRating: integer("helpfulness_rating"), // 1-5 scale
+  feedback: text("feedback"), // Written feedback
+  suggestions: text("suggestions"), // Improvement suggestions
+  isAnonymous: boolean("is_anonymous").notNull().default(false),
+  metadata: jsonb("metadata").default({}), // Additional review data
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+}, (table) => ({
+  ticketIdIdx: index("idx_ticket_reviews_ticket_id").on(table.ticketId),
+  reviewerIdIdx: index("idx_ticket_reviews_reviewer_id").on(table.reviewerId),
+  statusIdx: index("idx_ticket_reviews_status").on(table.status),
+  ticketReviewerIdx: index("idx_ticket_reviews_ticket_reviewer").on(table.ticketId, table.reviewerId),
+}));
+
+export const reviewCriteria = pgTable("review_criteria", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  description: text("description"),
+  type: reviewTypeEnum("type").notNull(),
+  weight: integer("weight").notNull().default(1), // Weight for calculating overall score
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+}, (table) => ({
+  typeIdx: index("idx_review_criteria_type").on(table.type),
+  activeIdx: index("idx_review_criteria_active").on(table.isActive),
+}));
+
 // Relations
 export const profilesRelations = relations(profiles, ({ many }) => ({
   createdTickets: many(tickets, { relationName: "creator" }),
@@ -263,6 +337,7 @@ export const profilesRelations = relations(profiles, ({ many }) => ({
   rateLimits: many(rateLimits),
   notifications: many(notifications),
   notificationPreferences: many(notificationPreferences),
+  reviews: many(ticketReviews, { relationName: "reviewer" }),
 }));
 
 export const ticketsRelations = relations(tickets, ({ one, many }) => ({
@@ -283,6 +358,7 @@ export const ticketsRelations = relations(tickets, ({ one, many }) => ({
   }),
   comments: many(ticketComments),
   notifications: many(notifications),
+  reviews: many(ticketReviews),
 }));
 
 export const ticketCommentsRelations = relations(ticketComments, ({ one }) => ({
@@ -335,5 +411,18 @@ export const notificationPreferencesRelations = relations(notificationPreference
   user: one(profiles, {
     fields: [notificationPreferences.userId],
     references: [profiles.id],
+  }),
+}));
+
+// Review Relations
+export const ticketReviewsRelations = relations(ticketReviews, ({ one }) => ({
+  ticket: one(tickets, {
+    fields: [ticketReviews.ticketId],
+    references: [tickets.id],
+  }),
+  reviewer: one(profiles, {
+    fields: [ticketReviews.reviewerId],
+    references: [profiles.id],
+    relationName: "reviewer",
   }),
 }));

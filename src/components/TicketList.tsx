@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { formatDistanceToNow } from "date-fns";
-import { Clock, User, Brain, BookOpen, Users, AlertCircle, CheckCircle, Filter, Search, X } from "lucide-react";
+import { Clock, User, Brain, BookOpen, Users, AlertCircle, CheckCircle, Filter, Search, X, Star } from "lucide-react";
 import { TicketOperationsService, Ticket } from "@/services/ticketOperationsService";
+import { ReviewSummary } from "./ReviewButton";
 
 interface TicketListProps {
   userId: string;
@@ -53,6 +54,11 @@ export const TicketList = ({ userId }: TicketListProps) => {
   // Filter tickets based on current filters
   useEffect(() => {
     let filtered = [...tickets];
+
+    // Only show tickets with descriptions
+    filtered = filtered.filter(ticket => 
+      ticket.description && ticket.description.trim().length > 0
+    );
 
     // Search filter
     if (filters.search) {
@@ -335,6 +341,8 @@ export const TicketList = ({ userId }: TicketListProps) => {
                       <User className="h-3 w-3" />
                       {ticket.creator?.full_name || ticket.creator?.email}
                     </div>
+                    <span>•</span>
+                    <ReviewSummary ticketId={ticket.id} />
                   </div>
                 </div>
                 
