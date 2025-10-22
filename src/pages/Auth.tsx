@@ -178,12 +178,7 @@ const Auth = () => {
                           <span>Instructor</span>
                         </div>
                       </SelectItem>
-                      <SelectItem value="admin">
-                        <div className="flex items-center gap-2">
-                          <Shield className="h-4 w-4" />
-                          <span>Admin</span>
-                        </div>
-                      </SelectItem>
+                      
                     </SelectContent>
                   </Select>
                   <div className="text-xs text-muted-foreground">
