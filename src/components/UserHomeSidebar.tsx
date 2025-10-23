@@ -78,7 +78,11 @@ export const UserHomeSidebar = ({ user, profile, onClose, isMobile = false }: Us
   };
 
   const handleNavigation = (path: string) => {
-    navigate(path);
+    // Smooth navigation without sidebar flicker
+    setTimeout(() => {
+      navigate(path);
+    }, 50);
+    
     if (isMobile && onClose) {
       onClose();
     }
@@ -86,9 +90,9 @@ export const UserHomeSidebar = ({ user, profile, onClose, isMobile = false }: Us
 
   const menuItems = [
     {
-      title: "Dashboard",
+      title: "Analytics",
       icon: BarChart3,
-      onClick: () => handleNavigation("/dashboard"),
+      onClick: () => handleNavigation("/analytics"),
     },
     {
       title: "My Tickets",
@@ -108,7 +112,10 @@ export const UserHomeSidebar = ({ user, profile, onClose, isMobile = false }: Us
   ];
 
   return (
-    <Sidebar variant="inset" className={`border-r bg-gradient-to-b from-card to-card/50 ${isMobile ? 'w-full' : ''}`}>
+    <Sidebar 
+      variant="inset" 
+      className={`border-r bg-gradient-to-b from-card to-card/50 transition-all duration-300 ease-in-out ${isMobile ? 'w-full' : ''}`}
+    >
       <SidebarHeader className="p-6 border-b border-border/50">
         <div className="flex flex-col items-center gap-4">
           {/* Mobile Close Button */}
@@ -127,11 +134,20 @@ export const UserHomeSidebar = ({ user, profile, onClose, isMobile = false }: Us
           
           {/* Avatar with enhanced styling */}
           <div className="relative">
-            <SmartAvatar 
-              name={profile?.full_name || user?.email || 'User'} 
-              avatarUrl={profile?.avatar_url}
-              size="xl"
-            />
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleNavigation("/profile");
+              }}
+              className="hover:opacity-80 transition-all duration-200 ease-in-out hover:scale-105"
+            >
+              <SmartAvatar 
+                name={profile?.full_name || user?.email || 'User'} 
+                avatarUrl={profile?.avatar_url}
+                size="xl"
+              />
+            </button>
             <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 border-2 border-card rounded-full flex items-center justify-center">
               <div className="w-2 h-2 bg-white rounded-full"></div>
             </div>
@@ -174,7 +190,7 @@ export const UserHomeSidebar = ({ user, profile, onClose, isMobile = false }: Us
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     onClick={item.onClick}
-                    className="w-full justify-start gap-3 h-11 rounded-lg hover:bg-accent/50 transition-colors group"
+                    className="w-full justify-start gap-3 h-11 rounded-lg hover:bg-accent/50 transition-all duration-200 ease-in-out group"
                   >
                     <item.icon className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
                     <span className="font-medium">{item.title}</span>
@@ -196,7 +212,7 @@ export const UserHomeSidebar = ({ user, profile, onClose, isMobile = false }: Us
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={() => handleNavigation("/settings")}
-                  className="w-full justify-start gap-3 h-11 rounded-lg hover:bg-accent/50 transition-colors group"
+                  className="w-full justify-start gap-3 h-11 rounded-lg hover:bg-accent/50 transition-all duration-200 ease-in-out group"
                 >
                   <Settings className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
                   <span className="font-medium">Settings</span>
@@ -212,7 +228,7 @@ export const UserHomeSidebar = ({ user, profile, onClose, isMobile = false }: Us
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={handleSignOut}
-              className="w-full justify-start gap-3 h-11 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors group"
+              className="w-full justify-start gap-3 h-11 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10 transition-all duration-200 ease-in-out group"
             >
               <LogOut className="h-4 w-4 group-hover:scale-110 transition-transform" />
               <span className="font-medium">Sign Out</span>

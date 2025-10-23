@@ -8,6 +8,7 @@ import { ProfileLayout } from "./components/ProfileLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import AdminDocuments from "./pages/AdminDocuments";
+import Analytics from "./pages/Analytics";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Index from "./pages/Index";
@@ -37,6 +38,11 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/analytics" element={
+              <ProtectedRoute>
+                <Analytics />
+              </ProtectedRoute>
+            } />
             <Route path="/userhome" element={<UserHome />} />
             <Route path="/profile" element={
               <ProtectedRoute>

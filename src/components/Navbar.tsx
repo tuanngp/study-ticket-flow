@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { AuthService } from "@/services/authService";
-import { Home, LayoutDashboard, LogOut, Ticket } from "lucide-react";
+import { LogOut, Ticket } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { NotificationBell } from "./NotificationBell";
@@ -41,41 +41,16 @@ export const Navbar = ({ user, profile }: NavbarProps) => {
               TicketFlow AI
             </button>
             
-            <div className="hidden md:flex items-center gap-4">
-              <Button
-                variant="ghost"
-                onClick={() => navigate("/")}
-                className="gap-2"
-              >
-                <Home className="h-4 w-4" />
-                Home
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => navigate("/dashboard")}
-                className="gap-2"
-              >
-                <LayoutDashboard className="h-4 w-4" />
-                Dashboard
-              </Button>
-              {user && (
-                <Button
-                  variant="ghost"
-                  onClick={() => navigate("/profile")}
-                  className="gap-2"
-                >
-                  <LayoutDashboard className="h-4 w-4" />
-                  User Home
-                </Button>
-              )}
-            </div>
           </div>
 
           <div className="flex items-center gap-4">
             {user ? (
               <>
                 <NotificationBell userId={user?.id} />
-                <div className="flex items-center gap-3">
+                <button
+                  onClick={() => navigate("/profile")}
+                  className="flex items-center gap-3 hover:bg-accent/50 rounded-lg p-2 transition-colors"
+                >
                   <SmartAvatar 
                     name={profile?.full_name || user.email || 'User'} 
                     avatarUrl={profile?.avatar_url}
@@ -89,7 +64,7 @@ export const Navbar = ({ user, profile }: NavbarProps) => {
                       {profile?.role || "student"}
                     </p>
                   </div>
-                </div>
+                </button>
                 <Button
                   variant="outline"
                   onClick={handleSignOut}
