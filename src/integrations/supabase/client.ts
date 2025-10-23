@@ -13,5 +13,16 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
-  }
+  },
+  realtime: {
+    enabled: true,
+    params: {
+      eventsPerSecond: 10, // Limit events to prevent overload
+    },
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'study-ticket-flow',
+    },
+  },
 });

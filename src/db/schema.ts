@@ -87,6 +87,24 @@ export const reviewStatusEnum = pgEnum("review_status", [
   "cancelled"
 ]);
 
+// Calendar Event Enums
+export const eventTypeEnum = pgEnum("event_type", [
+  "personal",
+  "academic",
+  "assignment",
+  "exam",
+  "meeting",
+  "deadline",
+  "reminder"
+]);
+
+export const eventStatusEnum = pgEnum("event_status", [
+  "scheduled",
+  "in_progress",
+  "completed",
+  "cancelled"
+]);
+
 // Tables
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey(),
@@ -328,6 +346,39 @@ export const reviewCriteria = pgTable("review_criteria", {
   activeIdx: index("idx_review_criteria_active").on(table.isActive),
 }));
 
+// Calendar Events Table
+export const calendarEvents = pgTable("calendar_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  description: text("description"),
+  type: eventTypeEnum("type").notNull().default("personal"),
+  status: eventStatusEnum("status").notNull().default("scheduled"),
+  startDate: timestamp("start_date", { withTimezone: true }).notNull(),
+  endDate: timestamp("end_date", { withTimezone: true }),
+  isAllDay: boolean("is_all_day").notNull().default(false),
+  location: text("location"),
+  color: text("color").default("#3b82f6"), // Default blue color
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  ticketId: uuid("ticket_id").references(() => tickets.id, { onDelete: "cascade" }),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+}, (table) => ({
+  userIdIdx: index("idx_calendar_events_user_id").on(table.userId),
+  startDateIdx: index("idx_calendar_events_start_date").on(table.startDate),
+  endDateIdx: index("idx_calendar_events_end_date").on(table.endDate),
+  typeIdx: index("idx_calendar_events_type").on(table.type),
+  statusIdx: index("idx_calendar_events_status").on(table.status),
+  ticketIdIdx: index("idx_calendar_events_ticket_id").on(table.ticketId),
+  userDateIdx: index("idx_calendar_events_user_date").on(table.userId, table.startDate),
+}));
+
 // Relations
 export const profilesRelations = relations(profiles, ({ many }) => ({
   createdTickets: many(tickets, { relationName: "creator" }),
@@ -338,6 +389,7 @@ export const profilesRelations = relations(profiles, ({ many }) => ({
   notifications: many(notifications),
   notificationPreferences: many(notificationPreferences),
   reviews: many(ticketReviews, { relationName: "reviewer" }),
+  calendarEvents: many(calendarEvents),
 }));
 
 export const ticketsRelations = relations(tickets, ({ one, many }) => ({
@@ -359,6 +411,7 @@ export const ticketsRelations = relations(tickets, ({ one, many }) => ({
   comments: many(ticketComments),
   notifications: many(notifications),
   reviews: many(ticketReviews),
+  calendarEvents: many(calendarEvents),
 }));
 
 export const ticketCommentsRelations = relations(ticketComments, ({ one }) => ({
@@ -424,5 +477,17 @@ export const ticketReviewsRelations = relations(ticketReviews, ({ one }) => ({
     fields: [ticketReviews.reviewerId],
     references: [profiles.id],
     relationName: "reviewer",
+  }),
+}));
+
+// Calendar Event Relations
+export const calendarEventsRelations = relations(calendarEvents, ({ one }) => ({
+  user: one(profiles, {
+    fields: [calendarEvents.userId],
+    references: [profiles.id],
+  }),
+  ticket: one(tickets, {
+    fields: [calendarEvents.ticketId],
+    references: [tickets.id],
   }),
 }));

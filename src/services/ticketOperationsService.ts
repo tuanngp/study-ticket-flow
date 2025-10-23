@@ -222,6 +222,40 @@ export class TicketOperationsService {
   }
 
   /**
+   * Get tickets created on a specific date
+   */
+  static async getTicketsByDate(date: Date): Promise<Ticket[]> {
+    try {
+      const startDate = new Date(date);
+      startDate.setHours(0, 0, 0, 0);
+      
+      const endDate = new Date(date);
+      endDate.setHours(23, 59, 59, 999);
+
+      const { data, error } = await supabase
+        .from("tickets")
+        .select(`
+          *,
+          creator:profiles!tickets_creator_id_profiles_id_fk(full_name, email, avatar_url),
+          assignee:profiles!tickets_assignee_id_profiles_id_fk(full_name, email, avatar_url)
+        `)
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString())
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching tickets by date:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error: any) {
+      console.error('Error in getTicketsByDate:', error);
+      return [];
+    }
+  }
+
+  /**
    * Subscribe to ticket changes
    */
   static subscribeToTickets(callback: () => void): () => void {
@@ -241,5 +275,43 @@ export class TicketOperationsService {
     return () => {
       supabase.removeChannel(channel);
     };
+  }
+
+  /**
+   * Get tickets for a specific month
+   */
+  static async getTicketsForMonth(
+    userId: string,
+    year: number,
+    month: number
+  ): Promise<Ticket[]> {
+    try {
+      // Fetching tickets for month
+
+      const startOfMonth = new Date(year, month - 1, 1);
+      const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+      
+      // Date range for tickets
+
+      const { data, error } = await supabase
+        .from('tickets')
+        .select('*')
+        .or(`creator_id.eq.${userId},assignee_id.eq.${userId}`)
+        .gte('created_at', startOfMonth.toISOString())
+        .lte('created_at', endOfMonth.toISOString())
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching tickets for month:', error);
+        throw new Error(error.message || 'Failed to fetch tickets for month');
+      }
+
+      // Month tickets fetched successfully
+
+      return data || [];
+    } catch (error: any) {
+      console.error('Error in getTicketsForMonth:', error);
+      throw new Error(error.message || 'Failed to fetch tickets for month');
+    }
   }
 }

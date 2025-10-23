@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
-import { ArrowLeft, Send, User, Clock, Star } from "lucide-react";
+import { ArrowLeft, Send, User, Clock, Star, Calendar } from "lucide-react";
 import { AuthService, UserProfile } from "@/services/authService";
 import { TicketOperationsService, Ticket } from "@/services/ticketOperationsService";
 import { CommentService, Comment } from "@/services/commentService";
@@ -16,6 +16,7 @@ import { ReviewButton, ReviewSummary } from "@/components/ReviewButton";
 import { ReviewDisplay } from "@/components/ReviewDisplay";
 import { ReviewService } from "@/services/reviewService";
 import { usePermissions } from "@/hooks/usePermissions";
+import { TicketCalendarIntegration } from "@/components/TicketCalendarIntegration";
 
 const TicketDetail = () => {
   const { id } = useParams();
@@ -27,6 +28,7 @@ const TicketDetail = () => {
   const [newComment, setNewComment] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const { canReviewTicket, canViewTicketReviews } = usePermissions();
 
   useEffect(() => {
@@ -294,6 +296,17 @@ const TicketDetail = () => {
                   </p>
                 </div>
 
+                <div className="pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsCalendarOpen(true)}
+                    className="w-full"
+                  >
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Add to Calendar
+                  </Button>
+                </div>
+
                 {ticket?.ai_suggested_priority && (
                   <div className="pt-4 border-t">
                     <p className="text-sm font-medium mb-2">AI Suggestions</p>
@@ -339,6 +352,14 @@ const TicketDetail = () => {
           </div>
         </div>
       </main>
+
+      {/* Calendar Integration */}
+      {id && isCalendarOpen && (
+        <TicketCalendarIntegration
+          ticketId={id}
+          onClose={() => setIsCalendarOpen(false)}
+        />
+      )}
     </div>
   );
 };

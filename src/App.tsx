@@ -10,6 +10,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import AdminDocuments from "./pages/AdminDocuments";
 import Analytics from "./pages/Analytics";
 import Auth from "./pages/Auth";
+import CalendarPage from "./pages/Calendar";
 import Dashboard from "./pages/Dashboard";
 import Index from "./pages/Index";
 import NewTicket from "./pages/NewTicket";
@@ -44,6 +45,11 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/userhome" element={<UserHome />} />
+            <Route path="/calendar" element={
+              <ProtectedRoute>
+                <CalendarPage />
+              </ProtectedRoute>
+            } />
             <Route path="/profile" element={
               <ProtectedRoute>
                 <ProfileLayout>
