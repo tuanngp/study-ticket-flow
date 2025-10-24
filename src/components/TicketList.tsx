@@ -5,10 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { formatDistanceToNow } from "date-fns";
-import { Clock, User, Brain, BookOpen, Users, AlertCircle, CheckCircle, Filter, Search, X, Star } from "lucide-react";
-import { TicketOperationsService, Ticket } from "@/services/ticketOperationsService";
+import { Clock, User, Brain, BookOpen, Users, AlertCircle, CheckCircle, Filter, Search, X, Star, Edit, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { TicketOperationsService, Ticket, PaginatedTickets } from "@/services/ticketOperationsService";
 import { ReviewSummary } from "./ReviewButton";
+import { Pagination } from "./Pagination";
 
 interface TicketListProps {
   userId: string;
@@ -35,12 +38,115 @@ export const TicketList = ({ userId }: TicketListProps) => {
     search: ''
   });
   const [showFilters, setShowFilters] = useState(false);
+  const [deletingTicketId, setDeletingTicketId] = useState<string | null>(null);
+  
+  // Pagination state
+  const [pagination, setPagination] = useState<PaginatedTickets>({
+    tickets: [],
+    totalCount: 0,
+    totalPages: 0,
+    currentPage: 1,
+    hasNextPage: false,
+    hasPreviousPage: false
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const handleDeleteTicket = async (ticketId: string) => {
+    setDeletingTicketId(ticketId);
+    try {
+      const { success, error } = await TicketOperationsService.deleteTicket(ticketId, userId);
+
+      if (!success) {
+        toast.error(error || "Failed to delete ticket");
+        return;
+      }
+
+      toast.success("Ticket deleted successfully");
+      // Refresh the ticket list with current pagination
+      const queryOptions: any = {
+        page: currentPage,
+        limit: pageSize
+      };
+
+      // Only add filters that are not 'all'
+      if (filters.status && filters.status !== 'all') {
+        queryOptions.status = filters.status;
+      }
+      if (filters.priority && filters.priority !== 'all') {
+        queryOptions.priority = filters.priority;
+      }
+      if (filters.type && filters.type !== 'all') {
+        queryOptions.type = filters.type;
+      }
+      if (filters.courseCode && filters.courseCode !== 'all') {
+        queryOptions.courseCode = filters.courseCode;
+      }
+
+      const paginatedData = await TicketOperationsService.getTicketsPaginated(queryOptions);
+      setPagination(paginatedData);
+      setTickets(paginatedData.tickets);
+      setFilteredTickets(paginatedData.tickets);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete ticket");
+    } finally {
+      setDeletingTicketId(null);
+    }
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(1); // Reset to first page when changing page size
+  };
+
+  const canEditTicket = (ticket: Ticket) => {
+    return ticket.creator_id === userId || ticket.assignee_id === userId;
+  };
+
+  const canDeleteTicket = (ticket: Ticket) => {
+    return ticket.creator_id === userId && 
+           ticket.status !== 'resolved' && 
+           ticket.status !== 'closed' && 
+           ticket.status !== 'deleted';
+  };
 
   useEffect(() => {
     const fetchTickets = async () => {
-      const ticketList = await TicketOperationsService.getTickets({ limit: 50 });
-      setTickets(ticketList);
-      setIsLoading(false);
+      setIsLoading(true);
+      try {
+        // Build query options from filters
+        const queryOptions: any = {
+          page: currentPage,
+          limit: pageSize
+        };
+
+        // Only add filters that are not 'all'
+        if (filters.status && filters.status !== 'all') {
+          queryOptions.status = filters.status;
+        }
+        if (filters.priority && filters.priority !== 'all') {
+          queryOptions.priority = filters.priority;
+        }
+        if (filters.type && filters.type !== 'all') {
+          queryOptions.type = filters.type;
+        }
+        if (filters.courseCode && filters.courseCode !== 'all') {
+          queryOptions.courseCode = filters.courseCode;
+        }
+
+        const paginatedData = await TicketOperationsService.getTicketsPaginated(queryOptions);
+        setPagination(paginatedData);
+        setTickets(paginatedData.tickets);
+        setFilteredTickets(paginatedData.tickets);
+      } catch (error) {
+        console.error('Error fetching tickets:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     fetchTickets();
@@ -49,9 +155,9 @@ export const TicketList = ({ userId }: TicketListProps) => {
     const unsubscribe = TicketOperationsService.subscribeToTickets(fetchTickets);
 
     return unsubscribe;
-  }, [userId]);
+  }, [userId, currentPage, pageSize, filters]);
 
-  // Filter tickets based on current filters
+  // Apply search filter (client-side only for search)
   useEffect(() => {
     let filtered = [...tickets];
 
@@ -60,7 +166,7 @@ export const TicketList = ({ userId }: TicketListProps) => {
       ticket.description && ticket.description.trim().length > 0
     );
 
-    // Search filter
+    // Search filter (client-side only)
     if (filters.search) {
       filtered = filtered.filter(ticket => 
         ticket.title.toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -68,30 +174,8 @@ export const TicketList = ({ userId }: TicketListProps) => {
       );
     }
 
-    // Status filter
-    if (filters.status !== 'all') {
-      filtered = filtered.filter(ticket => ticket.status === filters.status);
-    }
-
-    // Priority filter
-    if (filters.priority !== 'all') {
-      filtered = filtered.filter(ticket => ticket.priority === filters.priority);
-    }
-
-    // Type filter
-    if (filters.type !== 'all') {
-      filtered = filtered.filter(ticket => ticket.type === filters.type);
-    }
-
-    // Course code filter
-    if (filters.courseCode !== 'all') {
-      filtered = filtered.filter(ticket => 
-        (ticket as any).courseCode === filters.courseCode
-      );
-    }
-
     setFilteredTickets(filtered);
-  }, [tickets, filters]);
+  }, [tickets, filters.search]);
 
   const handleFilterChange = (key: keyof FilterOptions, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -291,12 +375,14 @@ export const TicketList = ({ userId }: TicketListProps) => {
         filteredTickets.map((ticket) => (
           <Card
             key={ticket.id}
-            onClick={() => navigate(`/tickets/${ticket.id}`)}
-            className="hover:shadow-md transition-all cursor-pointer border-l-4 border-l-primary/20 hover:border-l-primary"
+            className="hover:shadow-md transition-all border-l-4 border-l-primary/20 hover:border-l-primary"
           >
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
+                <div 
+                  className="flex-1 min-w-0 cursor-pointer"
+                  onClick={() => navigate(`/tickets/${ticket.id}`)}
+                >
                   <CardTitle className="text-lg mb-2 line-clamp-1">
                     {ticket.title}
                   </CardTitle>
@@ -347,6 +433,56 @@ export const TicketList = ({ userId }: TicketListProps) => {
                 </div>
                 
                 <div className="flex flex-col gap-2 items-end">
+                  <div className="flex gap-2">
+                    {canEditTicket(ticket) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/tickets/${ticket.id}?edit=true`);
+                        }}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {canDeleteTicket(ticket) && (
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Delete Ticket</DialogTitle>
+                            <DialogDescription>
+                              Are you sure you want to delete "{ticket.title}"? This action cannot be undone.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="flex justify-end gap-2 mt-4">
+                            <Button variant="outline">
+                              Cancel
+                            </Button>
+                            <Button 
+                              variant="destructive" 
+                              onClick={() => handleDeleteTicket(ticket.id)}
+                              disabled={deletingTicketId === ticket.id}
+                            >
+                              {deletingTicketId === ticket.id ? "Deleting..." : "Delete"}
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    )}
+                  </div>
+                  
                   <Badge className={getPriorityColor(ticket.priority)}>
                     {ticket.priority}
                   </Badge>
@@ -361,6 +497,22 @@ export const TicketList = ({ userId }: TicketListProps) => {
             </CardHeader>
           </Card>
         ))
+      )}
+
+      {/* Pagination */}
+      {!isLoading && pagination.totalCount > 0 && (
+        <div className="mt-6">
+          <Pagination
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            totalCount={pagination.totalCount}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+            hasNextPage={pagination.hasNextPage}
+            hasPreviousPage={pagination.hasPreviousPage}
+          />
+        </div>
       )}
     </div>
   );
