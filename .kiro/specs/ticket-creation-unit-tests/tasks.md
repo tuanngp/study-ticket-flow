@@ -73,16 +73,16 @@
     - Verify suggestion dismissal functionality
     - _Requirements: 2.5_
 
-- [ ] 5. Implement AI triage function tests
+- [x] 5. Implement AI triage function tests
 
-  - [ ] 5.1 Test validateInput() function
+  - [x] 5.1 Test validateInput() function
 
     - Write positive tests for valid triage requests (TC33)
     - Write negative tests for missing/invalid fields (TC34-TC37)
     - Write edge tests for whitespace and length limits (TC38, TC39)
     - _Requirements: 3.1, 4.1, 4.2, 4.3_
 
-  - [ ] 5.2 Test callGeminiAI() function
+  - [x] 5.2 Test callGeminiAI() function
 
     - Write positive tests for successful API calls (TC40)
     - Write negative tests for authentication failures (TC41, TC42)
@@ -90,15 +90,17 @@
     - Write error tests for rate limits and service outages (TC45, TC46)
     - _Requirements: 3.2, 4.1, 4.2, 4.3, 4.4_
 
-  - [ ] 5.3 Test createPrompt() function
+  - [x] 5.3 Test createPrompt() function
 
     - Write positive tests for prompt generation (TC49, TC50)
     - Write edge tests for input limits and empty data (TC51, TC52)
     - Write error tests for invalid data structures (TC53)
     - _Requirements: 3.3, 4.1, 4.3, 4.4_
 
-  - [ ] 5.4 Test parseTypeAndPriority() function
+  - [x] 5.4 Test parseTypeAndPriority() function
+
     - Write positive tests for standard response parsing (TC54, TC55)
+
     - Write edge tests for fallback logic (TC56-TC59)
     - Write negative tests for invalid responses (TC60, TC61)
     - _Requirements: 3.4, 4.1, 4.2, 4.3_
