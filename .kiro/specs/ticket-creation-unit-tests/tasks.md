@@ -8,23 +8,24 @@
   - Create basic test directory structure (**tests**, fixtures, **mocks**)
   - _Requirements: 5.1, 5.4_
 
-- [ ] 2. Create test data fixtures and mock implementations
+- [x] 2. Create test data fixtures and mock implementations
 
-  - [ ] 2.1 Create test data fixtures for ticket scenarios
+  - [x] 2.1 Create test data fixtures for ticket scenarios
 
     - Write fixtures/ticketData.ts with valid, invalid, and edge case data
     - Create fixtures/aiResponses.ts with mock AI response scenarios
     - Add fixtures/userProfiles.ts for authentication test data
     - _Requirements: 5.4, 4.1, 4.2, 4.3, 4.4_
 
-  - [ ] 2.2 Implement Supabase service mocks
+  - [x] 2.2 Implement Supabase service mocks
 
     - Create **mocks**/supabase.ts with mock client implementation
     - Mock database operations (insert, select, update, delete)
     - Mock edge function calls for AI triage
     - _Requirements: 5.1_
 
-  - [ ] 2.3 Implement AI service mocks
+  - [x] 2.3 Implement AI service mocks
+
     - Create **mocks**/geminiAI.ts with mock AI API responses
     - Mock different response scenarios (success, timeout, rate limit, invalid)
     - Add mock validation for API keys and request formats
