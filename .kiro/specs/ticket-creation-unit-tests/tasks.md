@@ -31,9 +31,9 @@
     - Add mock validation for API keys and request formats
     - _Requirements: 5.2_
 
-- [ ] 3. Implement TicketService unit tests
+- [x] 3. Implement TicketService unit tests
 
-  - [ ] 3.1 Test TicketService.createTicket() method
+  - [x] 3.1 Test TicketService.createTicket() method
 
     - Write positive tests for valid ticket creation (TC01, TC02)
     - Write negative tests for validation failures (TC03-TC06)
@@ -41,7 +41,7 @@
     - Write error tests for service failures (TC09, TC10)
     - _Requirements: 1.1, 1.2, 4.1, 4.2, 4.3, 4.4_
 
-  - [ ] 3.2 Test TicketService.getAITriageSuggestions() method
+  - [x] 3.2 Test TicketService.getAITriageSuggestions() method
 
     - Write positive tests for successful AI integration (TC11, TC12)
     - Write negative tests for invalid input handling (TC13)
@@ -49,7 +49,8 @@
     - Write error tests for AI service failures (TC15, TC16)
     - _Requirements: 1.3, 4.1, 4.2, 4.3, 4.4_
 
-  - [ ] 3.3 Test TicketService.validateTicketData() method
+  - [x] 3.3 Test TicketService.validateTicketData() method
+
     - Write positive tests for valid data scenarios (TC17, TC18)
     - Write negative tests for all validation rules (TC19-TC23)
     - Write edge tests for special input cases (TC24, TC25)
