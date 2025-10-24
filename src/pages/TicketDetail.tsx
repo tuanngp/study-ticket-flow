@@ -5,10 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
-import { ArrowLeft, Send, User, Clock, Star, Calendar } from "lucide-react";
+import { ArrowLeft, Send, User, Clock, Star, Calendar, Edit, Trash2, Save, X } from "lucide-react";
 import { AuthService, UserProfile } from "@/services/authService";
 import { TicketOperationsService, Ticket } from "@/services/ticketOperationsService";
 import { CommentService, Comment } from "@/services/commentService";
@@ -29,6 +31,17 @@ const TicketDetail = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState({
+    title: "",
+    description: "",
+    type: "",
+    priority: "",
+    courseCode: "",
+    className: "",
+    projectGroup: ""
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
   const { canReviewTicket, canViewTicketReviews } = usePermissions();
 
   useEffect(() => {
@@ -46,6 +59,7 @@ const TicketDetail = () => {
 
         if (id) {
           await Promise.all([fetchTicket(), fetchComments()]);
+          
         }
       } catch (error) {
         console.error('Auth check failed:', error);
@@ -58,6 +72,16 @@ const TicketDetail = () => {
 
     checkAuthAndLoadData();
   }, [id, navigate]);
+
+  // Check for edit mode when ticket is loaded
+  useEffect(() => {
+    if (ticket) {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('edit') === 'true') {
+        handleEditTicket();
+      }
+    }
+  }, [ticket]);
 
   const fetchTicket = async () => {
     if (!id) return;
@@ -135,6 +159,88 @@ const TicketDetail = () => {
     }
   };
 
+  const handleEditTicket = () => {
+    if (!ticket) return;
+    
+    setEditData({
+      title: ticket.title,
+      description: ticket.description,
+      type: ticket.type,
+      priority: ticket.priority,
+      courseCode: (ticket as any).course_code || "",
+      className: (ticket as any).class_name || "",
+      projectGroup: (ticket as any).project_group || ""
+    });
+    setIsEditing(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!id || !user) return;
+
+    try {
+      const { success, error, ticket: updatedTicket } = await TicketOperationsService.updateTicket(
+        id,
+        editData,
+        user.id
+      );
+
+      if (!success) {
+        toast.error(error || "Failed to update ticket");
+        return;
+      }
+
+      if (updatedTicket) {
+        setTicket(updatedTicket);
+      }
+      
+      toast.success("Ticket updated successfully");
+      setIsEditing(false);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update ticket");
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditData({
+      title: "",
+      description: "",
+      type: "",
+      priority: "",
+      courseCode: "",
+      className: "",
+      projectGroup: ""
+    });
+  };
+
+  const handleDeleteTicket = async () => {
+    if (!id || !user) return;
+
+    setIsDeleting(true);
+    try {
+      const { success, error } = await TicketOperationsService.deleteTicket(id, user.id);
+
+      if (!success) {
+        toast.error(error || "Failed to delete ticket");
+        return;
+      }
+
+      toast.success("Ticket deleted successfully");
+      navigate("/dashboard");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete ticket");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const canEditTicket = ticket && user && (
+    ticket.creator_id === user.id || 
+    ticket.assignee_id === user.id
+  );
+
+  const canDeleteTicket = ticket && user && ticket.creator_id === user.id;
+
   if (isAuthLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -174,21 +280,147 @@ const TicketDetail = () => {
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <CardTitle className="text-2xl mb-2">{ticket?.title}</CardTitle>
-                    <CardDescription className="flex items-center gap-2 text-sm">
-                      <User className="h-4 w-4" />
-                      Created by {ticket?.creator?.full_name || ticket?.creator?.email}
-                      <span>•</span>
-                      <Clock className="h-4 w-4" />
-                      {formatDistanceToNow(new Date(ticket?.created_at), { addSuffix: true })}
-                    </CardDescription>
+                    {isEditing ? (
+                      <div className="space-y-4">
+                        <Input
+                          value={editData.title}
+                          onChange={(e) => setEditData(prev => ({ ...prev, title: e.target.value }))}
+                          placeholder="Ticket title"
+                          className="text-2xl font-bold"
+                        />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm font-medium mb-2 block">Type</label>
+                            <Select value={editData.type} onValueChange={(value) => setEditData(prev => ({ ...prev, type: value }))}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="bug">Bug Report</SelectItem>
+                                <SelectItem value="feature">Feature Request</SelectItem>
+                                <SelectItem value="question">Question</SelectItem>
+                                <SelectItem value="task">Task</SelectItem>
+                                <SelectItem value="grading">Grading Issue</SelectItem>
+                                <SelectItem value="assignment">Assignment Help</SelectItem>
+                                <SelectItem value="technical">Technical Support</SelectItem>
+                                <SelectItem value="academic">Academic Support</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium mb-2 block">Priority</label>
+                            <Select value={editData.priority} onValueChange={(value) => setEditData(prev => ({ ...prev, priority: value }))}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select priority" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="low">Low</SelectItem>
+                                <SelectItem value="medium">Medium</SelectItem>
+                                <SelectItem value="high">High</SelectItem>
+                                <SelectItem value="critical">Critical</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <Input
+                            value={editData.courseCode}
+                            onChange={(e) => setEditData(prev => ({ ...prev, courseCode: e.target.value }))}
+                            placeholder="Course Code (e.g., PRJ301)"
+                          />
+                          <Input
+                            value={editData.className}
+                            onChange={(e) => setEditData(prev => ({ ...prev, className: e.target.value }))}
+                            placeholder="Class Name (e.g., SE1730)"
+                          />
+                          <Input
+                            value={editData.projectGroup}
+                            onChange={(e) => setEditData(prev => ({ ...prev, projectGroup: e.target.value }))}
+                            placeholder="Project Group (e.g., Team 07)"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <CardTitle className="text-2xl mb-2">{ticket?.title}</CardTitle>
+                        <CardDescription className="flex items-center gap-2 text-sm">
+                          <User className="h-4 w-4" />
+                          Created by {ticket?.creator?.full_name || ticket?.creator?.email}
+                          <span>•</span>
+                          <Clock className="h-4 w-4" />
+                          {formatDistanceToNow(new Date(ticket?.created_at), { addSuffix: true })}
+                        </CardDescription>
+                      </>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    {isEditing ? (
+                      <>
+                        <Button onClick={handleSaveEdit} size="sm" className="gap-2">
+                          <Save className="h-4 w-4" />
+                          Save
+                        </Button>
+                        <Button onClick={handleCancelEdit} variant="outline" size="sm" className="gap-2">
+                          <X className="h-4 w-4" />
+                          Cancel
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        {canEditTicket && (
+                          <Button onClick={handleEditTicket} variant="outline" size="sm" className="gap-2">
+                            <Edit className="h-4 w-4" />
+                            Edit
+                          </Button>
+                        )}
+                        {canDeleteTicket && (
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="destructive" size="sm" className="gap-2">
+                                <Trash2 className="h-4 w-4" />
+                                Delete
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Delete Ticket</DialogTitle>
+                                <DialogDescription>
+                                  Are you sure you want to delete this ticket? This action cannot be undone.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div className="flex justify-end gap-2 mt-4">
+                                <Button variant="outline" onClick={() => {}}>
+                                  Cancel
+                                </Button>
+                                <Button 
+                                  variant="destructive" 
+                                  onClick={handleDeleteTicket}
+                                  disabled={isDeleting}
+                                >
+                                  {isDeleting ? "Deleting..." : "Delete"}
+                                </Button>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="prose max-w-none">
-                  <p className="text-foreground whitespace-pre-wrap">{ticket?.description}</p>
-                </div>
+                {isEditing ? (
+                  <Textarea
+                    value={editData.description}
+                    onChange={(e) => setEditData(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Ticket description"
+                    className="min-h-[200px]"
+                  />
+                ) : (
+                  <div className="prose max-w-none">
+                    <p className="text-foreground whitespace-pre-wrap">{ticket?.description}</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

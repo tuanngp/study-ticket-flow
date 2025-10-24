@@ -43,6 +43,7 @@ export const ticketStatusEnum = pgEnum("ticket_status", [
   "in_progress",
   "resolved",
   "closed",
+  "deleted",
 ]);
 
 // RAG Assistant Enums
@@ -51,6 +52,8 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "ticket_assigned", 
   "ticket_status_changed",
   "ticket_resolved",
+  "ticket_updated",
+  "ticket_deleted",
   "ticket_due_soon",
   "comment_added",
   "mention",
