@@ -1,41 +1,33 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { 
-  Bug, 
-  Lightbulb, 
-  HelpCircle, 
-  Settings, 
-  Code, 
-  Database, 
-  FileText, 
+import {
   AlertTriangle,
+  BookOpen,
+  Brain,
+  Bug,
   CheckCircle,
   Clock,
-  Star,
-  Sparkles,
-  BookOpen,
-  Users,
-  Zap,
-  Brain,
-  Target,
-  ArrowRight,
-  Plus,
-  X,
-  Search,
-  Filter,
-  Wand2,
-  Rocket,
+  Code,
+  FileText,
+  HelpCircle,
+  Lightbulb,
   Loader2,
-  Upload
+  Plus,
+  Rocket,
+  Settings,
+  Sparkles,
+  Star,
+  Target,
+  Upload,
+  Users,
+  X,
+  Zap
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { AIAutoComplete } from "./AIAutoComplete";
 import { EnhancedTicketTemplates } from "./EnhancedTicketTemplates";
 
@@ -129,7 +121,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
             type: formData.type,
             priority: formData.priority
           });
-          
+
           if (suggestions) {
             setAiSuggestions(suggestions);
             setShowSuggestions(true);
@@ -148,21 +140,24 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate form data before submission
     if (!formData.title.trim()) {
       alert('Vui lòng nhập tiêu đề cho ticket');
       return;
     }
-    
+
     if (!formData.description.trim()) {
       alert('Vui lòng nhập mô tả chi tiết cho ticket');
       return;
     }
-    
+
     setIsCreating(true);
     try {
       await onSubmit(formData);
+    } catch (error) {
+      // Error is handled by parent component or displayed via toast/alert
+      console.error('Error submitting ticket:', error);
     } finally {
       setIsCreating(false);
     }
@@ -176,9 +171,9 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
   };
 
   const removeTag = (tagToRemove: string) => {
-    setFormData(prev => ({ 
-      ...prev, 
-      tags: prev.tags.filter(tag => tag !== tagToRemove) 
+    setFormData(prev => ({
+      ...prev,
+      tags: prev.tags.filter(tag => tag !== tagToRemove)
     }));
   };
 
@@ -241,11 +236,10 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                     {basicTicketTypes.map((type) => (
                       <Card
                         key={type.value}
-                        className={`cursor-pointer transition-all ${
-                          formData.type === type.value 
-                            ? 'ring-2 ring-primary border-primary' 
+                        className={`cursor-pointer transition-all ${formData.type === type.value
+                            ? 'ring-2 ring-primary border-primary'
                             : 'hover:shadow-md'
-                        }`}
+                          }`}
                         onClick={() => setFormData(prev => ({ ...prev, type: type.value as any }))}
                       >
                         <CardContent className="p-4 text-center">
@@ -293,11 +287,10 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                         {educationalTicketTypes.map((type) => (
                           <Card
                             key={type.value}
-                            className={`cursor-pointer transition-all ${
-                              formData.type === type.value 
-                                ? 'ring-2 ring-primary border-primary' 
+                            className={`cursor-pointer transition-all ${formData.type === type.value
+                                ? 'ring-2 ring-primary border-primary'
                                 : 'hover:shadow-md'
-                            }`}
+                              }`}
                             onClick={() => setFormData(prev => ({ ...prev, type: type.value as any }))}
                           >
                             <CardContent className="p-4 text-center">
@@ -353,11 +346,10 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                     {priorities.map((priority) => (
                       <Card
                         key={priority.value}
-                        className={`cursor-pointer transition-all ${
-                          formData.priority === priority.value 
-                            ? 'ring-2 ring-primary border-primary' 
+                        className={`cursor-pointer transition-all ${formData.priority === priority.value
+                            ? 'ring-2 ring-primary border-primary'
                             : 'hover:shadow-md'
-                        }`}
+                          }`}
                         onClick={() => setFormData(prev => ({ ...prev, priority: priority.value as any }))}
                       >
                         <CardContent className="p-3 text-center">
@@ -437,7 +429,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Card 
+                  <Card
                     className="cursor-pointer hover:shadow-md transition-all border-2 border-dashed border-primary/20 hover:border-primary"
                     onClick={() => setShowTemplates(true)}
                   >
@@ -460,7 +452,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                     </CardContent>
                   </Card>
 
-                  <Card 
+                  <Card
                     className="cursor-pointer hover:shadow-md transition-all border-2 border-dashed border-muted-foreground/20 hover:border-muted-foreground"
                     onClick={() => setActiveTab("detailed")}
                   >
@@ -575,22 +567,22 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                         <Plus className="h-4 w-4" />
                       </Button>
                     </div>
-                    
+
                     <div className="flex flex-wrap gap-2">
                       {formData.tags.map((tag) => (
                         <Badge key={tag} variant="secondary" className="flex items-center gap-1">
                           {tag}
-                          <X 
-                            className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                          <X
+                            className="h-3 w-3 cursor-pointer hover:text-destructive"
                             onClick={() => removeTag(tag)}
                           />
                         </Badge>
                       ))}
                     </div>
-                    
+
                     <div className="text-sm text-muted-foreground">
                       Common tags: {commonTags.slice(0, 8).map(tag => (
-                        <span 
+                        <span
                           key={tag}
                           className="cursor-pointer hover:text-primary mr-2"
                           onClick={() => addTag(tag)}
@@ -609,11 +601,10 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                     {urgencies.map((urgency) => (
                       <Card
                         key={urgency.value}
-                        className={`cursor-pointer transition-all ${
-                          formData.urgency === urgency.value 
-                            ? 'ring-2 ring-primary border-primary' 
+                        className={`cursor-pointer transition-all ${formData.urgency === urgency.value
+                            ? 'ring-2 ring-primary border-primary'
                             : 'hover:shadow-md'
-                        }`}
+                          }`}
                         onClick={() => setFormData(prev => ({ ...prev, urgency: urgency.value as any }))}
                       >
                         <CardContent className="p-4">
@@ -638,8 +629,8 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                 {/* Estimated Time */}
                 <div>
                   <label className="text-sm font-medium mb-2 block">Estimated Resolution Time</label>
-                  <Select 
-                    value={formData.estimatedTime} 
+                  <Select
+                    value={formData.estimatedTime}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, estimatedTime: value }))}
                   >
                     <SelectTrigger>
@@ -666,7 +657,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                     <Target className="h-5 w-5 text-primary" />
                     Ticket Preview
                   </h3>
-                  
+
                   <Card className="border-l-4 border-l-primary">
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
@@ -677,7 +668,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                           <div className="text-sm text-muted-foreground mb-3">
                             {formData.description || "Your ticket description will appear here"}
                           </div>
-                          
+
                           {/* Educational Context */}
                           {(formData.courseCode || formData.className || formData.projectGroup) && (
                             <div className="flex items-center gap-2 mb-2">
@@ -699,7 +690,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                               )}
                             </div>
                           )}
-                          
+
                           {/* Tags */}
                           {formData.tags.length > 0 && (
                             <div className="flex flex-wrap gap-1 mb-2">
@@ -711,7 +702,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                             </div>
                           )}
                         </div>
-                        
+
                         <div className="flex flex-col gap-2 items-end">
                           <Badge className={`${priorities.find(p => p.value === formData.priority)?.color}`}>
                             {formData.priority}
@@ -738,16 +729,16 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
               </Button>
               <div className="flex gap-3">
                 {activeTab !== "preview" && (
-                  <Button 
-                    type="button" 
+                  <Button
+                    type="button"
                     variant="outline"
                     onClick={() => setActiveTab("preview")}
                   >
                     Preview
                   </Button>
                 )}
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   disabled={!formData.title.trim() || !formData.description.trim() || isCreating}
                   className="bg-gradient-primary hover:shadow-glow"
                 >
