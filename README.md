@@ -6,6 +6,8 @@ Hệ thống quản lý ticket học tập với AI-powered triage, được xâ
 
 Study Ticket Flow là một ứng dụng web hiện đại giúp sinh viên và giảng viên quản lý các vấn đề, yêu cầu và nhiệm vụ trong quá trình học tập. Hệ thống tích hợp AI để tự động phân loại và gán priority cho ticket, giúp tối ưu hóa quy trình xử lý.
 
+Slide: https://www.canva.com/design/DAG2scqfHqY/P3RTQsAHv8XgQ8ciTxlrUQ/edit?utm_content=DAG2scqfHqY&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
+
 ### ✨ Tính năng chính
 
 - **AI-Powered Triage**: Tự động phân tích và gợi ý priority dựa trên nội dung ticket
