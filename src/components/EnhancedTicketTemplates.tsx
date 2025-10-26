@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RichTextEditor } from './RichTextEditor';
 import { 
   Bug, 
   Lightbulb, 
@@ -23,7 +24,8 @@ import {
   Sparkles,
   BookOpen,
   Users,
-  Zap
+  Zap,
+  ArrowUpRight
 } from "lucide-react";
 
 interface TicketTemplate {
@@ -454,10 +456,10 @@ export const EnhancedTicketTemplates = ({ onSelectTemplate, onClose }: EnhancedT
             <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-b from-muted/20 to-transparent pointer-events-none z-10" />
             <div className="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-t from-muted/20 to-transparent pointer-events-none z-10" />
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 p-1">
               {/* Scroll hint */}
               {filteredTemplates.length > 6 && (
-                <div className="col-span-full text-center py-2 text-sm text-muted-foreground">
+                <div className="col-span-full text-center py-4 text-sm text-muted-foreground">
                   <div className="flex items-center justify-center gap-2">
                     <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" />
                     <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
@@ -467,70 +469,98 @@ export const EnhancedTicketTemplates = ({ onSelectTemplate, onClose }: EnhancedT
                 </div>
               )}
               
-              {filteredTemplates.map((template) => (
+              {filteredTemplates.length === 0 ? (
+                <div className="col-span-full flex flex-col items-center justify-center py-16 text-center">
+                  <div className="w-24 h-24 bg-muted/20 rounded-full flex items-center justify-center mb-6">
+                    <FileText className="w-12 h-12 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">No templates found</h3>
+                  <p className="text-muted-foreground mb-6 max-w-md">
+                    Try adjusting your search terms or filters to find the perfect template for your ticket.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setSearchTerm('');
+                        setSelectedCategory('all');
+                        setSelectedDifficulty('all');
+                      }}
+                    >
+                      Clear Filters
+                    </Button>
+                    <Button onClick={onClose}>
+                      Create Custom Ticket
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                filteredTemplates.map((template) => (
                 <Card 
                   key={template.id}
-                  className="hover:shadow-md transition-all border-l-4 hover:border-l-primary"
+                  className="group hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 border-l-4 hover:border-l-primary hover:-translate-y-1 bg-gradient-to-br from-card to-card/50"
                 >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${template.color} text-white`}>
-                          {template.icon}
-                        </div>
-                        <div className="flex-1">
-                          <CardTitle className="text-lg line-clamp-1">
-                            {template.title}
-                          </CardTitle>
-                          <CardDescription className="line-clamp-2">
-                            {template.description}
-                          </CardDescription>
-                        </div>
+                  <CardHeader className="pb-4">
+                    <div className="flex items-start gap-4">
+                      <div className={`p-3 rounded-xl ${template.color} text-white shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                        {template.icon}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-lg font-semibold line-clamp-1 group-hover:text-primary transition-colors">
+                          {template.title}
+                        </CardTitle>
+                        <CardDescription className="line-clamp-2 mt-1 text-sm">
+                          {template.description}
+                        </CardDescription>
                       </div>
                     </div>
                   </CardHeader>
                   
-                  <CardContent className="pt-0">
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      <Badge variant="outline" className="text-xs">
+                  <CardContent className="pt-0 space-y-4">
+                    {/* Badges */}
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="outline" className="text-xs font-medium px-2 py-1">
                         {template.category}
                       </Badge>
-                      <Badge className={`text-xs ${getPriorityColor(template.priority)}`}>
+                      <Badge className={`text-xs font-medium px-2 py-1 ${getPriorityColor(template.priority)}`}>
                         {template.priority}
                       </Badge>
-                      <Badge className={`text-xs ${getDifficultyColor(template.difficulty)}`}>
+                      <Badge className={`text-xs font-medium px-2 py-1 ${getDifficultyColor(template.difficulty)}`}>
                         {template.difficulty}
                       </Badge>
                     </div>
                     
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {template.estimatedTime}
+                    {/* Meta info */}
+                    <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        <span className="font-medium">{template.estimatedTime}</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Zap className="h-3 w-3" />
-                        {template.type}
+                      <div className="flex items-center gap-2">
+                        <Zap className="h-4 w-4" />
+                        <span className="font-medium capitalize">{template.type}</span>
                       </div>
                     </div>
                     
-                    <div className="flex flex-wrap gap-1 mt-2 mb-3">
-                      {template.tags.slice(0, 3).map((tag) => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
+                    {/* Tags */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {template.tags.slice(0, 4).map((tag) => (
+                        <Badge key={tag} variant="secondary" className="text-xs px-2 py-1 bg-muted/50 hover:bg-muted transition-colors">
                           {tag}
                         </Badge>
                       ))}
-                      {template.tags.length > 3 && (
-                        <Badge variant="secondary" className="text-xs">
-                          +{template.tags.length - 3}
+                      {template.tags.length > 4 && (
+                        <Badge variant="secondary" className="text-xs px-2 py-1 bg-muted/50">
+                          +{template.tags.length - 4}
                         </Badge>
                       )}
                     </div>
                     
-                    <div className="flex gap-2">
+                    {/* Action buttons */}
+                    <div className="flex gap-2 pt-2">
                       <Button 
                         size="sm" 
-                        className="flex-1"
+                        className="flex-1 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md hover:shadow-lg transition-all duration-200"
                         onClick={() => onSelectTemplate(template)}
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
@@ -539,14 +569,16 @@ export const EnhancedTicketTemplates = ({ onSelectTemplate, onClose }: EnhancedT
                       <Button 
                         size="sm" 
                         variant="outline"
+                        className="px-3 hover:bg-muted/50 transition-colors"
                         onClick={() => setSelectedTemplate(template)}
                       >
-                        Preview
+                        <FileText className="h-4 w-4" />
                       </Button>
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -554,15 +586,35 @@ export const EnhancedTicketTemplates = ({ onSelectTemplate, onClose }: EnhancedT
         {/* Template Preview Dialog */}
         {selectedTemplate && (
           <Dialog open={!!selectedTemplate} onOpenChange={() => setSelectedTemplate(null)}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  {selectedTemplate.icon}
-                  {selectedTemplate.title}
-                </DialogTitle>
-                <DialogDescription>
-                  {selectedTemplate.description}
-                </DialogDescription>
+            <DialogContent className="max-w-4xl max-h-[95vh] flex flex-col">
+              <DialogHeader className="pb-6">
+                <div className="flex items-start gap-4">
+                  <div className={`p-3 rounded-xl ${selectedTemplate.color} text-white shadow-lg`}>
+                    {selectedTemplate.icon}
+                  </div>
+                  <div className="flex-1">
+                    <DialogTitle className="text-2xl font-bold mb-2">
+                      {selectedTemplate.title}
+                    </DialogTitle>
+                    <DialogDescription className="text-base text-muted-foreground">
+                      {selectedTemplate.description}
+                    </DialogDescription>
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      <Badge variant="outline" className="px-3 py-1">
+                        {selectedTemplate.category}
+                      </Badge>
+                      <Badge className={`px-3 py-1 ${getPriorityColor(selectedTemplate.priority)}`}>
+                        {selectedTemplate.priority}
+                      </Badge>
+                      <Badge className={`px-3 py-1 ${getDifficultyColor(selectedTemplate.difficulty)}`}>
+                        {selectedTemplate.difficulty}
+                      </Badge>
+                      <Badge variant="secondary" className="px-3 py-1">
+                        {selectedTemplate.estimatedTime}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
               </DialogHeader>
 
               <div className="flex-1 overflow-y-auto">
@@ -599,55 +651,163 @@ export const EnhancedTicketTemplates = ({ onSelectTemplate, onClose }: EnhancedT
                     </div>
                   </TabsContent>
                   
-                  <TabsContent value="content" className="space-y-4">
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className="font-medium mb-2">Title</h4>
-                        <div className="p-3 bg-muted rounded-lg font-mono text-sm">
-                          {selectedTemplate.content.title}
+                  <TabsContent value="content" className="space-y-6">
+                    <div className="space-y-6">
+                      {/* Title Section */}
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-primary rounded-full"></div>
+                          <h4 className="font-semibold text-lg">Title</h4>
+                        </div>
+                        <div className="p-4 bg-gradient-to-r from-muted/30 to-muted/10 rounded-xl border border-border/50">
+                          <div className="font-medium text-foreground">
+                            {selectedTemplate.content.title}
+                          </div>
                         </div>
                       </div>
                       
-                      <div>
-                        <h4 className="font-medium mb-2">Description</h4>
-                        <div className="p-3 bg-muted rounded-lg">
-                          {selectedTemplate.content.description}
+                      {/* Description Section */}
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <h4 className="font-semibold text-lg">Description</h4>
+                        </div>
+                        <div className="border rounded-xl bg-background p-4">
+                          <div className="text-sm leading-relaxed space-y-3">
+                            {selectedTemplate.content.description.split('\n\n').map((paragraph, index) => {
+                              // Handle markdown formatting
+                              if (paragraph.startsWith('**') && paragraph.endsWith('**')) {
+                                return (
+                                  <div key={index} className="font-semibold text-foreground">
+                                    {paragraph.replace(/\*\*/g, '')}
+                                  </div>
+                                );
+                              }
+                              
+                              if (paragraph.includes('```')) {
+                                const parts = paragraph.split('```');
+                                return (
+                                  <div key={index} className="space-y-2">
+                                    {parts.map((part, partIndex) => {
+                                      if (partIndex % 2 === 1) {
+                                        // Code block
+                                        return (
+                                          <div key={partIndex} className="bg-muted/50 p-3 rounded-lg font-mono text-xs border">
+                                            <pre className="whitespace-pre-wrap">{part.trim()}</pre>
+                                          </div>
+                                        );
+                                      } else {
+                                        // Regular text
+                                        return (
+                                          <div key={partIndex} className="text-foreground">
+                                            {part.split('\n').map((line, lineIndex) => (
+                                              <div key={lineIndex}>
+                                                {line.startsWith('- ') ? (
+                                                  <div className="flex items-start gap-2">
+                                                    <span className="text-muted-foreground mt-1">•</span>
+                                                    <span>{line.substring(2)}</span>
+                                                  </div>
+                                                ) : (
+                                                  line
+                                                )}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        );
+                                      }
+                                    })}
+                                  </div>
+                                );
+                              }
+                              
+                              return (
+                                <div key={index} className="text-foreground">
+                                  {paragraph.split('\n').map((line, lineIndex) => (
+                                    <div key={lineIndex}>
+                                      {line.startsWith('- ') ? (
+                                        <div className="flex items-start gap-2">
+                                          <span className="text-muted-foreground mt-1">•</span>
+                                          <span>{line.substring(2)}</span>
+                                        </div>
+                                      ) : (
+                                        line
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       </div>
                       
-                      <div>
-                        <h4 className="font-medium mb-2">Steps to Include</h4>
-                        <ul className="space-y-2">
+                      {/* Steps Section */}
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <h4 className="font-semibold text-lg">Steps to Include</h4>
+                        </div>
+                        <div className="space-y-3">
                           {selectedTemplate.content.steps.map((step, index) => (
-                            <li key={index} className="flex items-start gap-2">
-                              <span className="flex-shrink-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-medium">
+                            <div key={index} className="flex items-start gap-4 p-4 bg-gradient-to-r from-muted/20 to-muted/10 rounded-xl border border-border/30 hover:border-border/50 transition-colors">
+                              <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold shadow-md">
                                 {index + 1}
-                              </span>
-                              <span className="text-sm">{step}</span>
-                            </li>
+                              </div>
+                              <div className="flex-1 text-sm leading-relaxed text-foreground">
+                                {step}
+                              </div>
+                            </div>
                           ))}
-                        </ul>
+                        </div>
                       </div>
                       
-                      <div>
-                        <h4 className="font-medium mb-2">Expected Outcome</h4>
-                        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                          {selectedTemplate.content.expectedOutcome}
+                      {/* Expected Outcome Section */}
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                          <h4 className="font-semibold text-lg">Expected Outcome</h4>
+                        </div>
+                        <div className="p-4 bg-gradient-to-r from-emerald-500/10 to-green-500/10 border border-emerald-500/20 rounded-xl">
+                          <div className="flex items-start gap-3">
+                            <CheckCircle className="h-5 w-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+                            <div className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                              {selectedTemplate.content.expectedOutcome}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </TabsContent>
                   
-                  <TabsContent value="resources" className="space-y-4">
-                    <div>
-                      <h4 className="font-medium mb-2">Helpful Resources</h4>
-                      <div className="space-y-2">
-                        {selectedTemplate.content.resources.map((resource, index) => (
-                          <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-lg">
-                            <BookOpen className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">{resource}</span>
-                          </div>
-                        ))}
+                  <TabsContent value="resources" className="space-y-6">
+                    <div className="space-y-6">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                          <h4 className="font-semibold text-lg">Helpful Resources</h4>
+                        </div>
+                        <div className="grid gap-3">
+                          {selectedTemplate.content.resources.map((resource, index) => (
+                            <div key={index} className="flex items-center gap-4 p-4 bg-gradient-to-r from-muted/20 to-muted/10 rounded-xl border border-border/30 hover:border-border/50 transition-all duration-200 hover:shadow-sm">
+                              <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-lg flex items-center justify-center shadow-md">
+                                <BookOpen className="h-5 w-5" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="text-sm font-medium text-foreground">
+                                  {resource}
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  Click to access resource
+                                </div>
+                              </div>
+                              <div className="flex-shrink-0">
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <ArrowUpRight className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </TabsContent>

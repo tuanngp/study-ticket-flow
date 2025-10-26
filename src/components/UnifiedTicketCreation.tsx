@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertTriangle,
+  ArrowLeft,
   BookOpen,
   Brain,
   Bug,
@@ -31,6 +32,9 @@ import { useEffect, useState } from "react";
 import { AIAutoComplete } from "./AIAutoComplete";
 import { EnhancedTicketTemplates } from "./EnhancedTicketTemplates";
 import { ImageUpload } from "./ImageUpload";
+import { RichTextEditor } from "./RichTextEditor";
+import { ValidationMessage } from "./ValidationMessage";
+import { CodeRunner } from "./CodeRunner";
 import { ImageUploadService } from "@/services/imageUploadService";
 import { toast } from "sonner";
 
@@ -44,6 +48,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
   const [formData, setFormData] = useState({
     title: initialData?.title || "",
     description: initialData?.description || "",
+    code: initialData?.code || "",
     type: initialData?.type || "task",
     priority: initialData?.priority || "medium",
     courseCode: initialData?.courseCode || "",
@@ -64,6 +69,10 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [showAllTypes, setShowAllTypes] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<{
+    title?: string;
+    description?: string;
+  }>({});
 
   // Basic ticket types (always visible)
   const basicTicketTypes = [
@@ -114,7 +123,8 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
   // Auto-analyze when form data changes
   useEffect(() => {
     const analyzeTicket = async () => {
-      if (formData.title.length > 10 && formData.description.length > 20) {
+      const descriptionText = formData.description.replace(/<[^>]*>/g, '').trim();
+      if (formData.title.length > 10 && descriptionText.length > 20) {
         setIsAnalyzing(true);
         try {
           // Call real AI triage service
@@ -145,14 +155,25 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Clear previous validation errors
+    setValidationErrors({});
+
     // Validate form data before submission
+    const errors: { title?: string; description?: string } = {};
+    
     if (!formData.title.trim()) {
-      alert('Vui lòng nhập tiêu đề cho ticket');
-      return;
+      errors.title = 'Tiêu đề là bắt buộc';
     }
 
-    if (!formData.description.trim()) {
-      alert('Vui lòng nhập mô tả chi tiết cho ticket');
+    // Check if description has meaningful content (not just HTML tags)
+    const descriptionText = formData.description.replace(/<[^>]*>/g, '').trim();
+    if (!descriptionText) {
+      errors.description = 'Mô tả là bắt buộc';
+    }
+
+    // If there are validation errors, set them and return
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
       return;
     }
 
@@ -197,10 +218,34 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
   };
 
   const handleTemplateSelect = (template: any) => {
+    // Convert markdown to HTML for better display in rich text editor
+    const convertMarkdownToHTML = (markdown: string) => {
+      return markdown
+        // Bold text with theme-aware color
+        .replace(/\*\*(.*?)\*\*/g, '<strong class="text-red-500 dark:text-red-400">$1</strong>')
+        // Code blocks
+        .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>')
+        // Inline code
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        // Bullet points
+        .replace(/^- (.+)$/gm, '<li>$1</li>')
+        // Numbered lists
+        .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+        // Line breaks
+        .replace(/\n\n/g, '</p><p>')
+        // Wrap in paragraphs
+        .replace(/^(?!<[pli])/gm, '<p>')
+        .replace(/(?<!>)$/gm, '</p>')
+        // Clean up empty paragraphs
+        .replace(/<p><\/p>/g, '')
+        .replace(/<p>(<li>.*<\/li>)<\/p>/g, '<ul>$1</ul>')
+        .replace(/<ul>(<li>.*<\/li>)<\/ul>/g, '<ul>$1</ul>');
+    };
+
     setFormData(prev => ({
       ...prev,
       title: template.content.title,
-      description: template.content.description,
+      description: convertMarkdownToHTML(template.content.description),
       type: template.type,
       priority: template.priority,
       tags: template.tags || [],
@@ -208,6 +253,11 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
     }));
     setShowTemplates(false);
     setActiveTab("preview");
+    
+    // Show success message
+    toast.success("Template applied successfully!", {
+      description: "You can now customize the content as needed."
+    });
   };
 
   const getTypeIcon = (type: string) => {
@@ -222,13 +272,27 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
     <div className="max-w-6xl mx-auto">
       <Card className="shadow-lg">
         <CardHeader className="bg-gradient-to-r from-primary/5 to-purple-500/5">
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            Create New Ticket
-          </CardTitle>
-          <CardDescription>
-            Choose your preferred creation method - from quick templates to detailed forms
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                Create New Ticket
+              </CardTitle>
+              <CardDescription>
+                Choose your preferred creation method - from quick templates to detailed forms
+              </CardDescription>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onCancel}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Dashboard
+            </Button>
+          </div>
         </CardHeader>
 
         <CardContent className="p-6">
@@ -260,6 +324,14 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                             : 'hover:shadow-md'
                           }`}
                         onClick={() => setFormData(prev => ({ ...prev, type: type.value as any }))}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setFormData(prev => ({ ...prev, type: type.value as any }));
+                          }
+                        }}
                       >
                         <CardContent className="p-4 text-center">
                           <div className={`w-8 h-8 mx-auto mb-2 rounded-lg ${type.color} text-white flex items-center justify-center`}>
@@ -276,6 +348,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                   {!showAllTypes && (
                     <div className="mt-4 text-center">
                       <Button
+                        type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => setShowAllTypes(true)}
@@ -293,6 +366,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="text-sm font-medium text-muted-foreground">Educational Types</h4>
                         <Button
+                          type="button"
                           variant="ghost"
                           size="sm"
                           onClick={() => setShowAllTypes(false)}
@@ -331,7 +405,13 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                   <label className="text-sm font-medium mb-2 block">Title *</label>
                   <AIAutoComplete
                     value={formData.title}
-                    onChange={(value) => setFormData(prev => ({ ...prev, title: value }))}
+                    onChange={(value) => {
+                      setFormData(prev => ({ ...prev, title: value }));
+                      // Clear validation error when user starts typing
+                      if (validationErrors.title) {
+                        setValidationErrors(prev => ({ ...prev, title: undefined }));
+                      }
+                    }}
                     placeholder="Brief, descriptive title for your issue or request"
                     type="title"
                     context={{
@@ -340,21 +420,48 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                       projectGroup: formData.projectGroup
                     }}
                   />
+                  {validationErrors.title && (
+                    <ValidationMessage 
+                      message={validationErrors.title} 
+                      type="error" 
+                    />
+                  )}
                 </div>
 
-                {/* Description with AI */}
+                {/* Description with Rich Text Editor */}
                 <div>
                   <label className="text-sm font-medium mb-2 block">Description *</label>
-                  <AIAutoComplete
+                  <RichTextEditor
                     value={formData.description}
-                    onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
-                    placeholder="Detailed description of your issue, including steps to reproduce, expected vs actual behavior, etc."
-                    type="description"
-                    context={{
-                      courseCode: formData.courseCode,
-                      className: formData.className,
-                      projectGroup: formData.projectGroup
+                    onChange={(value) => {
+                      setFormData(prev => ({ ...prev, description: value }));
+                      // Clear validation error when user starts typing
+                      if (validationErrors.description) {
+                        setValidationErrors(prev => ({ ...prev, description: undefined }));
+                      }
                     }}
+                    placeholder="Detailed description of your issue, including steps to reproduce, expected vs actual behavior, etc."
+                  />
+                  {validationErrors.description && (
+                    <ValidationMessage 
+                      message={validationErrors.description} 
+                      type="error" 
+                    />
+                  )}
+                </div>
+
+                {/* Code Runner */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">
+                    Code (Optional)
+                  </label>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Add code snippets to help others understand the issue. You can run the code to see the output.
+                  </p>
+                  <CodeRunner
+                    value={formData.code}
+                    onChange={(value) => setFormData(prev => ({ ...prev, code: value }))}
+                    placeholder="// Add your code here...\nconsole.log('Hello World');"
                   />
                 </div>
 
@@ -370,6 +477,14 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                             : 'hover:shadow-md'
                           }`}
                         onClick={() => setFormData(prev => ({ ...prev, priority: priority.value as any }))}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setFormData(prev => ({ ...prev, priority: priority.value as any }));
+                          }
+                        }}
                       >
                         <CardContent className="p-3 text-center">
                           <Badge className={`w-full ${priority.color}`}>
@@ -401,6 +516,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                               {aiSuggestions.suggested_type}
                             </Badge>
                             <Button
+                              type="button"
                               variant="ghost"
                               size="sm"
                               className="h-7 px-2"
@@ -417,6 +533,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                               {aiSuggestions.suggested_priority}
                             </Badge>
                             <Button
+                              type="button"
                               variant="ghost"
                               size="sm"
                               className="h-7 px-2"
@@ -430,7 +547,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                           <p className="text-sm text-muted-foreground">{aiSuggestions.analysis}</p>
                         )}
                         <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => setShowSuggestions(false)}>
+                          <Button type="button" size="sm" variant="outline" onClick={() => setShowSuggestions(false)}>
                             Dismiss
                           </Button>
                         </div>
@@ -485,7 +602,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="text-center">
-                      <Button variant="outline" className="w-full">
+                      <Button type="button" variant="outline" className="w-full">
                         <Target className="h-4 w-4 mr-2" />
                         Start Custom
                       </Button>
@@ -505,7 +622,9 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                     <CardContent className="pt-0">
                       <div className="space-y-2">
                         <div className="font-medium">{formData.title}</div>
-                        <div className="text-sm text-muted-foreground line-clamp-2">{formData.description}</div>
+                        <div className="text-sm text-muted-foreground line-clamp-2">
+                          <div dangerouslySetInnerHTML={{ __html: formData.description }} />
+                        </div>
                         <div className="flex gap-2">
                           <Badge variant="outline">{formData.type}</Badge>
                           <Badge className={priorities.find(p => p.value === formData.priority)?.color}>
@@ -625,6 +744,14 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                             : 'hover:shadow-md'
                           }`}
                         onClick={() => setFormData(prev => ({ ...prev, urgency: urgency.value as any }))}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setFormData(prev => ({ ...prev, urgency: urgency.value as any }));
+                          }
+                        }}
                       >
                         <CardContent className="p-4">
                           <div className="flex items-center justify-between">
@@ -696,7 +823,11 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                             {formData.title || "Your ticket title will appear here"}
                           </CardTitle>
                           <div className="text-sm text-muted-foreground mb-3">
-                            {formData.description || "Your ticket description will appear here"}
+                            <div 
+                              dangerouslySetInnerHTML={{ 
+                                __html: formData.description || "Your ticket description will appear here" 
+                              }}
+                            />
                           </div>
 
                           {/* Educational Context */}
@@ -769,7 +900,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                 )}
                 <Button
                   type="submit"
-                  disabled={!formData.title.trim() || !formData.description.trim() || isCreating}
+                  disabled={!formData.title.trim() || !formData.description.replace(/<[^>]*>/g, '').trim() || isCreating}
                   className="bg-gradient-primary hover:shadow-glow"
                 >
                   {isCreating ? (

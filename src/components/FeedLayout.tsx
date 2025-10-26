@@ -202,7 +202,7 @@ export const FeedLayout = ({ children, onCreateTicket, user, profile, searchQuer
             
             {user && (
               <button
-                onClick={() => navigate('/analytics')}
+                onClick={() => navigate('/profile')}
                 className="flex items-center gap-2 hover:bg-muted/50 rounded-lg p-2 transition-colors"
               >
                 <SmartAvatar 

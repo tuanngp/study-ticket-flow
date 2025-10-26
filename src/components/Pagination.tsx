@@ -59,10 +59,9 @@ export const Pagination = ({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="5">5</SelectItem>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="20">20</SelectItem>
-              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="6">6</SelectItem>
+              <SelectItem value="12">12</SelectItem>
+              <SelectItem value="22">22</SelectItem>
             </SelectContent>
           </Select>
           <span className="text-sm text-muted-foreground">per page</span>
@@ -85,10 +84,9 @@ export const Pagination = ({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="5">5</SelectItem>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="20">20</SelectItem>
-              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="6">6</SelectItem>
+              <SelectItem value="12">12</SelectItem>
+              <SelectItem value="22">22</SelectItem>
             </SelectContent>
           </Select>
           <span className="text-sm text-muted-foreground">per page</span>

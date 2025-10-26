@@ -50,7 +50,7 @@ export const TicketList = ({ userId }: TicketListProps) => {
     hasPreviousPage: false
   });
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(12);
 
   const handleDeleteTicket = async (ticketId: string) => {
     setDeletingTicketId(ticketId);

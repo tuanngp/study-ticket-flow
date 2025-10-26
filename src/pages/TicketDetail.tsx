@@ -420,7 +420,10 @@ const TicketDetail = () => {
                   />
                 ) : (
                   <div className="prose max-w-none">
-                    <p className="text-foreground whitespace-pre-wrap">{ticket?.description}</p>
+                    <div 
+                      className="text-foreground"
+                      dangerouslySetInnerHTML={{ __html: ticket?.description || '' }}
+                    />
                   </div>
                 )}
               </CardContent>
@@ -560,16 +563,6 @@ const TicketDetail = () => {
                   </p>
                 </div>
 
-                <div className="pt-4 border-t">
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsCalendarOpen(true)}
-                    className="w-full"
-                  >
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Add to Calendar
-                  </Button>
-                </div>
 
                 {ticket?.ai_suggested_priority && (
                   <div className="pt-4 border-t">
