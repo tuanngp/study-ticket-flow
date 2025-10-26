@@ -13,13 +13,17 @@ export interface Ticket {
   ai_suggested_priority?: string;
   created_at: string;
   updated_at: string;
+  images?: string[];
+  tags?: string[];
   creator?: {
     full_name?: string;
     email?: string;
+    avatar_url?: string;
   };
   assignee?: {
     full_name?: string;
     email?: string;
+    avatar_url?: string;
   };
 }
 
@@ -46,6 +50,40 @@ export interface PaginatedTickets {
 
 export class TicketOperationsService {
   /**
+   * Create a new ticket
+   */
+  static async createTicket(ticketData: any, creatorId: string): Promise<Ticket> {
+    try {
+      
+      const { data, error } = await supabase
+        .from("tickets")
+        .insert({
+          title: ticketData.title,
+          description: ticketData.description,
+          type: ticketData.type || "task",
+          priority: ticketData.priority || "medium",
+          creator_id: creatorId,
+          course_code: ticketData.courseCode,
+          class_name: ticketData.className,
+          project_group: ticketData.projectGroup,
+          images: ticketData.images || [],
+          tags: ticketData.tags || [],
+        } as any)
+        .select("*")
+        .single();
+
+      if (error) {
+        throw new Error(error.message || 'Failed to create ticket');
+      }
+
+      return data as Ticket;
+    } catch (error: any) {
+      console.error('Error creating ticket:', error);
+      throw new Error(error.message || 'Failed to create ticket');
+    }
+  }
+
+  /**
    * Fetch a single ticket by ID with relations
    */
   static async getTicketById(ticketId: string): Promise<Ticket | null> {
@@ -54,8 +92,8 @@ export class TicketOperationsService {
         .from("tickets")
         .select(`
           *,
-          creator:profiles!tickets_creator_id_profiles_id_fk(full_name, email),
-          assignee:profiles!tickets_assignee_id_profiles_id_fk(full_name, email)
+          creator:profiles!tickets_creator_id_profiles_id_fk(full_name, email, avatar_url),
+          assignee:profiles!tickets_assignee_id_profiles_id_fk(full_name, email, avatar_url)
         `)
         .eq("id", ticketId)
         .single();
@@ -81,17 +119,17 @@ export class TicketOperationsService {
         .from("tickets")
         .select(`
           *,
-          creator:profiles!tickets_creator_id_profiles_id_fk(full_name, email),
-          assignee:profiles!tickets_assignee_id_profiles_id_fk(full_name, email)
+          creator:profiles!tickets_creator_id_profiles_id_fk(full_name, email, avatar_url),
+          assignee:profiles!tickets_assignee_id_profiles_id_fk(full_name, email, avatar_url)
         `)
         .order("created_at", { ascending: false });
 
       if (options.creatorId) {
-        query = query.eq("creator_id", options.creatorId);
+        query = query.eq("creator_id", options.creatorId) as any;
       }
 
       if (options.assigneeId) {
-        query = query.eq("assignee_id", options.assigneeId);
+        query = query.eq("assignee_id", options.assigneeId) as any;
       }
 
       if (options.status) {
@@ -102,6 +140,10 @@ export class TicketOperationsService {
       if (!options.includeDeleted) {
         query = query.neq("status", "deleted");
       }
+
+      // Only show tickets with descriptions (non-empty)
+      query = query.not("description", "is", null);
+      query = query.neq("description", "");
 
       if (options.limit) {
         query = query.limit(options.limit);
@@ -135,18 +177,18 @@ export class TicketOperationsService {
         .from("tickets")
         .select(`
           *,
-          creator:profiles!tickets_creator_id_profiles_id_fk(full_name, email),
-          assignee:profiles!tickets_assignee_id_profiles_id_fk(full_name, email)
+          creator:profiles!tickets_creator_id_profiles_id_fk(full_name, email, avatar_url),
+          assignee:profiles!tickets_assignee_id_profiles_id_fk(full_name, email, avatar_url)
         `, { count: 'exact' })
         .order("created_at", { ascending: false });
 
       // Apply filters
       if (options.creatorId) {
-        query = query.eq("creator_id", options.creatorId);
+        query = query.eq("creator_id", options.creatorId) as any;
       }
 
       if (options.assigneeId) {
-        query = query.eq("assignee_id", options.assigneeId);
+        query = query.eq("assignee_id", options.assigneeId) as any;
       }
 
       if (options.status) {
@@ -162,13 +204,17 @@ export class TicketOperationsService {
       }
 
       if (options.courseCode) {
-        query = query.eq("course_code", options.courseCode);
+        query = query.eq("course_code", options.courseCode) as any;
       }
 
       // Always exclude deleted tickets unless specifically requested
       if (!options.includeDeleted) {
         query = query.neq("status", "deleted");
       }
+
+      // Only show tickets with descriptions (non-empty)
+      query = query.not("description", "is", null);
+      query = query.neq("description", "");
 
       // Apply pagination
       query = query.range(offset, offset + limit - 1);
@@ -481,8 +527,8 @@ export class TicketOperationsService {
         .eq('id', ticketId)
         .select(`
           *,
-          creator:profiles!tickets_creator_id_profiles_id_fk(full_name, email),
-          assignee:profiles!tickets_assignee_id_profiles_id_fk(full_name, email)
+          creator:profiles!tickets_creator_id_profiles_id_fk(full_name, email, avatar_url),
+          assignee:profiles!tickets_assignee_id_profiles_id_fk(full_name, email, avatar_url)
         `)
         .single();
 

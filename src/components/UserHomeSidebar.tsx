@@ -97,7 +97,7 @@ export const UserHomeSidebar = ({ user, profile, onClose, isMobile = false }: Us
     {
       title: "My Tickets",
       icon: Ticket,
-      onClick: () => handleNavigation("/userhome"),
+      onClick: () => handleNavigation("/dashboard"),
     },
     {
       title: "Calendar",

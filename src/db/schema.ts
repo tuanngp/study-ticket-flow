@@ -158,6 +158,9 @@ export const tickets = pgTable("tickets", {
   // AI analysis metadata
   aiAnalysis: text("ai_analysis"),
   aiConfidenceScore: text("ai_confidence_score"),
+  // Attachments
+  images: text("images").array(),
+  tags: text("tags").array(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

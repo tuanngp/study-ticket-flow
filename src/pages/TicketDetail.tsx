@@ -42,6 +42,8 @@ const TicketDetail = () => {
     projectGroup: ""
   });
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const { canReviewTicket, canViewTicketReviews } = usePermissions();
 
   useEffect(() => {
@@ -493,6 +495,36 @@ const TicketDetail = () => {
                 <CardTitle>Details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Images Section */}
+                {ticket?.images && ticket.images.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium mb-2">Images ({ticket.images.length})</p>
+                    <div className="space-y-2">
+                      {ticket.images.map((imageUrl, index) => (
+                        <div 
+                          key={index} 
+                          className="relative group cursor-pointer"
+                          onClick={() => {
+                            setCurrentImageIndex(index);
+                            setIsImageViewerOpen(true);
+                          }}
+                        >
+                          <img
+                            src={imageUrl}
+                            alt={`Ticket image ${index + 1}`}
+                            className="w-full h-32 object-cover rounded-lg border hover:opacity-90 transition-opacity"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                            <div className="bg-white text-black px-3 py-1 rounded-full text-sm font-medium">
+                              Click to view
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <p className="text-sm font-medium mb-2">Status</p>
                   <Select
@@ -592,6 +624,87 @@ const TicketDetail = () => {
           onClose={() => setIsCalendarOpen(false)}
         />
       )}
+
+      {/* Image Viewer Dialog */}
+      <Dialog open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+          <div className="relative">
+            {/* Close button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="absolute top-4 right-4 z-10 bg-black/50 hover:bg-black/70 text-white"
+              onClick={() => setIsImageViewerOpen(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+
+            {/* Image counter */}
+            {ticket?.images && ticket.images.length > 1 && (
+              <div className="absolute top-4 left-4 z-10 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+                {currentImageIndex + 1} / {ticket.images.length}
+              </div>
+            )}
+
+            {/* Main image */}
+            {ticket?.images && (
+              <img
+                src={ticket.images[currentImageIndex]}
+                alt={`Ticket image ${currentImageIndex + 1}`}
+                className="w-full h-auto max-h-[80vh] object-contain"
+              />
+            )}
+
+            {/* Navigation buttons */}
+            {ticket?.images && ticket.images.length > 1 && (
+              <>
+                {/* Previous button */}
+                {currentImageIndex > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white"
+                    onClick={() => setCurrentImageIndex(currentImageIndex - 1)}
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                )}
+
+                {/* Next button */}
+                {currentImageIndex < ticket.images.length - 1 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white"
+                    onClick={() => setCurrentImageIndex(currentImageIndex + 1)}
+                  >
+                    <ArrowLeft className="h-4 w-4 rotate-180" />
+                  </Button>
+                )}
+              </>
+            )}
+
+            {/* Thumbnail strip */}
+            {ticket?.images && ticket.images.length > 1 && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-2 max-w-full overflow-x-auto px-4">
+                {ticket.images.map((imageUrl, index) => (
+                  <img
+                    key={index}
+                    src={imageUrl}
+                    alt={`Thumbnail ${index + 1}`}
+                    className={`w-16 h-16 object-cover rounded cursor-pointer border-2 transition-all ${
+                      index === currentImageIndex 
+                        ? 'border-blue-500 opacity-100' 
+                        : 'border-transparent opacity-60 hover:opacity-80'
+                    }`}
+                    onClick={() => setCurrentImageIndex(index)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

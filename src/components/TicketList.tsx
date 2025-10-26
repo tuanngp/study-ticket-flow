@@ -161,11 +161,6 @@ export const TicketList = ({ userId }: TicketListProps) => {
   useEffect(() => {
     let filtered = [...tickets];
 
-    // Only show tickets with descriptions
-    filtered = filtered.filter(ticket => 
-      ticket.description && ticket.description.trim().length > 0
-    );
-
     // Search filter (client-side only)
     if (filters.search) {
       filtered = filtered.filter(ticket => 

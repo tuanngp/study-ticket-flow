@@ -30,6 +30,9 @@ import {
 import { useEffect, useState } from "react";
 import { AIAutoComplete } from "./AIAutoComplete";
 import { EnhancedTicketTemplates } from "./EnhancedTicketTemplates";
+import { ImageUpload } from "./ImageUpload";
+import { ImageUploadService } from "@/services/imageUploadService";
+import { toast } from "sonner";
 
 interface UnifiedTicketCreationProps {
   onSubmit: (data: any) => void;
@@ -47,6 +50,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
     className: initialData?.className || "",
     projectGroup: initialData?.projectGroup || "",
     tags: initialData?.tags || [],
+    images: initialData?.images || [],
     estimatedTime: initialData?.estimatedTime || "1-2 hours",
     urgency: initialData?.urgency || "medium",
     ...initialData
@@ -154,7 +158,22 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
 
     setIsCreating(true);
     try {
-      await onSubmit(formData);
+      // Upload images if any
+      let processedFormData = { ...formData };
+      if (formData.images && formData.images.length > 0) {
+        console.log('Uploading images:', formData.images);
+        try {
+          const imageUrls = await ImageUploadService.uploadImages(formData.images);
+          processedFormData.images = imageUrls;
+          console.log('Uploaded image URLs:', imageUrls);
+        } catch (error) {
+          console.error('Image upload failed:', error);
+          toast.error('Failed to upload images. Please try again.');
+          return;
+        }
+      }
+      
+      await onSubmit(processedFormData);
     } catch (error) {
       // Error is handled by parent component or displayed via toast/alert
       console.error('Error submitting ticket:', error);
@@ -507,10 +526,10 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                 </div>
 
                 {/* Educational Context */}
-                <Card className="border-blue-200 bg-blue-50/50">
+                <Card className="border-border bg-card/50 dark:bg-card/30">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <BookOpen className="h-5 w-5 text-blue-600" />
+                      <BookOpen className="h-5 w-5 text-primary" />
                       Educational Context
                     </CardTitle>
                     <CardDescription>
@@ -624,6 +643,17 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                       </Card>
                     ))}
                   </div>
+                </div>
+
+                {/* Image Upload */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Attach Images</label>
+                  <ImageUpload
+                    maxImages={5}
+                    maxSize={5}
+                    images={formData.images}
+                    onImagesChange={(images) => setFormData(prev => ({ ...prev, images }))}
+                  />
                 </div>
 
                 {/* Estimated Time */}
@@ -767,6 +797,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
           onClose={() => setShowTemplates(false)}
         />
       )}
+
     </div>
   );
 };
