@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import { AIAnswerService } from './aiAnswerService';
 import { EmbeddingService } from './embeddingService';
 
 export interface SuggestedAnswer {
@@ -20,6 +21,7 @@ export interface SuggestedAnswer {
         tags?: string[];
         viewCount?: number;
         helpfulCount?: number;
+        chunkCount?: number;
     };
 }
 
@@ -48,7 +50,7 @@ export class TicketAutoResponseService {
 
             const [kbResults, ragResults] = await Promise.all([
                 this.searchKnowledgeBase(queryEmbedding, courseCode),
-                this.searchRAGDocuments(queryEmbedding)
+                this.searchRAGDocuments(queryEmbedding, queryText)
             ]);
 
             const allSuggestions = [...kbResults, ...ragResults]
@@ -82,7 +84,7 @@ export class TicketAutoResponseService {
     ): Promise<SuggestedAnswer[]> {
         try {
             const { data, error } = await supabase.rpc('match_knowledge_entries', {
-                query_embedding: queryEmbedding,
+                query_embedding: JSON.stringify(queryEmbedding),
                 match_threshold: this.SIMILARITY_THRESHOLD,
                 match_count: this.MAX_SUGGESTIONS,
                 filter_course_code: courseCode || null
@@ -120,14 +122,15 @@ export class TicketAutoResponseService {
     }
 
     /**
-     * Tìm kiếm trong RAG documents
+     * Tìm kiếm trong RAG documents và tổng hợp bằng AI
      */
     private static async searchRAGDocuments(
-        queryEmbedding: number[]
+        queryEmbedding: number[],
+        questionText?: string
     ): Promise<SuggestedAnswer[]> {
         try {
             const { data, error } = await supabase.rpc('match_documents', {
-                query_embedding: queryEmbedding,
+                query_embedding: JSON.stringify(queryEmbedding),
                 match_threshold: this.SIMILARITY_THRESHOLD,
                 match_count: this.MAX_SUGGESTIONS
             });
@@ -141,17 +144,41 @@ export class TicketAutoResponseService {
                 return [];
             }
 
-            return data.map((doc: any) => ({
-                id: doc.id,
-                source: 'rag_documents' as const,
-                questionText: doc.title,
-                answerText: doc.content,
-                similarityScore: doc.similarity,
-                confidence: this.calculateConfidence(doc.similarity),
-                metadata: {
-                    tags: doc.metadata?.tags || []
-                }
-            }));
+            // Tổng hợp câu trả lời bằng AI cho mỗi document
+            const suggestions = await Promise.all(
+                data.map(async (doc: any) => {
+                    let answerText = doc.content;
+
+                    // Nếu có nhiều chunks, dùng AI để tổng hợp
+                    if (questionText && doc.chunk_count > 1) {
+                        const aiResult = await AIAnswerService.generateAnswer({
+                            question: questionText,
+                            context: doc.content
+                        });
+
+                        // Chỉ dùng AI answer nếu chất lượng tốt
+                        if (aiResult.success && aiResult.answer &&
+                            AIAnswerService.isQualityAnswer(aiResult.answer)) {
+                            answerText = aiResult.answer;
+                        }
+                    }
+
+                    return {
+                        id: doc.id,
+                        source: 'rag_documents' as const,
+                        questionText: doc.title,
+                        answerText: answerText,
+                        similarityScore: doc.similarity,
+                        confidence: this.calculateConfidence(doc.similarity),
+                        metadata: {
+                            tags: doc.metadata?.tags || [],
+                            chunkCount: doc.chunk_count
+                        }
+                    };
+                })
+            );
+
+            return suggestions;
         } catch (error) {
             console.error('RAG documents search failed:', error);
             return [];
