@@ -53,6 +53,9 @@ const TicketDetail = () => {
   const [savedEntryId, setSavedEntryId] = useState<string | null>(null);
   const [showAISuggestions, setShowAISuggestions] = useState(true);
   const [showMarkdownPreview, setShowMarkdownPreview] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentContent, setEditingCommentContent] = useState("");
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
 
   useEffect(() => {
     const checkAuthAndLoadData = async () => {
@@ -271,6 +274,64 @@ const TicketDetail = () => {
     setShowAISuggestions(false);
   };
 
+  const handleEditComment = (comment: Comment) => {
+    setEditingCommentId(comment.id);
+    setEditingCommentContent(comment.content);
+  };
+
+  const handleSaveEditComment = async (commentId: string) => {
+    if (!editingCommentContent.trim()) {
+      toast.error("Comment cannot be empty");
+      return;
+    }
+
+    const { success, error } = await CommentService.updateComment(
+      commentId,
+      editingCommentContent.trim()
+    );
+
+    if (!success) {
+      toast.error(error || "Failed to update comment");
+      return;
+    }
+
+    toast.success("Comment updated");
+    setEditingCommentId(null);
+    setEditingCommentContent("");
+
+    // Refresh comments
+    await fetchComments();
+  };
+
+  const handleCancelEditComment = () => {
+    setEditingCommentId(null);
+    setEditingCommentContent("");
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    setDeletingCommentId(commentId);
+
+    const { success, error } = await CommentService.deleteComment(commentId);
+
+    if (!success) {
+      toast.error(error || "Failed to delete comment");
+      setDeletingCommentId(null);
+      return;
+    }
+
+    toast.success("Comment deleted");
+    setDeletingCommentId(null);
+
+    // Remove comment from local state
+    setComments(prev => prev.filter(c => c.id !== commentId));
+  };
+
+  const canEditOrDeleteComment = (comment: Comment) => {
+    if (!user) return false;
+    // User can edit/delete their own comment or instructor can edit/delete any comment
+    return comment.user_id === user.id || profile?.role === 'instructor';
+  };
+
   if (isAuthLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -482,19 +543,98 @@ const TicketDetail = () => {
                   ) : (
                     comments.map((comment) => (
                       <div key={comment.id} className="border-l-2 border-primary pl-4 py-2">
-                        <div className="flex items-center gap-2 mb-2">
-                          <p className="font-semibold text-sm">
-                            {comment.user?.full_name || comment.user?.email}
-                          </p>
-                          <span className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(comment.created_at), {
-                              addSuffix: true,
-                            })}
-                          </span>
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-sm">
+                              {comment.user?.full_name || comment.user?.email}
+                            </p>
+                            <span className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(comment.created_at), {
+                                addSuffix: true,
+                              })}
+                            </span>
+                            {comment.updated_at !== comment.created_at && (
+                              <span className="text-xs text-muted-foreground italic">
+                                (edited)
+                              </span>
+                            )}
+                          </div>
+                          {canEditOrDeleteComment(comment) && editingCommentId !== comment.id && (
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditComment(comment)}
+                                className="h-7 px-2"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 text-destructive hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Delete Comment</DialogTitle>
+                                    <DialogDescription>
+                                      Are you sure you want to delete this comment? This action cannot be undone.
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="flex justify-end gap-2 mt-4">
+                                    <Button variant="outline" onClick={() => { }}>
+                                      Cancel
+                                    </Button>
+                                    <Button
+                                      variant="destructive"
+                                      onClick={() => handleDeleteComment(comment.id)}
+                                      disabled={deletingCommentId === comment.id}
+                                    >
+                                      {deletingCommentId === comment.id ? "Deleting..." : "Delete"}
+                                    </Button>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            </div>
+                          )}
                         </div>
-                        <div className="prose prose-sm max-w-none dark:prose-invert">
-                          <ReactMarkdown>{comment.content}</ReactMarkdown>
-                        </div>
+                        {editingCommentId === comment.id ? (
+                          <div className="space-y-2">
+                            <Textarea
+                              value={editingCommentContent}
+                              onChange={(e) => setEditingCommentContent(e.target.value)}
+                              className="min-h-[80px]"
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => handleSaveEditComment(comment.id)}
+                                className="gap-1"
+                              >
+                                <Save className="h-3 w-3" />
+                                Save
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={handleCancelEditComment}
+                                className="gap-1"
+                              >
+                                <X className="h-3 w-3" />
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="prose prose-sm max-w-none dark:prose-invert">
+                            <ReactMarkdown>{comment.content}</ReactMarkdown>
+                          </div>
+                        )}
                       </div>
                     ))
                   )}
