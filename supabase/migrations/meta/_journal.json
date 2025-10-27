@@ -36,6 +36,13 @@
       "when": 1761221070421,
       "tag": "0004_mute_enchantress",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1761564048242,
+      "tag": "0005_brief_albert_cleary",
+      "breakpoints": true
     }
   ]
 }

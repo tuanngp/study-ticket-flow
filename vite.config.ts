@@ -28,7 +28,7 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     rollupOptions: {
-      external: ['postgres', 'better-sqlite3'],
+      external: ['postgres', 'better-sqlite3', '@/db/drizzle-client'],
     },
   },
 }));
