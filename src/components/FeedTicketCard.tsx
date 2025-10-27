@@ -1,38 +1,25 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { 
-  Clock, 
-  User, 
-  MessageSquare, 
-  Bookmark, 
-  Share2, 
-  ThumbsUp,
-  MoreHorizontal,
-  Image as ImageIcon,
-  Calendar,
-  Tag as TagIcon,
-  FileText,
-  Bug,
-  Lightbulb,
-  HelpCircle,
-  Settings,
-  Code,
-  Database,
-  AlertTriangle,
-  CheckCircle,
-  Star,
-  Sparkles,
-  BookOpen,
-  Users,
-  Zap,
-  Brain,
-  Target
-} from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { CommentService } from '@/services/commentService';
+import { formatDistanceToNow } from 'date-fns';
+import {
+  Bookmark,
+  Bug,
+  CheckCircle,
+  FileText,
+  HelpCircle,
+  Lightbulb,
+  MessageSquare,
+  MoreHorizontal,
+  Share2,
+  Star,
+  Tag as TagIcon,
+  ThumbsUp,
+  User
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface FeedTicketCardProps {
   ticket: {
@@ -65,12 +52,12 @@ interface FeedTicketCardProps {
   showActions?: boolean;
 }
 
-export const FeedTicketCard = ({ 
-  ticket, 
-  onClick, 
-  onEdit, 
-  onDelete, 
-  showActions = true 
+export const FeedTicketCard = ({
+  ticket,
+  onClick,
+  onEdit,
+  onDelete,
+  showActions = true
 }: FeedTicketCardProps) => {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
@@ -215,7 +202,7 @@ export const FeedTicketCard = ({
   };
 
   return (
-    <Card 
+    <Card
       className="group hover:shadow-lg transition-all duration-200 cursor-pointer bg-card/50 hover:bg-card border-border/50"
       onClick={onClick}
     >
@@ -235,7 +222,7 @@ export const FeedTicketCard = ({
               </p>
             </div>
           </div>
-          
+
           {showActions && (
             <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
               <MoreHorizontal className="h-4 w-4" />
@@ -292,11 +279,12 @@ export const FeedTicketCard = ({
           <h3 className="font-bold text-xl leading-tight line-clamp-1">
             {ticket.title}
           </h3>
-          
+
           {/* Description - Single line only */}
-          <p className="text-sm text-muted-foreground line-clamp-1">
-            {ticket.description}
-          </p>
+          <div
+            className="text-sm text-muted-foreground line-clamp-1"
+            dangerouslySetInnerHTML={{ __html: ticket.description }}
+          />
         </div>
 
         {/* Tags - Add spacing from separator */}
@@ -352,7 +340,7 @@ export const FeedTicketCard = ({
               <ThumbsUp className="h-4 w-4 mr-1" />
               <span className="text-xs">12</span>
             </Button>
-            
+
             <Button
               variant="ghost"
               size="sm"
@@ -368,7 +356,7 @@ export const FeedTicketCard = ({
                 {isLoadingComments ? '...' : commentCount}
               </span>
             </Button>
-            
+
             <Button
               variant="ghost"
               size="sm"
@@ -381,7 +369,7 @@ export const FeedTicketCard = ({
               <Bookmark className="h-4 w-4" />
             </Button>
           </div>
-          
+
           <Button
             variant="ghost"
             size="sm"
