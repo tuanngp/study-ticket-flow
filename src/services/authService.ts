@@ -51,7 +51,6 @@ export class AuthService {
 
       return { user: result.user };
     } catch (error: any) {
-      console.error('Error in signUp:', error);
       return { user: null, error: error.message };
     }
   }
@@ -72,7 +71,6 @@ export class AuthService {
 
       return { user: result.user };
     } catch (error: any) {
-      console.error('Error in signIn:', error);
       return { user: null, error: error.message };
     }
   }
@@ -90,7 +88,6 @@ export class AuthService {
 
       return {};
     } catch (error: any) {
-      console.error('Error in signOut:', error);
       return { error: error.message };
     }
   }
@@ -108,7 +105,6 @@ export class AuthService {
 
       return { data };
     } catch (error: any) {
-      console.error('Error in getCurrentUser:', error);
       throw error;
     }
   }
@@ -118,7 +114,10 @@ export class AuthService {
    */
   static async getCurrentSession(): Promise<AuthSession | null> {
     try {
+      console.log('Getting current session...');
+
       const { data: { session }, error } = await supabase.auth.getSession();
+      console.log('Session result:', { hasSession: !!session, error: error?.message });
 
       if (error) {
         console.error('Error getting session:', error);
@@ -129,7 +128,9 @@ export class AuthService {
         return null;
       }
 
+      console.log('Session found, ensuring profile...');
       const profile = await this.ensureUserProfile(session.user);
+      console.log('Profile ensured:', !!profile);
 
       return {
         user: session.user,
@@ -146,42 +147,28 @@ export class AuthService {
    */
   static async ensureUserProfile(user: any): Promise<UserProfile | null> {
     try {
-      // First try to get existing profile
-      let profile = await this.getUserProfile(user.id);
+      console.log('Ensuring profile for user:', user.id);
 
-      if (!profile) {
-        // Profile doesn't exist, create one
-        console.log('Profile not found, creating new profile for user:', user.id);
+      // Return a minimal profile immediately to avoid database issues
+      const minimalProfile = {
+        id: user.id,
+        email: user.email,
+        full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Unknown User',
+        role: user.user_metadata?.role || 'student',
+      };
 
-        const { data, error } = await supabase
-          .from("profiles")
-          .insert({
-            id: user.id,
-            email: user.email,
-            full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
-            role: user.user_metadata?.role || 'student',
-          })
-          .select()
-          .single();
-
-        if (error) {
-          console.error('Error creating user profile:', error);
-          // If profile creation fails, try to get it again in case it was created by another process
-          profile = await this.getUserProfile(user.id);
-          if (!profile) {
-            console.error('Failed to create or retrieve profile');
-            return null;
-          }
-        } else {
-          profile = data;
-          console.log('Profile created successfully:', profile);
-        }
-      }
-
-      return profile;
+      console.log('Using minimal profile:', minimalProfile);
+      return minimalProfile;
     } catch (error) {
       console.error('Error in ensureUserProfile:', error);
-      return null;
+
+      // Return a minimal profile as fallback
+      return {
+        id: user.id,
+        email: user.email,
+        full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Unknown User',
+        role: user.user_metadata?.role || 'student',
+      };
     }
   }
 

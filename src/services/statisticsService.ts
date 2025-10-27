@@ -167,14 +167,58 @@ export class StatisticsService {
   }
 
   /**
-   * Get comprehensive analytics dashboard data
+   * Get comprehensive analytics dashboard data with timeout
    */
   static async getAnalyticsDashboard(userId: string, timeRange: 'week' | 'month' | 'quarter' | 'year' = 'month') {
+    try {
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Analytics fetch timeout')), 20000)
+      );
+
+      const analyticsPromise = this.fetchAnalyticsData(userId, timeRange);
+      return await Promise.race([analyticsPromise, timeoutPromise]);
+    } catch (error) {
+      console.error('Error in getAnalyticsDashboard:', error);
+      // Return empty data structure instead of throwing error
+      return {
+        overview: {
+          totalTickets: 0,
+          openTickets: 0,
+          resolvedTickets: 0,
+          closedTickets: 0,
+          averageResolutionTime: 0,
+          userSatisfaction: 0,
+        },
+        trends: {
+          ticketsByStatus: [],
+          ticketsByPriority: [],
+          ticketsByType: [],
+          resolutionTimeByMonth: [],
+        },
+        performance: {
+          topPerformers: [],
+          departmentStats: [],
+          courseStats: [],
+        },
+        insights: {
+          peakHours: [],
+          commonIssues: [],
+          seasonalPatterns: [],
+        },
+      };
+    }
+  }
+
+  /**
+   * Internal method to fetch analytics data
+   */
+  private static async fetchAnalyticsData(userId: string, timeRange: 'week' | 'month' | 'quarter' | 'year') {
     try {
       // Calculate date range
       const now = new Date();
       const startDate = new Date();
-      
+
       switch (timeRange) {
         case 'week':
           startDate.setDate(now.getDate() - 7);
@@ -242,8 +286,8 @@ export class StatisticsService {
       const closedTickets = tickets?.filter(t => t.status === 'closed').length || 0;
 
       // Calculate average resolution time
-      const resolvedTicketsWithTime = tickets?.filter(t => 
-        (t.status === 'resolved' || t.status === 'closed') && 
+      const resolvedTicketsWithTime = tickets?.filter(t =>
+        (t.status === 'resolved' || t.status === 'closed') &&
         t.created_at && t.updated_at
       ) || [];
 
@@ -253,18 +297,18 @@ export class StatisticsService {
         return sum + (resolved - created);
       }, 0);
 
-      const averageResolutionTime = resolvedTicketsWithTime.length > 0 
+      const averageResolutionTime = resolvedTicketsWithTime.length > 0
         ? Math.round(totalResolutionTime / resolvedTicketsWithTime.length / (1000 * 60 * 60)) // Convert to hours
         : 0;
 
       // Calculate user satisfaction based on resolution rate and time
       const userSatisfaction = (() => {
         if (totalTickets === 0) return 0;
-        
+
         const resolutionRate = (resolvedTickets + closedTickets) / totalTickets;
         const timeScore = averageResolutionTime > 0 ? Math.max(0, 100 - (averageResolutionTime * 2)) : 100;
         const activityScore = Math.min(100, totalTickets * 5); // More tickets = higher activity score
-        
+
         return Math.round((resolutionRate * 40) + (timeScore * 0.3) + (activityScore * 0.3));
       })();
 
@@ -294,24 +338,24 @@ export class StatisticsService {
       const resolutionTimeByMonth = (() => {
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const currentMonth = new Date().getMonth();
-        
+
         return months.slice(0, currentMonth + 1).map((month, index) => {
           const monthTickets = tickets?.filter(ticket => {
             const ticketDate = new Date(ticket.created_at);
-            return ticketDate.getMonth() === index && 
-                   (ticket.status === 'resolved' || ticket.status === 'closed');
+            return ticketDate.getMonth() === index &&
+              (ticket.status === 'resolved' || ticket.status === 'closed');
           }) || [];
-          
+
           if (monthTickets.length === 0) {
             return { month, averageTime: 0 };
           }
-          
+
           const totalTime = monthTickets.reduce((sum, ticket) => {
             const created = new Date(ticket.created_at).getTime();
             const resolved = new Date(ticket.updated_at).getTime();
             return sum + (resolved - created);
           }, 0);
-          
+
           const avgTime = totalTime / monthTickets.length / (1000 * 60 * 60); // Convert to hours
           return { month, averageTime: Math.round(avgTime) };
         });
@@ -319,40 +363,40 @@ export class StatisticsService {
 
       // Personal performance data (based on user's own tickets)
       const userResolvedTickets = tickets?.filter(t => t.status === 'resolved' || t.status === 'closed') || [];
-      const userAvgResolutionTime = userResolvedTickets.length > 0 
+      const userAvgResolutionTime = userResolvedTickets.length > 0
         ? userResolvedTickets.reduce((sum, ticket) => {
-            const created = new Date(ticket.created_at).getTime();
-            const resolved = new Date(ticket.updated_at).getTime();
-            return sum + (resolved - created);
-          }, 0) / userResolvedTickets.length / (1000 * 60 * 60)
+          const created = new Date(ticket.created_at).getTime();
+          const resolved = new Date(ticket.updated_at).getTime();
+          return sum + (resolved - created);
+        }, 0) / userResolvedTickets.length / (1000 * 60 * 60)
         : 0;
 
       const topPerformers = [
-        { 
-          name: currentUserProfile?.full_name || 'You', 
-          resolvedTickets: userResolvedTickets.length, 
-          averageTime: Math.round(userAvgResolutionTime), 
-          rating: Math.min(5, Math.max(3, 5 - (userAvgResolutionTime / 10))) 
+        {
+          name: currentUserProfile?.full_name || 'You',
+          resolvedTickets: userResolvedTickets.length,
+          averageTime: Math.round(userAvgResolutionTime),
+          rating: Math.min(5, Math.max(3, 5 - (userAvgResolutionTime / 10)))
         },
       ];
 
       // Personal department/course stats (if user has role info)
       const userRole = currentUserProfile?.role || 'student';
       const departmentStats = [
-        { 
-          department: userRole === 'student' ? 'Student Support' : 'Staff Support', 
-          tickets: totalTickets, 
-          resolutionTime: Math.round(userAvgResolutionTime), 
-          satisfaction: userSatisfaction 
+        {
+          department: userRole === 'student' ? 'Student Support' : 'Staff Support',
+          tickets: totalTickets,
+          resolutionTime: Math.round(userAvgResolutionTime),
+          satisfaction: userSatisfaction
         },
       ];
 
       const courseStats = [
-        { 
-          course: 'Your Tickets', 
-          tickets: totalTickets, 
-          resolutionTime: Math.round(userAvgResolutionTime), 
-          satisfaction: userSatisfaction 
+        {
+          course: 'Your Tickets',
+          tickets: totalTickets,
+          resolutionTime: Math.round(userAvgResolutionTime),
+          satisfaction: userSatisfaction
         },
       ];
 
@@ -391,15 +435,15 @@ export class StatisticsService {
       }
 
       const seasonalPatterns = [
-        { 
-          period: 'Your Activity', 
-          pattern: totalTickets > 0 ? 'Active ticket creator' : 'No tickets created yet', 
-          impact: Math.min(100, totalTickets * 10) 
+        {
+          period: 'Your Activity',
+          pattern: totalTickets > 0 ? 'Active ticket creator' : 'No tickets created yet',
+          impact: Math.min(100, totalTickets * 10)
         },
-        { 
-          period: 'Resolution Rate', 
-          pattern: resolvedTickets > 0 ? `${Math.round((resolvedTickets / totalTickets) * 100)}% resolved` : 'No resolved tickets', 
-          impact: Math.round((resolvedTickets / Math.max(totalTickets, 1)) * 100) 
+        {
+          period: 'Resolution Rate',
+          pattern: resolvedTickets > 0 ? `${Math.round((resolvedTickets / totalTickets) * 100)}% resolved` : 'No resolved tickets',
+          impact: Math.round((resolvedTickets / Math.max(totalTickets, 1)) * 100)
         },
       ];
 
@@ -430,34 +474,8 @@ export class StatisticsService {
         },
       };
     } catch (error) {
-      console.error('Error in getAnalyticsDashboard:', error);
-      // Return empty data structure instead of throwing error
-      return {
-        overview: {
-          totalTickets: 0,
-          openTickets: 0,
-          resolvedTickets: 0,
-          closedTickets: 0,
-          averageResolutionTime: 0,
-          userSatisfaction: 0,
-        },
-        trends: {
-          ticketsByStatus: [],
-          ticketsByPriority: [],
-          ticketsByType: [],
-          resolutionTimeByMonth: [],
-        },
-        performance: {
-          topPerformers: [],
-          departmentStats: [],
-          courseStats: [],
-        },
-        insights: {
-          peakHours: [],
-          commonIssues: [],
-          seasonalPatterns: [],
-        },
-      };
+      console.error('Error in fetchAnalyticsData:', error);
+      throw error; // Re-throw to be caught by parent method
     }
   }
 

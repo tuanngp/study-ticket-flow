@@ -1,19 +1,17 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { FeedLayout } from "@/components/FeedLayout";
 import { FeedTicketCard } from "@/components/FeedTicketCard";
 import { UnifiedTicketCreation } from "@/components/UnifiedTicketCreation";
 import { Pagination } from "@/components/Pagination";
 import { TicketOperationsService, Ticket } from "@/services/ticketOperationsService";
-import { AuthService, UserProfile } from "@/services/authService";
+import { useAuth } from "@/hooks/useAuth";
+import { FullPageLoadingSpinner } from "@/components/LoadingSpinner";
 import { toast } from "sonner";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, profile, loading: authLoading, isAuthenticated } = useAuth();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [filteredTickets, setFilteredTickets] = useState<Ticket[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -24,7 +22,7 @@ const Dashboard = () => {
     dateRange: undefined as string | undefined,
   });
   const [showCreateForm, setShowCreateForm] = useState(false);
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
@@ -41,7 +39,7 @@ const Dashboard = () => {
         type: filters.type !== 'all' ? filters.type : undefined,
         courseCode: filters.dateRange !== 'all' ? filters.dateRange : undefined,
       });
-      
+
       setTickets(result.tickets);
       setFilteredTickets(result.tickets);
       setTotalCount(result.totalCount);
@@ -52,18 +50,16 @@ const Dashboard = () => {
     }
   };
 
-  // Fetch tickets when filters or pagination change
   useEffect(() => {
     if (user?.id) {
-      fetchTickets(user.id, 1, pageSize); // Reset to page 1 when filters change
+      fetchTickets(user.id, 1, pageSize);
       setCurrentPage(1);
     }
   }, [filters, pageSize]);
 
-  // Client-side search (since server doesn't support search yet)
   useEffect(() => {
     if (searchQuery.trim()) {
-      const filtered = tickets.filter(ticket => 
+      const filtered = tickets.filter(ticket =>
         ticket.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         ticket.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         ticket.type.toLowerCase().includes(searchQuery.toLowerCase())
@@ -75,71 +71,39 @@ const Dashboard = () => {
   }, [tickets, searchQuery]);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const session = await AuthService.getCurrentSession();
+    if (!authLoading && !isAuthenticated) {
+      navigate("/auth");
+      return;
+    }
 
-        if (!session) {
-          navigate("/auth");
-          return;
+    if (user?.id) {
+      fetchTickets(user.id);
+
+      // Set up real-time subscription for tickets
+      const unsubscribe = TicketOperationsService.subscribeToTickets(() => {
+        fetchTickets(user.id);
+      });
+
+      return () => {
+        if (unsubscribe) {
+          unsubscribe();
         }
-
-        setUser(session.user);
-        setProfile(session.profile);
-        
-        // Fetch tickets after auth
-        if (session.user?.id) {
-          await fetchTickets(session.user.id);
-          
-          // Set up real-time subscription for tickets
-          const unsubscribe = TicketOperationsService.subscribeToTickets(() => {
-            // Refresh tickets when changes occur
-            fetchTickets(session.user.id);
-          });
-          
-          // Cleanup subscription on unmount
-          return () => {
-            if (unsubscribe) {
-              unsubscribe();
-            }
-          };
-        }
-      } catch (error) {
-        console.error('Auth check failed:', error);
-        navigate("/auth");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkAuth();
-
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (event === "SIGNED_OUT") {
-          navigate("/auth");
-        } else if (session) {
-          setUser(session.user);
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+      };
+    }
+  }, [user, authLoading, isAuthenticated, navigate]);
 
   const handleCreateTicket = async (ticketData: any) => {
     try {
       console.log('Creating ticket with data:', ticketData);
       console.log('User ID:', user.id);
-      
+
       // Create ticket using the service
       const newTicket = await TicketOperationsService.createTicket(ticketData, user.id);
       console.log('Ticket created successfully:', newTicket);
-      
+
       toast.success('Ticket created successfully!');
       setShowCreateForm(false);
-      
+
       // Refresh tickets to show the new one
       if (user?.id) {
         await fetchTickets(user.id);
@@ -170,12 +134,8 @@ const Dashboard = () => {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
+  if (authLoading) {
+    return <FullPageLoadingSpinner />;
   }
 
   if (showCreateForm) {
@@ -192,7 +152,7 @@ const Dashboard = () => {
   }
 
   return (
-    <FeedLayout 
+    <FeedLayout
       onCreateTicket={() => setShowCreateForm(true)}
       user={user}
       profile={profile}
@@ -235,7 +195,7 @@ const Dashboard = () => {
               }}
             />
           ))}
-          
+
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="col-span-full mt-8 mb-20 flex justify-center">

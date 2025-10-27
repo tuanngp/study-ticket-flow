@@ -7,6 +7,8 @@ import { AIAssistantWidget } from "./components/AIAssistantWidget";
 import { InstructorRoute } from "./components/InstructorRoute";
 import { ProfileLayout } from "./components/ProfileLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import AdminDocuments from "./pages/AdminDocuments";
 import Analytics from "./pages/Analytics";
@@ -26,56 +28,60 @@ import UserHome from "./pages/UserHome";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter
-          future={{
-            v7_startTransition: true,
-            v7_relativeSplatPath: true,
-          }}
-        >
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/analytics" element={
-              <ProtectedRoute>
-                <Analytics />
-              </ProtectedRoute>
-            } />
-            <Route path="/userhome" element={<UserHome />} />
-            <Route path="/calendar" element={
-              <ProtectedRoute>
-                <CalendarPage />
-              </ProtectedRoute>
-            } />
-            <Route path="/profile" element={
-              <ProtectedRoute>
-                <ProfileLayout>
-                  <Profile />
-                </ProfileLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/tickets/:id" element={<TicketDetail />} />
-            <Route path="/tickets/new" element={<NewTicket />} />
-            <Route path="/notifications" element={<Notifications />} />
-            <Route path="/knowledge-base" element={
-              <InstructorRoute>
-                <KnowledgeBase />
-              </InstructorRoute>
-            } />
-            <Route path="/admin/documents" element={<AdminDocuments />} />
-            <Route path="/test-educational-types" element={<TestEducationalTypes />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <AIAssistantWidget />
-        </BrowserRouter>
-      </TooltipProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <ThemeProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter
+              future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true,
+              }}
+            >
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/analytics" element={
+                  <ProtectedRoute>
+                    <Analytics />
+                  </ProtectedRoute>
+                } />
+                <Route path="/userhome" element={<UserHome />} />
+                <Route path="/calendar" element={
+                  <ProtectedRoute>
+                    <CalendarPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/profile" element={
+                  <ProtectedRoute>
+                    <ProfileLayout>
+                      <Profile />
+                    </ProfileLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/tickets/:id" element={<TicketDetail />} />
+                <Route path="/tickets/new" element={<NewTicket />} />
+                <Route path="/notifications" element={<Notifications />} />
+                <Route path="/knowledge-base" element={
+                  <InstructorRoute>
+                    <KnowledgeBase />
+                  </InstructorRoute>
+                } />
+                <Route path="/admin/documents" element={<AdminDocuments />} />
+                <Route path="/test-educational-types" element={<TestEducationalTypes />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <AIAssistantWidget />
+            </BrowserRouter>
+          </TooltipProvider>
+        </ThemeProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

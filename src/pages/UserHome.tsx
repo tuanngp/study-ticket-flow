@@ -6,60 +6,23 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { UserHomeSidebar } from '@/components/UserHomeSidebar';
-import { supabase } from '@/integrations/supabase/client';
-import { AuthService, UserProfile } from '@/services/authService';
+import { useAuth } from '@/hooks/useAuth';
 import { BarChart3, Calendar, Plus, Ticket, Users } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { FullPageLoadingSpinner } from '@/components/LoadingSpinner';
 
 const UserHome = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, profile, loading: authLoading, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const session = await AuthService.getCurrentSession();
+    if (!authLoading && !isAuthenticated) {
+      navigate("/auth");
+    }
+  }, [authLoading, isAuthenticated, navigate]);
 
-        if (!session) {
-          navigate("/auth");
-          return;
-        }
-
-        setUser(session.user);
-        setProfile(session.profile);
-      } catch (error) {
-        console.error('Auth check failed:', error);
-        navigate("/auth");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkAuth();
-
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (event === "SIGNED_OUT") {
-          navigate("/auth");
-        } else if (session) {
-          setUser(session.user);
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
+  if (authLoading) {
+    return <FullPageLoadingSpinner />;
   }
 
   return (

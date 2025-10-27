@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,16 +7,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Ticket, GraduationCap, User, Shield } from "lucide-react";
+import { Ticket, GraduationCap, User } from "lucide-react";
 import { AuthService } from "@/services/authService";
+import { useAuth } from "@/hooks/useAuth";
 
 const Auth = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState<'student' | 'instructor' | 'admin'>('student');
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, authLoading, navigate]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +45,8 @@ const Auth = () => {
 
       if (user) {
         toast.success("Account created successfully!");
-        navigate("/dashboard");
+        // Don't navigate here - let AuthContext handle it
+        // The useEffect above will redirect when isAuthenticated becomes true
       }
     } catch (error: any) {
       toast.error(error.message || "Error creating account");
@@ -61,11 +71,12 @@ const Auth = () => {
 
       if (user) {
         toast.success("Signed in successfully!");
-        navigate("/dashboard");
+        window.location.href = '/dashboard';
+      } else {
+        throw new Error('No user returned from sign in');
       }
     } catch (error: any) {
       toast.error(error.message || "Error signing in");
-    } finally {
       setIsLoading(false);
     }
   };
@@ -178,7 +189,7 @@ const Auth = () => {
                           <span>Instructor</span>
                         </div>
                       </SelectItem>
-                      
+
                     </SelectContent>
                   </Select>
                   <div className="text-xs text-muted-foreground">
