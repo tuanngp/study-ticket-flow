@@ -1,14 +1,16 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { UserHomeSidebar } from '@/components/UserHomeSidebar';
-import { AuthService, UserProfile } from '@/services/authService';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Plus, Ticket, Users, BarChart3, Calendar } from 'lucide-react';
-import { TicketList } from '@/components/TicketList';
+import { KnowledgeBaseCard } from '@/components/KnowledgeBaseCard';
+import { KnowledgeBaseQuickActions } from '@/components/KnowledgeBaseQuickActions';
 import { StatsCards } from '@/components/StatsCards';
+import { TicketList } from '@/components/TicketList';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { UserHomeSidebar } from '@/components/UserHomeSidebar';
+import { supabase } from '@/integrations/supabase/client';
+import { AuthService, UserProfile } from '@/services/authService';
+import { BarChart3, Calendar, Plus, Ticket, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const UserHome = () => {
   const navigate = useNavigate();
@@ -64,7 +66,7 @@ const UserHome = () => {
     <SidebarProvider>
       <div className="min-h-screen bg-background">
         <UserHomeSidebar user={user} profile={profile} />
-        
+
         <SidebarInset>
           <main className="flex-1 p-6">
             {/* Header */}
@@ -102,7 +104,7 @@ const UserHome = () => {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <TicketList userId={user?.id} limit={5} />
+                    <TicketList userId={user?.id} />
                   </CardContent>
                 </Card>
               </div>
@@ -120,24 +122,24 @@ const UserHome = () => {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="w-full justify-start gap-2"
                       onClick={() => navigate("/tickets/new")}
                     >
                       <Plus className="h-4 w-4" />
                       Create Ticket
                     </Button>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="w-full justify-start gap-2"
                       onClick={() => navigate("/analytics")}
                     >
                       <BarChart3 className="h-4 w-4" />
                       View Analytics
                     </Button>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="w-full justify-start gap-2"
                       onClick={() => navigate("/calendar")}
                     >
@@ -146,6 +148,14 @@ const UserHome = () => {
                     </Button>
                   </CardContent>
                 </Card>
+
+                {/* Knowledge Base Card - Only for Instructors */}
+                {profile?.role === 'instructor' && user?.id && (
+                  <>
+                    <KnowledgeBaseCard instructorId={user.id} />
+                    <KnowledgeBaseQuickActions instructorId={user.id} />
+                  </>
+                )}
 
                 {/* Profile Summary */}
                 <Card className="shadow-md">

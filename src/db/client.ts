@@ -3,7 +3,7 @@ import postgres from 'postgres'
 import * as schema from './schema'
 
 // Use Supabase connection string from environment variables
-const connectionString = import.meta.env.VITE_DATABASE_URL || 
+const connectionString = import.meta.env.DATABASE_URL ||
   `postgresql://postgres:${import.meta.env.VITE_SUPABASE_DB_PASSWORD}@${import.meta.env.VITE_SUPABASE_HOST}:5432/postgres`
 
 export const client = postgres(connectionString, { prepare: false })

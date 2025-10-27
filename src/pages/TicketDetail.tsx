@@ -1,24 +1,28 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { toast } from "sonner";
-import { formatDistanceToNow } from "date-fns";
-import { ArrowLeft, Send, User, Clock, Star, Calendar, Edit, Trash2, Save, X } from "lucide-react";
-import { AuthService, UserProfile } from "@/services/authService";
-import { TicketOperationsService, Ticket } from "@/services/ticketOperationsService";
-import { CommentService, Comment } from "@/services/commentService";
 import { ReviewButton, ReviewSummary } from "@/components/ReviewButton";
 import { ReviewDisplay } from "@/components/ReviewDisplay";
-import { ReviewService } from "@/services/reviewService";
-import { usePermissions } from "@/hooks/usePermissions";
+import { SaveToKnowledgeBaseDialog } from "@/components/SaveToKnowledgeBaseDialog";
+import { TicketAISuggestions } from "@/components/TicketAISuggestions";
 import { TicketCalendarIntegration } from "@/components/TicketCalendarIntegration";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import type { KnowledgeEntry } from "@/db/schema";
+import { usePermissions } from "@/hooks/usePermissions";
+import { AuthService, UserProfile } from "@/services/authService";
+import { Comment, CommentService } from "@/services/commentService";
+import { ReviewService } from "@/services/reviewService";
+import { Ticket, TicketOperationsService } from "@/services/ticketOperationsService";
+import { formatDistanceToNow } from "date-fns";
+import { ArrowLeft, BookOpen, Clock, Edit, Save, Send, Star, Trash2, User, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
 
 const TicketDetail = () => {
   const { id } = useParams();
@@ -45,6 +49,10 @@ const TicketDetail = () => {
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const { canReviewTicket, canViewTicketReviews } = usePermissions();
+  const [isSaveToKBDialogOpen, setIsSaveToKBDialogOpen] = useState(false);
+  const [savedEntryId, setSavedEntryId] = useState<string | null>(null);
+  const [showAISuggestions, setShowAISuggestions] = useState(true);
+  const [showMarkdownPreview, setShowMarkdownPreview] = useState(false);
 
   useEffect(() => {
     const checkAuthAndLoadData = async () => {
@@ -61,7 +69,7 @@ const TicketDetail = () => {
 
         if (id) {
           await Promise.all([fetchTicket(), fetchComments()]);
-          
+
         }
       } catch (error) {
         console.error('Auth check failed:', error);
@@ -163,7 +171,7 @@ const TicketDetail = () => {
 
   const handleEditTicket = () => {
     if (!ticket) return;
-    
+
     setEditData({
       title: ticket.title,
       description: ticket.description,
@@ -194,7 +202,7 @@ const TicketDetail = () => {
       if (updatedTicket) {
         setTicket(updatedTicket);
       }
-      
+
       toast.success("Ticket updated successfully");
       setIsEditing(false);
     } catch (error: any) {
@@ -237,11 +245,31 @@ const TicketDetail = () => {
   };
 
   const canEditTicket = ticket && user && (
-    ticket.creator_id === user.id || 
+    ticket.creator_id === user.id ||
     ticket.assignee_id === user.id
   );
 
   const canDeleteTicket = ticket && user && ticket.creator_id === user.id;
+
+  const isInstructor = profile?.role === 'instructor';
+
+  const handleSaveToKnowledgeBase = () => {
+    if (!newComment.trim()) {
+      toast.error("Please enter a comment to save");
+      return;
+    }
+    setIsSaveToKBDialogOpen(true);
+  };
+
+  const handleKnowledgeEntrySaved = (entry: KnowledgeEntry) => {
+    setSavedEntryId(entry.id);
+    toast.success("Answer saved to knowledge base!");
+  };
+
+  const handleApplySuggestion = (answer: string) => {
+    setNewComment(answer);
+    setShowAISuggestions(false);
+  };
 
   if (isAuthLoading) {
     return (
@@ -265,7 +293,7 @@ const TicketDetail = () => {
   return (
     <div className="min-h-screen bg-gradient-subtle">
       <Navbar user={user} profile={profile} />
-      
+
       <main className="container mx-auto px-4 py-8">
         <Button
           variant="ghost"
@@ -391,11 +419,11 @@ const TicketDetail = () => {
                                 </DialogDescription>
                               </DialogHeader>
                               <div className="flex justify-end gap-2 mt-4">
-                                <Button variant="outline" onClick={() => {}}>
+                                <Button variant="outline" onClick={() => { }}>
                                   Cancel
                                 </Button>
-                                <Button 
-                                  variant="destructive" 
+                                <Button
+                                  variant="destructive"
                                   onClick={handleDeleteTicket}
                                   disabled={isDeleting}
                                 >
@@ -420,7 +448,7 @@ const TicketDetail = () => {
                   />
                 ) : (
                   <div className="prose max-w-none">
-                    <div 
+                    <div
                       className="text-foreground"
                       dangerouslySetInnerHTML={{ __html: ticket?.description || '' }}
                     />
@@ -428,6 +456,18 @@ const TicketDetail = () => {
                 )}
               </CardContent>
             </Card>
+
+            {/* AI Suggestions Section */}
+            {showAISuggestions && ticket && user && (
+              <TicketAISuggestions
+                ticketId={ticket.id}
+                ticketTitle={ticket.title}
+                ticketDescription={ticket.description}
+                courseCode={(ticket as any).course_code}
+                userId={user.id}
+                onApplySuggestion={handleApplySuggestion}
+              />
+            )}
 
             <Card className="shadow-lg">
               <CardHeader>
@@ -452,26 +492,95 @@ const TicketDetail = () => {
                             })}
                           </span>
                         </div>
-                        <p className="text-sm whitespace-pre-wrap">{comment.content}</p>
+                        <div className="prose prose-sm max-w-none dark:prose-invert">
+                          <ReactMarkdown>{comment.content}</ReactMarkdown>
+                        </div>
                       </div>
                     ))
                   )}
                 </div>
 
-                <div className="flex gap-2">
-                  <Textarea
-                    placeholder="Add a comment..."
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    className="flex-1"
-                    rows={3}
-                  />
-                  <Button
-                    onClick={handleAddComment}
-                    className="bg-gradient-primary hover:shadow-glow"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
+                <div className="space-y-2">
+                  {/* Markdown Preview Toggle */}
+                  {newComment.trim() && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowMarkdownPreview(!showMarkdownPreview)}
+                        className="h-6 px-2 text-xs"
+                      >
+                        {showMarkdownPreview ? "Chỉnh sửa" : "Xem trước"}
+                      </Button>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    {showMarkdownPreview ? (
+                      <div className="flex-1 min-h-[76px] p-3 border rounded-md bg-muted">
+                        <div className="prose prose-sm max-w-none dark:prose-invert">
+                          <ReactMarkdown>{newComment}</ReactMarkdown>
+                        </div>
+                      </div>
+                    ) : (
+                      <Textarea
+                        placeholder="Add a comment..."
+                        value={newComment}
+                        onChange={(e) => {
+                          setNewComment(e.target.value);
+                          // Clear saved entry indicator when user starts typing again
+                          if (savedEntryId) {
+                            setSavedEntryId(null);
+                          }
+                        }}
+                        className="flex-1"
+                        rows={3}
+                      />
+                    )}
+                    <Button
+                      onClick={handleAddComment}
+                      className="bg-gradient-primary hover:shadow-glow"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {/* Markdown Help */}
+                  {!showMarkdownPreview && newComment.trim() && (
+                    <div className="text-xs text-muted-foreground">
+                      <details className="cursor-pointer">
+                        <summary className="hover:text-foreground">Markdown Guide</summary>
+                        <div className="mt-2 space-y-1 pl-4">
+                          <div><code>**bold**</code> → <strong>bold</strong></div>
+                          <div><code>*italic*</code> → <em>italic</em></div>
+                          <div><code>`code`</code> → <code>code</code></div>
+                          <div><code>```code block```</code> → code block</div>
+                          <div><code>[link](url)</code> → link</div>
+                          <div><code>- list item</code> → • list item</div>
+                        </div>
+                      </details>
+                    </div>
+                  )}
+
+                  {isInstructor && newComment.trim() && (
+                    <div className="flex justify-between items-center">
+                      {savedEntryId && (
+                        <Badge variant="secondary" className="gap-1">
+                          <BookOpen className="h-3 w-3" />
+                          Saved to Knowledge Base
+                        </Badge>
+                      )}
+                      <Button
+                        onClick={handleSaveToKnowledgeBase}
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 ml-auto"
+                      >
+                        <BookOpen className="h-4 w-4" />
+                        Save to Knowledge Base
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -504,8 +613,8 @@ const TicketDetail = () => {
                     <p className="text-sm font-medium mb-2">Images ({ticket.images.length})</p>
                     <div className="space-y-2">
                       {ticket.images.map((imageUrl, index) => (
-                        <div 
-                          key={index} 
+                        <div
+                          key={index}
                           className="relative group cursor-pointer"
                           onClick={() => {
                             setCurrentImageIndex(index);
@@ -586,12 +695,12 @@ const TicketDetail = () => {
                         <p className="text-sm font-medium">Đánh giá</p>
                         <ReviewSummary ticketId={id} />
                       </div>
-                      
+
                       {canReviewTicket(id) && (
-                        <ReviewButton 
-                          ticketId={id} 
-                          variant="outline" 
-                          size="sm" 
+                        <ReviewButton
+                          ticketId={id}
+                          variant="outline"
+                          size="sm"
                           className="w-full"
                         />
                       )}
@@ -685,11 +794,10 @@ const TicketDetail = () => {
                     key={index}
                     src={imageUrl}
                     alt={`Thumbnail ${index + 1}`}
-                    className={`w-16 h-16 object-cover rounded cursor-pointer border-2 transition-all ${
-                      index === currentImageIndex 
-                        ? 'border-blue-500 opacity-100' 
-                        : 'border-transparent opacity-60 hover:opacity-80'
-                    }`}
+                    className={`w-16 h-16 object-cover rounded cursor-pointer border-2 transition-all ${index === currentImageIndex
+                      ? 'border-blue-500 opacity-100'
+                      : 'border-transparent opacity-60 hover:opacity-80'
+                      }`}
                     onClick={() => setCurrentImageIndex(index)}
                   />
                 ))}
@@ -698,6 +806,22 @@ const TicketDetail = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Save to Knowledge Base Dialog */}
+      {isInstructor && ticket && profile && (
+        <SaveToKnowledgeBaseDialog
+          isOpen={isSaveToKBDialogOpen}
+          onClose={() => setIsSaveToKBDialogOpen(false)}
+          ticketId={ticket.id}
+          questionText={ticket.title}
+          answerText={newComment}
+          courseCode={(ticket as any).course_code}
+          instructorId={user.id}
+          instructorName={profile.full_name || profile.email || 'Instructor'}
+          instructorAvatar={profile.avatar_url}
+          onSave={handleKnowledgeEntrySaved}
+        />
+      )}
     </div>
   );
 };

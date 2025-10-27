@@ -1,15 +1,15 @@
 import { relations } from "drizzle-orm";
 import {
+  boolean,
+  index,
+  integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
   timestamp,
   uuid,
-  integer,
-  boolean,
-  jsonb,
   vector,
-  index,
 } from "drizzle-orm/pg-core";
 
 // Enums
@@ -20,7 +20,7 @@ export const userRoleEnum = pgEnum("user_role", [
 ]);
 export const ticketTypeEnum = pgEnum("ticket_type", [
   "bug",
-  "feature", 
+  "feature",
   "question",
   "task",
   "grading",
@@ -49,7 +49,7 @@ export const ticketStatusEnum = pgEnum("ticket_status", [
 // RAG Assistant Enums
 export const notificationTypeEnum = pgEnum("notification_type", [
   "ticket_created",
-  "ticket_assigned", 
+  "ticket_assigned",
   "ticket_status_changed",
   "ticket_resolved",
   "ticket_updated",
@@ -69,7 +69,7 @@ export const notificationTypeEnum = pgEnum("notification_type", [
 
 export const notificationPriorityEnum = pgEnum("notification_priority", [
   "low",
-  "medium", 
+  "medium",
   "high",
   "urgent"
 ]);
@@ -77,7 +77,7 @@ export const notificationPriorityEnum = pgEnum("notification_priority", [
 // Review System Enums
 export const reviewTypeEnum = pgEnum("review_type", [
   "quality",
-  "completeness", 
+  "completeness",
   "clarity",
   "helpfulness",
   "overall"
@@ -106,6 +106,12 @@ export const eventStatusEnum = pgEnum("event_status", [
   "in_progress",
   "completed",
   "cancelled"
+]);
+
+// Knowledge Base Enums
+export const knowledgeVisibilityEnum = pgEnum("knowledge_visibility", [
+  "public",
+  "course_specific"
 ]);
 
 // Tables
@@ -385,6 +391,100 @@ export const calendarEvents = pgTable("calendar_events", {
   userDateIdx: index("idx_calendar_events_user_date").on(table.userId, table.startDate),
 }));
 
+// Knowledge Base Tables
+export const knowledgeEntries = pgTable("knowledge_entries", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  instructorId: uuid("instructor_id")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  ticketId: uuid("ticket_id").references(() => tickets.id, { onDelete: "set null" }),
+
+  // Content
+  questionText: text("question_text").notNull(),
+  answerText: text("answer_text").notNull(),
+  tags: text("tags").array().default([]),
+
+  // Vector search
+  questionEmbedding: vector("question_embedding", { dimensions: 768 }),
+
+  // Visibility control
+  visibility: knowledgeVisibilityEnum("visibility").notNull().default("public"),
+  courseCode: text("course_code"),
+
+  // Metadata
+  viewCount: integer("view_count").notNull().default(0),
+  helpfulCount: integer("helpful_count").notNull().default(0),
+  notHelpfulCount: integer("not_helpful_count").notNull().default(0),
+
+  // Version history
+  version: integer("version").notNull().default(1),
+  previousVersionId: uuid("previous_version_id").references((): any => knowledgeEntries.id),
+
+  // Timestamps
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+}, (table) => ({
+  instructorIdx: index("idx_knowledge_entries_instructor").on(table.instructorId),
+  courseIdx: index("idx_knowledge_entries_course").on(table.courseCode),
+  visibilityIdx: index("idx_knowledge_entries_visibility").on(table.visibility),
+  embeddingIdx: index("idx_knowledge_entries_embedding").using("ivfflat", table.questionEmbedding.op("vector_cosine_ops")),
+}));
+
+export const knowledgeFeedback = pgTable("knowledge_feedback", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  entryId: uuid("entry_id")
+    .notNull()
+    .references(() => knowledgeEntries.id, { onDelete: "cascade" }),
+  studentId: uuid("student_id")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  ticketId: uuid("ticket_id").references(() => tickets.id, { onDelete: "set null" }),
+
+  // Feedback
+  isHelpful: boolean("is_helpful").notNull(),
+  similarityScore: integer("similarity_score"),
+
+  // Timestamps
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+}, (table) => ({
+  entryIdx: index("idx_knowledge_feedback_entry").on(table.entryId),
+  studentIdx: index("idx_knowledge_feedback_student").on(table.studentId),
+  uniqueEntryStudentTicket: index("idx_knowledge_feedback_unique").on(table.entryId, table.studentId, table.ticketId),
+}));
+
+export const knowledgeSuggestions = pgTable("knowledge_suggestions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ticketId: uuid("ticket_id")
+    .notNull()
+    .references(() => tickets.id, { onDelete: "cascade" }),
+  entryId: uuid("entry_id")
+    .notNull()
+    .references(() => knowledgeEntries.id, { onDelete: "cascade" }),
+
+  // Ranking
+  similarityScore: integer("similarity_score").notNull(),
+  rankPosition: integer("rank_position").notNull(),
+
+  // Interaction tracking
+  wasViewed: boolean("was_viewed").notNull().default(false),
+  wasHelpful: boolean("was_helpful"),
+
+  // Timestamps
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+}, (table) => ({
+  ticketIdx: index("idx_knowledge_suggestions_ticket").on(table.ticketId),
+  entryIdx: index("idx_knowledge_suggestions_entry").on(table.entryId),
+  uniqueTicketEntry: index("idx_knowledge_suggestions_unique").on(table.ticketId, table.entryId),
+}));
+
 // Relations
 export const profilesRelations = relations(profiles, ({ many }) => ({
   createdTickets: many(tickets, { relationName: "creator" }),
@@ -396,6 +496,8 @@ export const profilesRelations = relations(profiles, ({ many }) => ({
   notificationPreferences: many(notificationPreferences),
   reviews: many(ticketReviews, { relationName: "reviewer" }),
   calendarEvents: many(calendarEvents),
+  knowledgeEntries: many(knowledgeEntries, { relationName: "instructor" }),
+  knowledgeFeedback: many(knowledgeFeedback, { relationName: "student" }),
 }));
 
 export const ticketsRelations = relations(tickets, ({ one, many }) => ({
@@ -418,6 +520,9 @@ export const ticketsRelations = relations(tickets, ({ one, many }) => ({
   notifications: many(notifications),
   reviews: many(ticketReviews),
   calendarEvents: many(calendarEvents),
+  knowledgeEntries: many(knowledgeEntries),
+  knowledgeFeedback: many(knowledgeFeedback),
+  knowledgeSuggestions: many(knowledgeSuggestions),
 }));
 
 export const ticketCommentsRelations = relations(ticketComments, ({ one }) => ({
@@ -497,3 +602,58 @@ export const calendarEventsRelations = relations(calendarEvents, ({ one }) => ({
     references: [tickets.id],
   }),
 }));
+
+// Knowledge Base Relations
+export const knowledgeEntriesRelations = relations(knowledgeEntries, ({ one, many }) => ({
+  instructor: one(profiles, {
+    fields: [knowledgeEntries.instructorId],
+    references: [profiles.id],
+    relationName: "instructor",
+  }),
+  ticket: one(tickets, {
+    fields: [knowledgeEntries.ticketId],
+    references: [tickets.id],
+  }),
+  previousVersion: one(knowledgeEntries, {
+    fields: [knowledgeEntries.previousVersionId],
+    references: [knowledgeEntries.id],
+    relationName: "previousVersion",
+  }),
+  feedback: many(knowledgeFeedback),
+  suggestions: many(knowledgeSuggestions),
+}));
+
+export const knowledgeFeedbackRelations = relations(knowledgeFeedback, ({ one }) => ({
+  entry: one(knowledgeEntries, {
+    fields: [knowledgeFeedback.entryId],
+    references: [knowledgeEntries.id],
+  }),
+  student: one(profiles, {
+    fields: [knowledgeFeedback.studentId],
+    references: [profiles.id],
+    relationName: "student",
+  }),
+  ticket: one(tickets, {
+    fields: [knowledgeFeedback.ticketId],
+    references: [tickets.id],
+  }),
+}));
+
+export const knowledgeSuggestionsRelations = relations(knowledgeSuggestions, ({ one }) => ({
+  ticket: one(tickets, {
+    fields: [knowledgeSuggestions.ticketId],
+    references: [tickets.id],
+  }),
+  entry: one(knowledgeEntries, {
+    fields: [knowledgeSuggestions.entryId],
+    references: [knowledgeEntries.id],
+  }),
+}));
+
+// Type exports for knowledge base tables
+export type KnowledgeEntry = typeof knowledgeEntries.$inferSelect;
+export type NewKnowledgeEntry = typeof knowledgeEntries.$inferInsert;
+export type KnowledgeFeedback = typeof knowledgeFeedback.$inferSelect;
+export type NewKnowledgeFeedback = typeof knowledgeFeedback.$inferInsert;
+export type KnowledgeSuggestion = typeof knowledgeSuggestions.$inferSelect;
+export type NewKnowledgeSuggestion = typeof knowledgeSuggestions.$inferInsert;

@@ -1,35 +1,34 @@
-import React from 'react';
-import { 
-  Sidebar, 
-  SidebarContent, 
-  SidebarFooter, 
-  SidebarGroup, 
-  SidebarGroupContent, 
-  SidebarGroupLabel, 
-  SidebarHeader, 
-  SidebarMenu, 
-  SidebarMenuButton, 
-  SidebarMenuItem, 
-  SidebarSeparator 
-} from '@/components/ui/sidebar';
 import { SmartAvatar } from '@/components/SmartAvatar';
 import { Button } from '@/components/ui/button';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarSeparator
+} from '@/components/ui/sidebar';
 import { useTheme } from '@/contexts/ThemeContext';
-import { 
-  User, 
-  BarChart3, 
-  Calendar, 
-  Bell, 
-  Moon, 
-  Sun, 
-  Monitor,
-  Settings,
+import { AuthService } from '@/services/authService';
+import {
+  BarChart3,
+  Bell,
+  BookOpen,
+  Calendar,
   LogOut,
+  Monitor,
+  Moon,
+  Settings,
+  Sun,
   Ticket,
   X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { AuthService } from '@/services/authService';
 import { toast } from 'sonner';
 
 interface UserHomeSidebarProps {
@@ -82,7 +81,7 @@ export const UserHomeSidebar = ({ user, profile, onClose, isMobile = false }: Us
     setTimeout(() => {
       navigate(path);
     }, 50);
-    
+
     if (isMobile && onClose) {
       onClose();
     }
@@ -111,9 +110,20 @@ export const UserHomeSidebar = ({ user, profile, onClose, isMobile = false }: Us
     },
   ];
 
+  // Add Knowledge Base for instructors
+  const instructorMenuItems = profile?.role === 'instructor' ? [
+    {
+      title: "Knowledge Base",
+      icon: BookOpen,
+      onClick: () => handleNavigation("/knowledge-base"),
+    },
+  ] : [];
+
+  const allMenuItems = [...menuItems, ...instructorMenuItems];
+
   return (
-    <Sidebar 
-      variant="inset" 
+    <Sidebar
+      variant="inset"
       className={`border-r bg-gradient-to-b from-card to-card/50 transition-all duration-300 ease-in-out ${isMobile ? 'w-full' : ''}`}
     >
       <SidebarHeader className="p-6 border-b border-border/50">
@@ -131,7 +141,7 @@ export const UserHomeSidebar = ({ user, profile, onClose, isMobile = false }: Us
               </Button>
             </div>
           )}
-          
+
           {/* Avatar with enhanced styling */}
           <div className="relative">
             <button
@@ -142,8 +152,8 @@ export const UserHomeSidebar = ({ user, profile, onClose, isMobile = false }: Us
               }}
               className="hover:opacity-80 transition-all duration-200 ease-in-out hover:scale-105"
             >
-              <SmartAvatar 
-                name={profile?.full_name || user?.email || 'User'} 
+              <SmartAvatar
+                name={profile?.full_name || user?.email || 'User'}
                 avatarUrl={profile?.avatar_url}
                 size="xl"
               />
@@ -152,7 +162,7 @@ export const UserHomeSidebar = ({ user, profile, onClose, isMobile = false }: Us
               <div className="w-2 h-2 bg-white rounded-full"></div>
             </div>
           </div>
-          
+
           {/* User Info with better styling */}
           <div className="text-center space-y-1">
             <h3 className="font-semibold text-lg text-foreground">
@@ -165,7 +175,7 @@ export const UserHomeSidebar = ({ user, profile, onClose, isMobile = false }: Us
               </p>
             </div>
           </div>
-          
+
           {/* Enhanced Theme Toggle Button */}
           <Button
             variant="outline"
@@ -186,7 +196,7 @@ export const UserHomeSidebar = ({ user, profile, onClose, isMobile = false }: Us
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
-              {menuItems.map((item) => (
+              {allMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     onClick={item.onClick}

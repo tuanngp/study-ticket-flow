@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ImageUploadService } from "@/services/imageUploadService";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -29,14 +30,14 @@ import {
   Zap
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { AIAutoComplete } from "./AIAutoComplete";
+import { AutoSuggestionPanel } from "./AutoSuggestionPanel";
+import { CodeRunner } from "./CodeRunner";
 import { EnhancedTicketTemplates } from "./EnhancedTicketTemplates";
 import { ImageUpload } from "./ImageUpload";
 import { RichTextEditor } from "./RichTextEditor";
 import { ValidationMessage } from "./ValidationMessage";
-import { CodeRunner } from "./CodeRunner";
-import { ImageUploadService } from "@/services/imageUploadService";
-import { toast } from "sonner";
 
 interface UnifiedTicketCreationProps {
   onSubmit: (data: any) => void;
@@ -160,7 +161,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
 
     // Validate form data before submission
     const errors: { title?: string; description?: string } = {};
-    
+
     if (!formData.title.trim()) {
       errors.title = 'Tiêu đề là bắt buộc';
     }
@@ -193,7 +194,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
           return;
         }
       }
-      
+
       await onSubmit(processedFormData);
     } catch (error) {
       // Error is handled by parent component or displayed via toast/alert
@@ -253,7 +254,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
     }));
     setShowTemplates(false);
     setActiveTab("preview");
-    
+
     // Show success message
     toast.success("Template applied successfully!", {
       description: "You can now customize the content as needed."
@@ -320,8 +321,8 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                       <Card
                         key={type.value}
                         className={`cursor-pointer transition-all ${formData.type === type.value
-                            ? 'ring-2 ring-primary border-primary'
-                            : 'hover:shadow-md'
+                          ? 'ring-2 ring-primary border-primary'
+                          : 'hover:shadow-md'
                           }`}
                         onClick={() => setFormData(prev => ({ ...prev, type: type.value as any }))}
                         role="button"
@@ -381,8 +382,8 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                           <Card
                             key={type.value}
                             className={`cursor-pointer transition-all ${formData.type === type.value
-                                ? 'ring-2 ring-primary border-primary'
-                                : 'hover:shadow-md'
+                              ? 'ring-2 ring-primary border-primary'
+                              : 'hover:shadow-md'
                               }`}
                             onClick={() => setFormData(prev => ({ ...prev, type: type.value as any }))}
                           >
@@ -421,9 +422,9 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                     }}
                   />
                   {validationErrors.title && (
-                    <ValidationMessage 
-                      message={validationErrors.title} 
-                      type="error" 
+                    <ValidationMessage
+                      message={validationErrors.title}
+                      type="error"
                     />
                   )}
                 </div>
@@ -443,12 +444,29 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                     placeholder="Detailed description of your issue, including steps to reproduce, expected vs actual behavior, etc."
                   />
                   {validationErrors.description && (
-                    <ValidationMessage 
-                      message={validationErrors.description} 
-                      type="error" 
+                    <ValidationMessage
+                      message={validationErrors.description}
+                      type="error"
                     />
                   )}
                 </div>
+
+                {/* Auto-Suggestion Panel */}
+                {(() => {
+                  const descriptionText = formData.description.replace(/<[^>]*>/g, '').trim();
+                  const questionText = `${formData.title} ${descriptionText}`.trim();
+                  const shouldShowSuggestions = questionText.length > 50;
+
+                  return shouldShowSuggestions ? (
+                    <AutoSuggestionPanel
+                      questionText={questionText}
+                      courseCode={formData.courseCode}
+                      onSuggestionApplied={(entryId) => {
+                        console.log('Suggestion applied:', entryId);
+                      }}
+                    />
+                  ) : null;
+                })()}
 
                 {/* Code Runner */}
                 <div>
@@ -473,8 +491,8 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                       <Card
                         key={priority.value}
                         className={`cursor-pointer transition-all ${formData.priority === priority.value
-                            ? 'ring-2 ring-primary border-primary'
-                            : 'hover:shadow-md'
+                          ? 'ring-2 ring-primary border-primary'
+                          : 'hover:shadow-md'
                           }`}
                         onClick={() => setFormData(prev => ({ ...prev, priority: priority.value as any }))}
                         role="button"
@@ -740,8 +758,8 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                       <Card
                         key={urgency.value}
                         className={`cursor-pointer transition-all ${formData.urgency === urgency.value
-                            ? 'ring-2 ring-primary border-primary'
-                            : 'hover:shadow-md'
+                          ? 'ring-2 ring-primary border-primary'
+                          : 'hover:shadow-md'
                           }`}
                         onClick={() => setFormData(prev => ({ ...prev, urgency: urgency.value as any }))}
                         role="button"
@@ -823,9 +841,9 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                             {formData.title || "Your ticket title will appear here"}
                           </CardTitle>
                           <div className="text-sm text-muted-foreground mb-3">
-                            <div 
-                              dangerouslySetInnerHTML={{ 
-                                __html: formData.description || "Your ticket description will appear here" 
+                            <div
+                              dangerouslySetInnerHTML={{
+                                __html: formData.description || "Your ticket description will appear here"
                               }}
                             />
                           </div>
