@@ -17,7 +17,7 @@ interface SmartAvatarProps {
  */
 const sizeConfig = {
   sm: 'h-6 w-6 text-xs',
-  md: 'h-8 w-8 text-sm', 
+  md: 'h-8 w-8 text-sm',
   lg: 'h-10 w-10 text-base',
   xl: 'h-12 w-12 text-lg',
 };
@@ -38,12 +38,12 @@ export const SmartAvatar: FC<SmartAvatarProps> = ({
   if (avatarUrl) {
     return (
       <Avatar className={cn(sizeConfig[size], className)}>
-        <AvatarImage 
-          src={avatarUrl} 
+        <AvatarImage
+          src={avatarUrl}
           alt={name}
           className="object-cover"
         />
-        <AvatarFallback className="text-white font-semibold">
+        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-semibold">
           {getInitials(name)}
         </AvatarFallback>
       </Avatar>
@@ -52,9 +52,9 @@ export const SmartAvatar: FC<SmartAvatarProps> = ({
 
   // If no uploaded avatar, use the AvatarGenerator
   return (
-    <AvatarGenerator 
-      name={name} 
-      size={size} 
+    <AvatarGenerator
+      name={name}
+      size={size}
       className={className}
     />
   );
@@ -65,12 +65,12 @@ export const SmartAvatar: FC<SmartAvatarProps> = ({
  */
 const getInitials = (name: string): string => {
   if (!name) return '?';
-  
+
   const words = name.trim().split(/\s+/);
   if (words.length === 1) {
     return words[0].charAt(0).toUpperCase();
   }
-  
+
   return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
 };
 
@@ -113,10 +113,10 @@ export const SmartUserAvatar: FC<SmartAvatarProps> = ({
   }
 
   return (
-    <SmartAvatar 
-      name={name} 
-      avatarUrl={avatarUrl} 
-      size={size} 
+    <SmartAvatar
+      name={name}
+      avatarUrl={avatarUrl}
+      size={size}
       className={className}
     />
   );

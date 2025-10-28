@@ -5,12 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { NotificationBell } from '@/components/NotificationBell';
 import { SmartAvatar } from '@/components/SmartAvatar';
-import { 
-  Search, 
-  Bell, 
-  Plus, 
-  Menu, 
-  ChevronUp, 
+import {
+  Search,
+  Bell,
+  Plus,
+  Menu,
+  ChevronUp,
   ChevronDown,
   Filter,
   Calendar,
@@ -58,15 +58,15 @@ export const FeedLayout = ({ children, onCreateTicket, user, profile, searchQuer
     }));
   };
 
-  const SidebarSection = ({ 
-    title, 
-    children, 
-    isExpanded, 
-    onToggle 
-  }: { 
-    title: string; 
-    children: React.ReactNode; 
-    isExpanded: boolean; 
+  const SidebarSection = ({
+    title,
+    children,
+    isExpanded,
+    onToggle
+  }: {
+    title: string;
+    children: React.ReactNode;
+    isExpanded: boolean;
     onToggle: () => void;
   }) => (
     <div className="space-y-2">
@@ -89,26 +89,25 @@ export const FeedLayout = ({ children, onCreateTicket, user, profile, searchQuer
     </div>
   );
 
-  const SidebarItem = ({ 
-    icon: Icon, 
-    label, 
-    active = false, 
+  const SidebarItem = ({
+    icon: Icon,
+    label,
+    active = false,
     onClick,
-    badge 
-  }: { 
-    icon: any; 
-    label: string; 
-    active?: boolean; 
+    badge
+  }: {
+    icon: any;
+    label: string;
+    active?: boolean;
     onClick?: () => void;
     badge?: string;
   }) => (
     <button
       onClick={onClick}
-      className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm transition-colors ${
-        active 
-          ? 'bg-primary text-primary-foreground' 
-          : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-      }`}
+      className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm transition-colors ${active
+        ? 'bg-primary text-primary-foreground'
+        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+        }`}
     >
       <Icon className="h-4 w-4" />
       <span className="flex-1 text-left">{label}</span>
@@ -120,26 +119,25 @@ export const FeedLayout = ({ children, onCreateTicket, user, profile, searchQuer
     </button>
   );
 
-  const FilterItem = ({ 
-    icon: Icon, 
-    label, 
+  const FilterItem = ({
+    icon: Icon,
+    label,
     value,
-    active = false, 
-    onClick 
-  }: { 
-    icon: any; 
-    label: string; 
+    active = false,
+    onClick
+  }: {
+    icon: any;
+    label: string;
     value: string;
-    active?: boolean; 
+    active?: boolean;
     onClick?: () => void;
   }) => (
     <button
       onClick={onClick}
-      className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm transition-colors ${
-        active 
-          ? 'bg-primary text-primary-foreground' 
-          : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-      }`}
+      className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm transition-colors ${active
+        ? 'bg-primary text-primary-foreground'
+        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+        }`}
     >
       <Icon className="h-4 w-4" />
       <span className="flex-1 text-left">{label}</span>
@@ -164,12 +162,12 @@ export const FeedLayout = ({ children, onCreateTicket, user, profile, searchQuer
             >
               <Menu className="h-4 w-4" />
             </Button>
-            
+
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-sm">T</span>
               </div>
-              <span className="font-bold text-lg">TicketFlow</span>
+              <span className="font-bold text-lg">EduTicket AI</span>
             </div>
           </div>
 
@@ -178,7 +176,7 @@ export const FeedLayout = ({ children, onCreateTicket, user, profile, searchQuer
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search tickets..."
+                placeholder="Tìm kiếm ticket..."
                 className="pl-10"
                 value={searchQuery || ""}
                 onChange={(e) => onSearchChange?.(e.target.value)}
@@ -190,23 +188,23 @@ export const FeedLayout = ({ children, onCreateTicket, user, profile, searchQuer
           <div className="flex items-center gap-2">
             <Button
               onClick={onCreateTicket}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
             >
               <Plus className="h-4 w-4 mr-2" />
-              New Ticket
+              Ticket Mới
             </Button>
-            
+
             {user && (
               <NotificationBell userId={user.id} />
             )}
-            
+
             {user && (
               <button
                 onClick={() => navigate('/profile')}
                 className="flex items-center gap-2 hover:bg-muted/50 rounded-lg p-2 transition-colors"
               >
-                <SmartAvatar 
-                  name={profile?.full_name || user.email || 'User'} 
+                <SmartAvatar
+                  name={profile?.full_name || user.email || 'User'}
                   avatarUrl={profile?.avatar_url}
                   size="md"
                 />
@@ -226,48 +224,47 @@ export const FeedLayout = ({ children, onCreateTicket, user, profile, searchQuer
 
       <div className="flex">
         {/* Filter Sidebar */}
-        <aside className={`${
-          sidebarCollapsed ? 'w-0' : 'w-64'
-        } transition-all duration-300 border-r bg-background/50 backdrop-blur-sm sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto z-40`}>
+        <aside className={`${sidebarCollapsed ? 'w-0' : 'w-64'
+          } transition-all duration-300 border-r bg-background/50 backdrop-blur-sm sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto z-40`}>
           <div className="p-4 space-y-6">
             {/* New Ticket Button */}
-            <Button 
+            <Button
               onClick={onCreateTicket}
-              className="w-full"
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
               size="lg"
             >
               <Plus className="h-4 w-4 mr-2" />
-              New Ticket
+              Ticket Mới
             </Button>
 
             {/* Filters */}
             <div className="space-y-4">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Filters
+                Bộ lọc
               </h3>
-              
+
               <SidebarSection
-                title="Status"
+                title="Trạng thái"
                 isExpanded={expandedSections.status}
                 onToggle={() => toggleSection('status')}
               >
-                <FilterItem 
-                  icon={AlertCircle} 
-                  label="Open" 
+                <FilterItem
+                  icon={AlertCircle}
+                  label="Mở"
                   value="open"
                   active={filters?.status === 'open'}
                   onClick={() => onFilterChange?.({ ...filters, status: filters?.status === 'open' ? undefined : 'open' })}
                 />
-                <FilterItem 
-                  icon={Clock} 
-                  label="In Progress" 
+                <FilterItem
+                  icon={Clock}
+                  label="Đang xử lý"
                   value="in_progress"
                   active={filters?.status === 'in_progress'}
                   onClick={() => onFilterChange?.({ ...filters, status: filters?.status === 'in_progress' ? undefined : 'in_progress' })}
                 />
-                <FilterItem 
-                  icon={CheckCircle} 
-                  label="Resolved" 
+                <FilterItem
+                  icon={CheckCircle}
+                  label="Đã giải quyết"
                   value="resolved"
                   active={filters?.status === 'resolved'}
                   onClick={() => onFilterChange?.({ ...filters, status: filters?.status === 'resolved' ? undefined : 'resolved' })}
@@ -275,34 +272,34 @@ export const FeedLayout = ({ children, onCreateTicket, user, profile, searchQuer
               </SidebarSection>
 
               <SidebarSection
-                title="Priority"
+                title="Mức độ ưu tiên"
                 isExpanded={expandedSections.priority}
                 onToggle={() => toggleSection('priority')}
               >
-                <FilterItem 
-                  icon={Tag} 
-                  label="Low" 
+                <FilterItem
+                  icon={Tag}
+                  label="Thấp"
                   value="low"
                   active={filters?.priority === 'low'}
                   onClick={() => onFilterChange?.({ ...filters, priority: filters?.priority === 'low' ? undefined : 'low' })}
                 />
-                <FilterItem 
-                  icon={Tag} 
-                  label="Medium" 
+                <FilterItem
+                  icon={Tag}
+                  label="Trung bình"
                   value="medium"
                   active={filters?.priority === 'medium'}
                   onClick={() => onFilterChange?.({ ...filters, priority: filters?.priority === 'medium' ? undefined : 'medium' })}
                 />
-                <FilterItem 
-                  icon={Tag} 
-                  label="High" 
+                <FilterItem
+                  icon={Tag}
+                  label="Cao"
                   value="high"
                   active={filters?.priority === 'high'}
                   onClick={() => onFilterChange?.({ ...filters, priority: filters?.priority === 'high' ? undefined : 'high' })}
                 />
-                <FilterItem 
-                  icon={Tag} 
-                  label="Critical" 
+                <FilterItem
+                  icon={Tag}
+                  label="Khẩn cấp"
                   value="critical"
                   active={filters?.priority === 'critical'}
                   onClick={() => onFilterChange?.({ ...filters, priority: filters?.priority === 'critical' ? undefined : 'critical' })}
@@ -310,62 +307,62 @@ export const FeedLayout = ({ children, onCreateTicket, user, profile, searchQuer
               </SidebarSection>
 
               <SidebarSection
-                title="Type"
+                title="Loại"
                 isExpanded={expandedSections.type}
                 onToggle={() => toggleSection('type')}
               >
-                <FilterItem 
-                  icon={AlertCircle} 
-                  label="Bug" 
-                  value="bug"
-                  active={filters?.type === 'bug'}
-                  onClick={() => onFilterChange?.({ ...filters, type: filters?.type === 'bug' ? undefined : 'bug' })}
+                <FilterItem
+                  icon={AlertCircle}
+                  label="Lỗi lập trình"
+                  value="coding_error"
+                  active={filters?.type === 'coding_error'}
+                  onClick={() => onFilterChange?.({ ...filters, type: filters?.type === 'coding_error' ? undefined : 'coding_error' })}
                 />
-                <FilterItem 
-                  icon={Star} 
-                  label="Feature" 
-                  value="feature"
-                  active={filters?.type === 'feature'}
-                  onClick={() => onFilterChange?.({ ...filters, type: filters?.type === 'feature' ? undefined : 'feature' })}
+                <FilterItem
+                  icon={Star}
+                  label="Thiết lập dự án"
+                  value="project_setup"
+                  active={filters?.type === 'project_setup'}
+                  onClick={() => onFilterChange?.({ ...filters, type: filters?.type === 'project_setup' ? undefined : 'project_setup' })}
                 />
-                <FilterItem 
-                  icon={MessageSquare} 
-                  label="Question" 
-                  value="question"
-                  active={filters?.type === 'question'}
-                  onClick={() => onFilterChange?.({ ...filters, type: filters?.type === 'question' ? undefined : 'question' })}
+                <FilterItem
+                  icon={MessageSquare}
+                  label="Câu hỏi lý thuyết"
+                  value="concept_question"
+                  active={filters?.type === 'concept_question'}
+                  onClick={() => onFilterChange?.({ ...filters, type: filters?.type === 'concept_question' ? undefined : 'concept_question' })}
                 />
-                <FilterItem 
-                  icon={BarChart3} 
-                  label="Task" 
-                  value="task"
-                  active={filters?.type === 'task'}
-                  onClick={() => onFilterChange?.({ ...filters, type: filters?.type === 'task' ? undefined : 'task' })}
+                <FilterItem
+                  icon={BarChart3}
+                  label="Bài tập"
+                  value="assignment"
+                  active={filters?.type === 'assignment'}
+                  onClick={() => onFilterChange?.({ ...filters, type: filters?.type === 'assignment' ? undefined : 'assignment' })}
                 />
               </SidebarSection>
 
               <SidebarSection
-                title="Date Range"
+                title="Khoảng thời gian"
                 isExpanded={expandedSections.dateRange}
                 onToggle={() => toggleSection('dateRange')}
               >
-                <FilterItem 
-                  icon={Calendar} 
-                  label="Today" 
+                <FilterItem
+                  icon={Calendar}
+                  label="Hôm nay"
                   value="today"
                   active={filters?.dateRange === 'today'}
                   onClick={() => onFilterChange?.({ ...filters, dateRange: filters?.dateRange === 'today' ? undefined : 'today' })}
                 />
-                <FilterItem 
-                  icon={Calendar} 
-                  label="This Week" 
+                <FilterItem
+                  icon={Calendar}
+                  label="Tuần này"
                   value="week"
                   active={filters?.dateRange === 'week'}
                   onClick={() => onFilterChange?.({ ...filters, dateRange: filters?.dateRange === 'week' ? undefined : 'week' })}
                 />
-                <FilterItem 
-                  icon={Calendar} 
-                  label="This Month" 
+                <FilterItem
+                  icon={Calendar}
+                  label="Tháng này"
                   value="month"
                   active={filters?.dateRange === 'month'}
                   onClick={() => onFilterChange?.({ ...filters, dateRange: filters?.dateRange === 'month' ? undefined : 'month' })}
@@ -380,11 +377,11 @@ export const FeedLayout = ({ children, onCreateTicket, user, profile, searchQuer
           <div className="p-6 pt-8">
             {/* Feed Settings */}
             <div className="flex items-center justify-between mb-6">
-              <h1 className="text-2xl font-bold">My Tickets</h1>
+              <h1 className="text-2xl font-bold">Ticket của tôi</h1>
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="sm">
                   <Settings className="h-4 w-4 mr-2" />
-                  Feed settings
+                  Cài đặt feed
                 </Button>
                 <Badge variant="outline">5/5</Badge>
               </div>

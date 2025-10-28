@@ -15,6 +15,7 @@ import type { KnowledgeEntry } from "@/db/schema";
 import { usePermissions } from "@/hooks/usePermissions";
 import { AuthService, UserProfile } from "@/services/authService";
 import { Comment, CommentService } from "@/services/commentService";
+import { InstructorService, Instructor } from "@/services/instructorService";
 import { ReviewService } from "@/services/reviewService";
 import { Ticket, TicketOperationsService } from "@/services/ticketOperationsService";
 import { formatDistanceToNow } from "date-fns";
@@ -48,6 +49,9 @@ const TicketDetail = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [instructors, setInstructors] = useState<Instructor[]>([]);
+  const [loadingInstructors, setLoadingInstructors] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
   const { canReviewTicket, canViewTicketReviews } = usePermissions();
   const [isSaveToKBDialogOpen, setIsSaveToKBDialogOpen] = useState(false);
   const [savedEntryId, setSavedEntryId] = useState<string | null>(null);
@@ -95,6 +99,24 @@ const TicketDetail = () => {
       }
     }
   }, [ticket]);
+
+  // Load instructors when component mounts
+  useEffect(() => {
+    const loadInstructors = async () => {
+      setLoadingInstructors(true);
+      try {
+        const instructorList = await InstructorService.getAvailableInstructors();
+        setInstructors(instructorList);
+      } catch (error) {
+        console.error('Error loading instructors:', error);
+        toast.error('Không thể tải danh sách giảng viên');
+      } finally {
+        setLoadingInstructors(false);
+      }
+    };
+
+    loadInstructors();
+  }, []);
 
   const fetchTicket = async () => {
     if (!id) return;
@@ -255,6 +277,32 @@ const TicketDetail = () => {
   const canDeleteTicket = ticket && user && ticket.creator_id === user.id;
 
   const isInstructor = profile?.role === 'instructor';
+
+  // Check if current user is the ticket creator
+  const isTicketCreator = ticket && user && ticket.creator_id === user.id;
+
+  const handleAssignTicket = async (assigneeId: string | null) => {
+    if (!id) return;
+
+    setIsAssigning(true);
+    try {
+      const { success, error } = await TicketOperationsService.updateTicketAssignee(id, assigneeId);
+
+      if (!success) {
+        toast.error(error || "Không thể gán ticket");
+        return;
+      }
+
+      // Refresh ticket data
+      await fetchTicket();
+      toast.success(assigneeId ? "Đã gán ticket thành công!" : "Đã hủy gán ticket!");
+    } catch (error: any) {
+      console.error('Error assigning ticket:', error);
+      toast.error(error.message || "Không thể gán ticket");
+    } finally {
+      setIsAssigning(false);
+    }
+  };
 
   const handleSaveToKnowledgeBase = () => {
     if (!newComment.trim()) {
@@ -807,9 +855,42 @@ const TicketDetail = () => {
 
                 <div>
                   <p className="text-sm font-medium mb-2">Assignee</p>
-                  <p className="text-sm text-muted-foreground">
-                    {ticket?.assignee?.full_name || ticket?.assignee?.email || "Unassigned"}
-                  </p>
+                  {isTicketCreator ? (
+                    <Select
+                      value={ticket?.assignee_id || "unassigned"}
+                      onValueChange={(value) => handleAssignTicket(value === "unassigned" ? null : value)}
+                      disabled={isAssigning || loadingInstructors}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder={loadingInstructors ? "Đang tải..." : "Chọn giảng viên"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unassigned">
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4" />
+                            <span className="font-medium">Chưa gán</span>
+                          </div>
+                        </SelectItem>
+                        {instructors.map((instructor) => (
+                          <SelectItem key={instructor.id} value={instructor.id}>
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4" />
+                              <div>
+                                <div className="font-medium">{instructor.fullName}</div>
+                                <div className="text-xs text-slate-600 dark:text-slate-400">
+                                  {instructor.role === 'admin' ? 'Quản trị viên' : 'Giảng viên'}
+                                </div>
+                              </div>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      {ticket?.assignee?.full_name || ticket?.assignee?.email || "Unassigned"}
+                    </p>
+                  )}
                 </div>
 
 

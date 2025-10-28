@@ -18,11 +18,11 @@ export const Navbar = ({ user, profile }: NavbarProps) => {
     const { error } = await AuthService.signOut();
 
     if (error) {
-      toast.error("Failed to sign out");
+      toast.error("Không thể đăng xuất");
       return;
     }
 
-    toast.success("Signed out successfully");
+    toast.success("Đăng xuất thành công");
     navigate("/");
   };
 
@@ -38,9 +38,9 @@ export const Navbar = ({ user, profile }: NavbarProps) => {
               <div className="p-2 bg-gradient-primary rounded-lg">
                 <Ticket className="h-5 w-5 text-white" />
               </div>
-              TicketFlow AI
+              EduTicket AI
             </button>
-            
+
           </div>
 
           <div className="flex items-center gap-4">
@@ -51,8 +51,8 @@ export const Navbar = ({ user, profile }: NavbarProps) => {
                   onClick={() => navigate("/profile")}
                   className="flex items-center gap-3 hover:bg-accent/50 rounded-lg p-2 transition-colors"
                 >
-                  <SmartAvatar 
-                    name={profile?.full_name || user.email || 'User'} 
+                  <SmartAvatar
+                    name={profile?.full_name || user.email || 'User'}
                     avatarUrl={profile?.avatar_url}
                     size="lg"
                   />
@@ -71,7 +71,7 @@ export const Navbar = ({ user, profile }: NavbarProps) => {
                   className="gap-2"
                 >
                   <LogOut className="h-4 w-4" />
-                  Sign Out
+                  Đăng xuất
                 </Button>
               </>
             ) : (
@@ -79,7 +79,7 @@ export const Navbar = ({ user, profile }: NavbarProps) => {
                 onClick={() => navigate("/auth")}
                 className="bg-gradient-primary hover:shadow-glow"
               >
-                Sign In
+                Đăng nhập
               </Button>
             )}
           </div>

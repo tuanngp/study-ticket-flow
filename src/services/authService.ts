@@ -49,6 +49,12 @@ export class AuthService {
         throw new Error(error.message);
       }
 
+      // If user was created successfully, ensure profile is created
+      if (result.user) {
+        console.log('User created, ensuring profile...');
+        await this.ensureUserProfile(result.user);
+      }
+
       return { user: result.user };
     } catch (error: any) {
       return { user: null, error: error.message };
@@ -149,26 +155,79 @@ export class AuthService {
     try {
       console.log('Ensuring profile for user:', user.id);
 
-      // Return a minimal profile immediately to avoid database issues
-      const minimalProfile = {
-        id: user.id,
+      // First, try to get existing profile
+      const existingProfile = await this.getUserProfile(user.id);
+      if (existingProfile) {
+        console.log('Profile already exists:', existingProfile);
+        return existingProfile;
+      }
+
+      // If no profile exists, create one
+      console.log('Creating new profile for user:', user.id);
+      const profileData = {
         email: user.email,
-        full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Unknown User',
-        role: user.user_metadata?.role || 'student',
+        fullName: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Unknown User',
+        role: (user.user_metadata?.role || 'student') as 'student' | 'instructor' | 'admin',
       };
 
-      console.log('Using minimal profile:', minimalProfile);
-      return minimalProfile;
+      const createdProfile = await this.createProfile(user.id, profileData);
+
+      if (createdProfile) {
+        return createdProfile;
+      }
+
+      // Return minimal profile as fallback if creation failed
+      return {
+        id: user.id,
+        email: user.email,
+        full_name: profileData.fullName,
+        role: profileData.role,
+      };
     } catch (error) {
       console.error('Error in ensureUserProfile:', error);
 
-      // Return a minimal profile as fallback
+      // Return minimal profile as fallback
       return {
         id: user.id,
         email: user.email,
         full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Unknown User',
         role: user.user_metadata?.role || 'student',
       };
+    }
+  }
+
+  /**
+   * Create a new profile for a user
+   */
+  static async createProfile(userId: string, profileData: {
+    email: string;
+    fullName: string;
+    role: 'student' | 'instructor' | 'admin';
+  }): Promise<UserProfile | null> {
+    try {
+      console.log('Creating profile for user:', userId, profileData);
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          email: profileData.email,
+          full_name: profileData.fullName,
+          role: profileData.role,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating profile:', error);
+        return null;
+      }
+
+      console.log('Profile created successfully:', data);
+      return data;
+    } catch (error) {
+      console.error('Error in createProfile:', error);
+      return null;
     }
   }
 

@@ -54,7 +54,7 @@ export class TicketOperationsService {
    */
   static async createTicket(ticketData: any, creatorId: string): Promise<Ticket> {
     try {
-      
+
       const { data, error } = await supabase
         .from("tickets")
         .insert({
@@ -63,6 +63,7 @@ export class TicketOperationsService {
           type: ticketData.type || "task",
           priority: ticketData.priority || "medium",
           creator_id: creatorId,
+          assignee_id: ticketData.assigneeId || null, // Add assignee if provided
           course_code: ticketData.courseCode,
           class_name: ticketData.className,
           project_group: ticketData.projectGroup,
@@ -73,13 +74,53 @@ export class TicketOperationsService {
         .single();
 
       if (error) {
-        throw new Error(error.message || 'Failed to create ticket');
+        throw new Error(error.message || 'Không thể tạo ticket');
+      }
+
+      // If ticket was assigned, send notification to assignee
+      if (data.assignee_id) {
+        await this.notifyAssignee(data.assignee_id, data.id, data.title);
       }
 
       return data as Ticket;
     } catch (error: any) {
       console.error('Error creating ticket:', error);
-      throw new Error(error.message || 'Failed to create ticket');
+      throw new Error(error.message || 'Không thể tạo ticket');
+    }
+  }
+
+  /**
+   * Notify assignee when ticket is assigned
+   */
+  private static async notifyAssignee(assigneeId: string, ticketId: string, ticketTitle: string) {
+    try {
+      const { title, message } = NotificationService.formatNotificationContent(
+        'ticket_assigned',
+        {
+          ticketTitle,
+          ticketId,
+        }
+      );
+
+      await NotificationService.send({
+        type: 'ticket_assigned',
+        title,
+        message,
+        recipients: [assigneeId],
+        priority: 'medium',
+        channels: ['in_app', 'email'],
+        metadata: {
+          ticketId,
+          assigneeId,
+        },
+        actions: [
+          { label: 'Xem Ticket', url: `/tickets/${ticketId}` },
+          { label: 'Chấp nhận Assignment', url: `/tickets/${ticketId}#accept` },
+        ],
+      });
+    } catch (error) {
+      console.error('Error notifying assignee:', error);
+      // Don't throw error as this shouldn't block ticket creation
     }
   }
 
@@ -212,14 +253,22 @@ export class TicketOperationsService {
         query = query.neq("status", "deleted");
       }
 
-      // Only show tickets with descriptions (non-empty)
-      query = query.not("description", "is", null);
-      query = query.neq("description", "");
+      // Only show tickets with descriptions (non-empty) - commented out for debugging
+      // query = query.not("description", "is", null);
+      // query = query.neq("description", "");
 
       // Apply pagination
       query = query.range(offset, offset + limit - 1);
 
       const { data, error, count } = await query;
+
+      // Debug logging
+      console.log('getTicketsPaginated query result:', {
+        options,
+        dataCount: data?.length || 0,
+        totalCount: count,
+        error
+      });
 
       if (error) {
         console.error('Error fetching paginated tickets:', error);
@@ -269,7 +318,7 @@ export class TicketOperationsService {
     try {
       // Get ticket details first
       const ticket = await this.getTicketById(ticketId);
-      
+
       const { error } = await supabase
         .from("tickets")
         .update({ status })
@@ -333,7 +382,7 @@ export class TicketOperationsService {
     try {
       // Get ticket details first
       const ticket = await this.getTicketById(ticketId);
-      
+
       const { error } = await supabase
         .from("tickets")
         .update({ assignee_id: assigneeId })
@@ -385,7 +434,7 @@ export class TicketOperationsService {
     try {
       const startDate = new Date(date);
       startDate.setHours(0, 0, 0, 0);
-      
+
       const endDate = new Date(date);
       endDate.setHours(23, 59, 59, 999);
 
@@ -447,7 +496,7 @@ export class TicketOperationsService {
 
       const startOfMonth = new Date(year, month - 1, 1);
       const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
-      
+
       // Date range for tickets
 
       const { data, error } = await supabase
@@ -460,7 +509,7 @@ export class TicketOperationsService {
 
       if (error) {
         console.error('Error fetching tickets for month:', error);
-        throw new Error(error.message || 'Failed to fetch tickets for month');
+        throw new Error(error.message || 'Không thể lấy dữ liệu ticket cho tháng');
       }
 
       // Month tickets fetched successfully
@@ -468,7 +517,7 @@ export class TicketOperationsService {
       return data || [];
     } catch (error: any) {
       console.error('Error in getTicketsForMonth:', error);
-      throw new Error(error.message || 'Failed to fetch tickets for month');
+      throw new Error(error.message || 'Không thể lấy dữ liệu ticket cho tháng');
     }
   }
 
@@ -593,16 +642,16 @@ export class TicketOperationsService {
 
       // Check if ticket can be deleted (not resolved/closed)
       if (currentTicket.status === 'resolved' || currentTicket.status === 'closed') {
-        return { 
-          success: false, 
-          error: 'Cannot delete resolved or closed tickets. Please contact administrator.' 
+        return {
+          success: false,
+          error: 'Cannot delete resolved or closed tickets. Please contact administrator.'
         };
       }
 
       // Soft delete by updating status to 'deleted'
       const { error } = await supabase
         .from('tickets')
-        .update({ 
+        .update({
           status: 'deleted',
           updated_at: new Date().toISOString()
         })
@@ -651,7 +700,7 @@ export class TicketOperationsService {
    * Check if user has permission to update ticket
    */
   private static checkUpdatePermission(
-    ticket: Ticket, 
+    ticket: Ticket,
     userId: string
   ): { allowed: boolean; reason?: string } {
     // Creator can always update their own tickets
@@ -667,9 +716,9 @@ export class TicketOperationsService {
     // TODO: Add admin/instructor role check here
     // For now, only creator and assignee can update
 
-    return { 
-      allowed: false, 
-      reason: 'You can only update tickets you created or are assigned to' 
+    return {
+      allowed: false,
+      reason: 'You can only update tickets you created or are assigned to'
     };
   }
 
@@ -677,7 +726,7 @@ export class TicketOperationsService {
    * Check if user has permission to delete ticket
    */
   private static checkDeletePermission(
-    ticket: Ticket, 
+    ticket: Ticket,
     userId: string
   ): { allowed: boolean; reason?: string } {
     // Only creator can delete their own tickets
@@ -688,18 +737,18 @@ export class TicketOperationsService {
     // TODO: Add admin/instructor role check here
     // For now, only creator can delete
 
-    return { 
-      allowed: false, 
-      reason: 'You can only delete tickets you created' 
+    return {
+      allowed: false,
+      reason: 'You can only delete tickets you created'
     };
   }
 
   /**
    * Validate ticket update data
    */
-  private static validateTicketUpdates(updates: any): { 
-    isValid: boolean; 
-    errors: string[] 
+  private static validateTicketUpdates(updates: any): {
+    isValid: boolean;
+    errors: string[]
   } {
     const errors: string[] = [];
 

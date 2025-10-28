@@ -38,6 +38,7 @@ import { EnhancedTicketTemplates } from "./EnhancedTicketTemplates";
 import { ImageUpload } from "./ImageUpload";
 import { RichTextEditor } from "./RichTextEditor";
 import { ValidationMessage } from "./ValidationMessage";
+import { InstructorService, Instructor } from "@/services/instructorService";
 
 interface UnifiedTicketCreationProps {
   onSubmit: (data: any) => void;
@@ -59,6 +60,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
     images: initialData?.images || [],
     estimatedTime: initialData?.estimatedTime || "1-2 hours",
     urgency: initialData?.urgency || "medium",
+    assigneeId: initialData?.assigneeId || "", // Add assignee field
     ...initialData
   });
 
@@ -74,46 +76,66 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
     title?: string;
     description?: string;
   }>({});
+  const [instructors, setInstructors] = useState<Instructor[]>([]);
+  const [loadingInstructors, setLoadingInstructors] = useState(false);
+
+  // Load instructors on component mount
+  useEffect(() => {
+    const loadInstructors = async () => {
+      setLoadingInstructors(true);
+      try {
+        console.log('Loading instructors in component...');
+        const instructorList = await InstructorService.getAvailableInstructors();
+        console.log('Instructors loaded:', instructorList);
+        setInstructors(instructorList);
+      } catch (error) {
+        console.error('Error loading instructors:', error);
+        toast.error('Không thể tải danh sách giảng viên');
+      } finally {
+        setLoadingInstructors(false);
+      }
+    };
+
+    loadInstructors();
+  }, []);
 
   // Basic ticket types (always visible)
   const basicTicketTypes = [
-    { value: "bug", label: "Bug Report", icon: <Bug className="h-4 w-4" />, color: "bg-red-500", description: "Report errors and issues" },
-    { value: "feature", label: "Feature Request", icon: <Lightbulb className="h-4 w-4" />, color: "bg-blue-500", description: "Request new functionality" },
-    { value: "question", label: "Question", icon: <HelpCircle className="h-4 w-4" />, color: "bg-green-500", description: "Ask for help or clarification" },
-    { value: "task", label: "Task", icon: <Settings className="h-4 w-4" />, color: "bg-purple-500", description: "General task or request" }
+    { value: "coding_error", label: "Lỗi lập trình", icon: <Bug className="h-4 w-4" />, color: "bg-red-500", description: "Báo cáo lỗi và vấn đề kỹ thuật" },
+    { value: "project_setup", label: "Thiết lập dự án", icon: <Lightbulb className="h-4 w-4" />, color: "bg-blue-500", description: "Yêu cầu hướng dẫn cài đặt" },
+    { value: "concept_question", label: "Câu hỏi lý thuyết", icon: <HelpCircle className="h-4 w-4" />, color: "bg-green-500", description: "Hỏi về khái niệm và giải thích" },
+    { value: "assignment", label: "Bài tập", icon: <Settings className="h-4 w-4" />, color: "bg-purple-500", description: "Hỗ trợ làm bài tập và dự án" }
   ];
 
   // Educational ticket types (shown when expanded)
   const educationalTicketTypes = [
-    { value: "grading", label: "Grading Issue", icon: <Star className="h-4 w-4" />, color: "bg-yellow-500", description: "Question about grades or scoring" },
-    { value: "report", label: "Report Problem", icon: <FileText className="h-4 w-4" />, color: "bg-orange-500", description: "Report academic or system issues" },
-    { value: "config", label: "Configuration", icon: <Settings className="h-4 w-4" />, color: "bg-indigo-500", description: "Setup or configuration help" },
-    { value: "assignment", label: "Assignment Help", icon: <BookOpen className="h-4 w-4" />, color: "bg-teal-500", description: "Help with assignments or projects" },
-    { value: "exam", label: "Exam Related", icon: <Target className="h-4 w-4" />, color: "bg-pink-500", description: "Questions about exams or tests" },
-    { value: "submission", label: "Submission Issue", icon: <Upload className="h-4 w-4" />, color: "bg-cyan-500", description: "Problems with file submissions" },
-    { value: "technical", label: "Technical Support", icon: <Code className="h-4 w-4" />, color: "bg-gray-500", description: "Technical difficulties or setup" },
-    { value: "academic", label: "Academic Support", icon: <Users className="h-4 w-4" />, color: "bg-emerald-500", description: "General academic assistance" }
+    { value: "grading_issue", label: "Vấn đề điểm số", icon: <Star className="h-4 w-4" />, color: "bg-yellow-500", description: "Câu hỏi về điểm số và chấm điểm" },
+    { value: "system_issue", label: "Lỗi hệ thống", icon: <FileText className="h-4 w-4" />, color: "bg-orange-500", description: "Báo cáo vấn đề học vụ hoặc hệ thống" },
+    { value: "exam", label: "Thi cử", icon: <Target className="h-4 w-4" />, color: "bg-pink-500", description: "Câu hỏi về thi cử và kiểm tra" },
+    { value: "submission", label: "Nộp bài", icon: <Upload className="h-4 w-4" />, color: "bg-cyan-500", description: "Vấn đề nộp bài và tải file" },
+    { value: "technical", label: "Hỗ trợ kỹ thuật", icon: <Code className="h-4 w-4" />, color: "bg-gray-500", description: "Khó khăn kỹ thuật và cài đặt" },
+    { value: "academic", label: "Hỗ trợ học tập", icon: <Users className="h-4 w-4" />, color: "bg-emerald-500", description: "Hỗ trợ học tập tổng quát" }
   ];
 
   // All ticket types for reference
   const allTicketTypes = [...basicTicketTypes, ...educationalTicketTypes];
 
   const priorities = [
-    { value: "low", label: "Low", color: "bg-green-100 text-green-800 border-green-200", description: "Can wait" },
-    { value: "medium", label: "Medium", color: "bg-yellow-100 text-yellow-800 border-yellow-200", description: "Normal priority" },
-    { value: "high", label: "High", color: "bg-orange-100 text-orange-800 border-orange-200", description: "Important" },
-    { value: "critical", label: "Critical", color: "bg-red-100 text-red-800 border-red-200", description: "Urgent" }
+    { value: "low", label: "Thấp", color: "bg-green-100 text-green-800 border-green-200", description: "Có thể chờ" },
+    { value: "medium", label: "Trung bình", color: "bg-yellow-100 text-yellow-800 border-yellow-200", description: "Mức độ bình thường" },
+    { value: "high", label: "Cao", color: "bg-orange-100 text-orange-800 border-orange-200", description: "Quan trọng" },
+    { value: "critical", label: "Khẩn cấp", color: "bg-red-100 text-red-800 border-red-200", description: "Cấp bách" }
   ];
 
   const urgencies = [
-    { value: "low", label: "Low", description: "Can wait a few days", icon: <Clock className="h-4 w-4" /> },
-    { value: "medium", label: "Medium", description: "Needs attention this week", icon: <Target className="h-4 w-4" /> },
-    { value: "high", label: "High", description: "Needs attention today", icon: <AlertTriangle className="h-4 w-4" /> },
-    { value: "critical", label: "Critical", description: "Blocks other work", icon: <Zap className="h-4 w-4" /> }
+    { value: "low", label: "Thấp", description: "Có thể chờ vài ngày", icon: <Clock className="h-4 w-4" /> },
+    { value: "medium", label: "Trung bình", description: "Cần xử lý trong tuần này", icon: <Target className="h-4 w-4" /> },
+    { value: "high", label: "Cao", description: "Cần xử lý hôm nay", icon: <AlertTriangle className="h-4 w-4" /> },
+    { value: "critical", label: "Khẩn cấp", description: "Chặn công việc khác", icon: <Zap className="h-4 w-4" /> }
   ];
 
   const estimatedTimes = [
-    "15-30 min", "30-60 min", "1-2 hours", "2-4 hours", "4-8 hours", "1-2 days", "2-3 days", "1 week+"
+    "15-30 phút", "30-60 phút", "1-2 giờ", "2-4 giờ", "4-8 giờ", "1-2 ngày", "2-3 ngày", "1 tuần+"
   ];
 
   const commonTags = [
@@ -256,8 +278,8 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
     setActiveTab("preview");
 
     // Show success message
-    toast.success("Template applied successfully!", {
-      description: "You can now customize the content as needed."
+    toast.success("Áp dụng template thành công!", {
+      description: "Bạn có thể tùy chỉnh nội dung theo nhu cầu."
     });
   };
 
@@ -277,10 +299,10 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-primary" />
-                Create New Ticket
+                Tạo Ticket Mới
               </CardTitle>
               <CardDescription>
-                Choose your preferred creation method - from quick templates to detailed forms
+                Chọn phương thức tạo ticket phù hợp - từ template nhanh đến form chi tiết
               </CardDescription>
             </div>
             <Button
@@ -291,7 +313,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
               className="flex items-center gap-2"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back to Dashboard
+              Về Dashboard
             </Button>
           </div>
         </CardHeader>
@@ -300,22 +322,22 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
           <form onSubmit={handleSubmit} className="space-y-6">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="quick">Quick Start</TabsTrigger>
-                <TabsTrigger value="templates">Templates</TabsTrigger>
-                <TabsTrigger value="detailed">Detailed</TabsTrigger>
-                <TabsTrigger value="preview">Preview</TabsTrigger>
+                <TabsTrigger value="quick">Nhanh</TabsTrigger>
+                <TabsTrigger value="templates">Mẫu</TabsTrigger>
+                <TabsTrigger value="detailed">Chi tiết</TabsTrigger>
+                <TabsTrigger value="preview">Xem trước</TabsTrigger>
               </TabsList>
 
               <TabsContent value="quick" className="space-y-6">
                 {/* Quick Start - Simple form with AI */}
                 <div className="text-center mb-6">
-                  <h3 className="text-lg font-semibold mb-2">Quick Ticket Creation</h3>
-                  <p className="text-muted-foreground">Get started quickly with AI assistance</p>
+                  <h3 className="text-lg font-semibold mb-2">Tạo Ticket Nhanh</h3>
+                  <p className="text-muted-foreground">Bắt đầu nhanh chóng với sự hỗ trợ của AI</p>
                 </div>
 
                 {/* Type Selection */}
                 <div>
-                  <label className="text-sm font-medium mb-3 block">What type of ticket is this?</label>
+                  <label className="text-sm font-medium mb-3 block">Đây là loại ticket gì?</label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {basicTicketTypes.map((type) => (
                       <Card
@@ -365,7 +387,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                   {showAllTypes && (
                     <div className="mt-6">
                       <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-medium text-muted-foreground">Educational Types</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Loại Ticket Giáo Dục</h4>
                         <Button
                           type="button"
                           variant="ghost"
@@ -403,7 +425,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
 
                 {/* Title with AI */}
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Title *</label>
+                  <label className="text-sm font-medium mb-2 block">Tiêu đề *</label>
                   <AIAutoComplete
                     value={formData.title}
                     onChange={(value) => {
@@ -413,7 +435,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                         setValidationErrors(prev => ({ ...prev, title: undefined }));
                       }
                     }}
-                    placeholder="Brief, descriptive title for your issue or request"
+                    placeholder="Tiêu đề ngắn gọn, mô tả vấn đề hoặc yêu cầu của bạn"
                     type="title"
                     context={{
                       courseCode: formData.courseCode,
@@ -431,7 +453,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
 
                 {/* Description with Rich Text Editor */}
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Description *</label>
+                  <label className="text-sm font-medium mb-2 block">Mô tả *</label>
                   <RichTextEditor
                     value={formData.description}
                     onChange={(value) => {
@@ -441,7 +463,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                         setValidationErrors(prev => ({ ...prev, description: undefined }));
                       }
                     }}
-                    placeholder="Detailed description of your issue, including steps to reproduce, expected vs actual behavior, etc."
+                    placeholder="Mô tả chi tiết vấn đề của bạn, bao gồm các bước tái tạo, hành vi mong đợi vs thực tế, v.v."
                   />
                   {validationErrors.description && (
                     <ValidationMessage
@@ -471,21 +493,21 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                 {/* Code Runner */}
                 <div>
                   <label className="text-sm font-medium mb-2 block">
-                    Code (Optional)
+                    Mã nguồn (Tùy chọn)
                   </label>
                   <p className="text-xs text-muted-foreground mb-3">
-                    Add code snippets to help others understand the issue. You can run the code to see the output.
+                    Thêm đoạn code để giúp người khác hiểu vấn đề. Bạn có thể chạy code để xem kết quả.
                   </p>
                   <CodeRunner
                     value={formData.code}
                     onChange={(value) => setFormData(prev => ({ ...prev, code: value }))}
-                    placeholder="// Add your code here...\nconsole.log('Hello World');"
+                    placeholder="// Thêm code của bạn ở đây...\nconsole.log('Hello World');"
                   />
                 </div>
 
                 {/* Priority */}
                 <div>
-                  <label className="text-sm font-medium mb-3 block">Priority</label>
+                  <label className="text-sm font-medium mb-3 block">Mức độ ưu tiên</label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {priorities.map((priority) => (
                       <Card
@@ -513,6 +535,44 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                       </Card>
                     ))}
                   </div>
+                </div>
+
+                {/* Assignee Selection - Quick Access */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Gán cho giảng viên (Tùy chọn)</label>
+                  <Select
+                    value={formData.assigneeId || "none"}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, assigneeId: value === "none" ? "" : value }))}
+                    disabled={loadingInstructors}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={loadingInstructors ? "Đang tải..." : "Chọn giảng viên"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4" />
+                          Không gán (để trống)
+                        </div>
+                      </SelectItem>
+                      {instructors.map((instructor) => (
+                        <SelectItem key={instructor.id} value={instructor.id}>
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            <div>
+                              <div className="font-medium">{instructor.fullName}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {instructor.role === 'admin' ? 'Quản trị viên' : 'Giảng viên'}
+                              </div>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Chọn giảng viên để gán ticket này ngay khi tạo. Nếu không chọn, ticket sẽ ở trạng thái chưa được gán.
+                  </p>
                 </div>
 
                 {/* AI Suggestions */}
@@ -803,13 +863,13 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
 
                 {/* Estimated Time */}
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Estimated Resolution Time</label>
+                  <label className="text-sm font-medium mb-2 block">Thời gian giải quyết dự kiến</label>
                   <Select
                     value={formData.estimatedTime}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, estimatedTime: value }))}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select estimated time" />
+                      <SelectValue placeholder="Chọn thời gian dự kiến" />
                     </SelectTrigger>
                     <SelectContent>
                       {estimatedTimes.map((time) => (
@@ -823,6 +883,44 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Assignee Selection */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Gán cho giảng viên (Tùy chọn)</label>
+                  <Select
+                    value={formData.assigneeId || "none"}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, assigneeId: value === "none" ? "" : value }))}
+                    disabled={loadingInstructors}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={loadingInstructors ? "Đang tải..." : "Chọn giảng viên"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4" />
+                          Không gán (để trống)
+                        </div>
+                      </SelectItem>
+                      {instructors.map((instructor) => (
+                        <SelectItem key={instructor.id} value={instructor.id}>
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            <div>
+                              <div className="font-medium">{instructor.fullName}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {instructor.role === 'admin' ? 'Quản trị viên' : 'Giảng viên'}
+                              </div>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Chọn giảng viên để gán ticket này ngay khi tạo. Nếu không chọn, ticket sẽ ở trạng thái chưa được gán.
+                  </p>
+                </div>
               </TabsContent>
 
               <TabsContent value="preview" className="space-y-6">
@@ -830,7 +928,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold flex items-center gap-2">
                     <Target className="h-5 w-5 text-primary" />
-                    Ticket Preview
+                    Xem trước Ticket
                   </h3>
 
                   <Card className="border-l-4 border-l-primary">
@@ -838,12 +936,12 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <CardTitle className="text-lg mb-2">
-                            {formData.title || "Your ticket title will appear here"}
+                            {formData.title || "Tiêu đề ticket của bạn sẽ hiển thị ở đây"}
                           </CardTitle>
                           <div className="text-sm text-muted-foreground mb-3">
                             <div
                               dangerouslySetInnerHTML={{
-                                __html: formData.description || "Your ticket description will appear here"
+                                __html: formData.description || "Mô tả ticket của bạn sẽ hiển thị ở đây"
                               }}
                             />
                           </div>
@@ -893,6 +991,12 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                             <Clock className="h-3 w-3" />
                             {formData.estimatedTime}
                           </div>
+                          {formData.assigneeId && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Users className="h-3 w-3" />
+                              {instructors.find(i => i.id === formData.assigneeId)?.fullName || 'Giảng viên'}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </CardHeader>
@@ -904,7 +1008,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
             {/* Action Buttons */}
             <div className="flex justify-between pt-6 border-t">
               <Button type="button" variant="outline" onClick={onCancel}>
-                Cancel
+                Hủy
               </Button>
               <div className="flex gap-3">
                 {activeTab !== "preview" && (
@@ -913,23 +1017,23 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                     variant="outline"
                     onClick={() => setActiveTab("preview")}
                   >
-                    Preview
+                    Xem trước
                   </Button>
                 )}
                 <Button
                   type="submit"
                   disabled={!formData.title.trim() || !formData.description.replace(/<[^>]*>/g, '').trim() || isCreating}
-                  className="bg-gradient-primary hover:shadow-glow"
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white hover:shadow-lg"
                 >
                   {isCreating ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Creating...
+                      Đang tạo...
                     </>
                   ) : (
                     <>
                       <Rocket className="h-4 w-4 mr-2" />
-                      Create Ticket
+                      Tạo Ticket
                     </>
                   )}
                 </Button>

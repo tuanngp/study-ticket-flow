@@ -12,23 +12,23 @@ const Index = () => {
   const features = [
     {
       icon: Ticket,
-      title: "Smart Ticket Management",
-      description: "Create, track, and manage tickets with an intuitive interface designed for academic teams",
+      title: "Quản lý Ticket Thông minh",
+      description: "Tạo, theo dõi và quản lý ticket với giao diện trực quan được thiết kế cho các nhóm học tập",
     },
     {
       icon: Sparkles,
-      title: "AI-Powered Triage",
-      description: "Automatic categorization, priority assignment, and smart routing based on ticket content",
+      title: "AI Triage Thông minh",
+      description: "Tự động phân loại, gán mức độ ưu tiên và định tuyến thông minh dựa trên nội dung ticket",
     },
     {
       icon: BarChart3,
-      title: "Analytics Dashboard",
-      description: "Real-time insights into team performance, ticket trends, and workload distribution",
+      title: "Dashboard Phân tích",
+      description: "Thông tin chi tiết theo thời gian thực về hiệu suất nhóm, xu hướng ticket và phân bổ khối lượng công việc",
     },
     {
       icon: Users,
-      title: "Role-Based Access",
-      description: "Flexible permissions for students, project leads, and instructors",
+      title: "Truy cập theo Vai trò",
+      description: "Quyền hạn linh hoạt cho sinh viên, trưởng nhóm dự án và giảng viên",
     },
   ];
 
@@ -42,16 +42,16 @@ const Index = () => {
               <div className="p-2 bg-gradient-primary rounded-lg">
                 <Ticket className="h-5 w-5 text-white" />
               </div>
-              TicketFlow AI
+              EduTicket AI
             </div>
-            
+
             <div className="flex items-center gap-4">
               {user ? (
                 <Button
                   onClick={() => navigate("/dashboard")}
                   className="bg-gradient-primary hover:shadow-glow"
                 >
-                  Go to Dashboard
+                  Đến Dashboard
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               ) : (
@@ -60,13 +60,13 @@ const Index = () => {
                     variant="ghost"
                     onClick={() => navigate("/auth")}
                   >
-                    Sign In
+                    Đăng nhập
                   </Button>
                   <Button
                     onClick={() => navigate("/auth")}
                     className="bg-gradient-primary hover:shadow-glow"
                   >
-                    Get Started
+                    Bắt đầu
                   </Button>
                 </>
               )}
@@ -81,26 +81,26 @@ const Index = () => {
           <div className="space-y-6">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
               <Sparkles className="h-4 w-4" />
-              AI-Powered Ticket Management
+              Quản lý Ticket với AI
             </div>
-            
+
             <h1 className="text-5xl lg:text-6xl font-bold leading-tight">
-              Intelligent Ticketing for
-              <span className="text-transparent bg-clip-text bg-gradient-primary"> Academic Teams</span>
+              Ticket Thông minh cho
+              <span className="text-transparent bg-clip-text bg-gradient-primary"> Nhóm Học tập</span>
             </h1>
-            
+
             <p className="text-xl text-muted-foreground">
-              Streamline your project workflow with AI-assisted ticket management. 
-              Perfect for student projects, capstone teams, and academic collaboration.
+              Tối ưu hóa quy trình làm việc dự án với quản lý ticket hỗ trợ AI.
+              Hoàn hảo cho các dự án sinh viên, nhóm capstone và hợp tác học thuật.
             </p>
-            
+
             <div className="flex flex-wrap gap-4">
               <Button
                 size="lg"
                 onClick={() => navigate(user ? "/dashboard" : "/auth")}
                 className="bg-gradient-primary hover:shadow-glow text-lg px-8"
               >
-                Start Free
+                Bắt đầu miễn phí
                 <ArrowRight className="h-5 w-5 ml-2" />
               </Button>
               <Button
@@ -108,16 +108,16 @@ const Index = () => {
                 variant="outline"
                 onClick={() => navigate("/auth")}
               >
-                View Demo
+                Xem Demo
               </Button>
             </div>
           </div>
-          
+
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-primary opacity-20 blur-3xl rounded-full"></div>
             <img
               src={heroImage}
-              alt="TicketFlow Dashboard"
+              alt="EduTicket Dashboard"
               className="relative rounded-2xl shadow-2xl"
             />
           </div>
@@ -127,10 +127,10 @@ const Index = () => {
       {/* Features Section */}
       <section className="container mx-auto px-4 py-20">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold mb-4">Everything You Need</h2>
+          <h2 className="text-4xl font-bold mb-4">Tất cả những gì bạn cần</h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Built specifically for academic environments with powerful features 
-            to help teams collaborate effectively
+            Được xây dựng đặc biệt cho môi trường học thuật với các tính năng mạnh mẽ
+            để giúp các nhóm hợp tác hiệu quả
           </p>
         </div>
 
@@ -158,11 +158,11 @@ const Index = () => {
         <Card className="bg-gradient-primary text-white shadow-glow">
           <CardContent className="p-12 text-center">
             <h2 className="text-4xl font-bold mb-4">
-              Ready to Transform Your Workflow?
+              Sẵn sàng chuyển đổi quy trình làm việc?
             </h2>
             <p className="text-xl mb-8 text-white/90 max-w-2xl mx-auto">
-              Join academic teams already using TicketFlow AI to manage 
-              their projects more efficiently
+              Tham gia cùng các nhóm học thuật đã sử dụng EduTicket AI để quản lý
+              dự án hiệu quả hơn
             </p>
             <Button
               size="lg"
@@ -170,7 +170,7 @@ const Index = () => {
               onClick={() => navigate("/auth")}
               className="text-lg px-8"
             >
-              Get Started Free
+              Bắt đầu miễn phí
               <ArrowRight className="h-5 w-5 ml-2" />
             </Button>
           </CardContent>

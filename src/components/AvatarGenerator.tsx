@@ -12,12 +12,12 @@ interface AvatarGeneratorProps {
  */
 const getInitials = (name: string): string => {
   if (!name) return '?';
-  
+
   const words = name.trim().split(/\s+/);
   if (words.length === 1) {
     return words[0].charAt(0).toUpperCase();
   }
-  
+
   return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
 };
 
@@ -26,27 +26,27 @@ const getInitials = (name: string): string => {
  */
 const getAvatarColor = (name: string): string => {
   if (!name) return 'bg-gray-500';
-  
+
   // Generate a hash from the name for consistent colors
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
-  
+
   // Convert hash to a color index
   const colorIndex = Math.abs(hash) % 8;
-  
+
   const colors = [
-    'bg-red-500',      // Red
-    'bg-blue-500',     // Blue
-    'bg-green-500',    // Green
-    'bg-yellow-500',   // Yellow
-    'bg-purple-500',   // Purple
-    'bg-pink-500',     // Pink
-    'bg-indigo-500',   // Indigo
-    'bg-teal-500',     // Teal
+    'bg-blue-500',      // Blue
+    'bg-blue-600',      // Blue darker
+    'bg-indigo-500',    // Indigo
+    'bg-indigo-600',    // Indigo darker
+    'bg-sky-500',       // Sky blue
+    'bg-sky-600',       // Sky blue darker
+    'bg-cyan-500',      // Cyan
+    'bg-cyan-600',      // Cyan darker
   ];
-  
+
   return colors[colorIndex];
 };
 
@@ -90,7 +90,7 @@ export const AvatarGenerator: FC<AvatarGeneratorProps> = ({
 /**
  * Avatar with fallback to user icon
  */
-export const UserAvatar: FC<AvatarGeneratorProps & { 
+export const UserAvatar: FC<AvatarGeneratorProps & {
   showFallback?: boolean;
   fallbackIcon?: React.ReactNode;
 }> = ({
@@ -100,32 +100,32 @@ export const UserAvatar: FC<AvatarGeneratorProps & {
   showFallback = true,
   fallbackIcon
 }) => {
-  if (!name && showFallback) {
-    return (
-      <div
-        className={cn(
-          'flex items-center justify-center rounded-full bg-muted text-muted-foreground',
-          sizeConfig[size],
-          className
-        )}
-      >
-        {fallbackIcon || (
-          <svg
-            className="h-1/2 w-1/2"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              fillRule="evenodd"
-              d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-              clipRule="evenodd"
-            />
-          </svg>
-        )}
-      </div>
-    );
-  }
+    if (!name && showFallback) {
+      return (
+        <div
+          className={cn(
+            'flex items-center justify-center rounded-full bg-muted text-muted-foreground',
+            sizeConfig[size],
+            className
+          )}
+        >
+          {fallbackIcon || (
+            <svg
+              className="h-1/2 w-1/2"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                clipRule="evenodd"
+              />
+            </svg>
+          )}
+        </div>
+      );
+    }
 
-  return <AvatarGenerator name={name} size={size} className={className} />;
-};
+    return <AvatarGenerator name={name} size={size} className={className} />;
+  };

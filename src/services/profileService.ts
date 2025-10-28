@@ -40,13 +40,13 @@ export class ProfileService {
   private static async ensureStorageBucketExists(): Promise<void> {
     try {
       const { data: buckets, error } = await supabase.storage.listBuckets();
-      
+
       if (error) {
         throw new Error(`Failed to check storage configuration: ${error.message}`);
       }
 
       const avatarsBucket = buckets?.find(bucket => bucket.id === 'avatars');
-      
+
       if (!avatarsBucket) {
         throw new Error('Storage bucket "avatars" not found. Please run the setup script in Supabase SQL Editor: scripts/setup-avatar-storage.sql');
       }
