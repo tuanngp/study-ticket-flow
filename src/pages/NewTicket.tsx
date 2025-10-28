@@ -1,35 +1,14 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
-import { 
-  ArrowLeft, 
-  Sparkles, 
-  Brain, 
-  BookOpen, 
-  Users, 
-  AlertCircle, 
-  CheckCircle,
-  Zap,
-  Wand2,
-  Rocket,
-  Star,
-  TrendingUp,
-  Clock,
-  Target
-} from "lucide-react";
-import { AuthService, UserProfile } from "@/services/authService";
-import { TicketService, TicketFormData, AITriageResult } from "@/services/ticketService";
 import { UnifiedTicketCreation } from "@/components/UnifiedTicketCreation";
+import { AuthService, UserProfile } from "@/services/authService";
+import { AITriageResult, TicketFormData, TicketService } from "@/services/ticketService";
+import {
+  ArrowLeft
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 const NewTicket = () => {
   const navigate = useNavigate();
@@ -43,17 +22,17 @@ const NewTicket = () => {
     type: "task",
     priority: "medium",
   });
-  
+
   // Educational context
   const [courseCode, setCourseCode] = useState("");
   const [className, setClassName] = useState("");
   const [projectGroup, setProjectGroup] = useState("");
-  
+
   // AI suggestions
   const [aiSuggestions, setAiSuggestions] = useState<AITriageResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  
+
   // Unified creation system
   const [isCreating, setIsCreating] = useState(false);
 
@@ -144,12 +123,12 @@ const NewTicket = () => {
   return (
     <div className="min-h-screen bg-gradient-subtle">
       <Navbar user={user} profile={profile} />
-      
+
       <main className="container mx-auto px-4 py-8 max-w-2xl">
         <Button
           variant="ghost"
           onClick={() => navigate("/dashboard")}
-          className="mb-6 gap-2"
+          className="mb-6 flex items-center gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Dashboard

@@ -213,6 +213,12 @@ export const TicketAISuggestions = ({
                                             {suggestion.metadata.courseCode}
                                         </Badge>
                                     )}
+                                    {suggestion.metadata.chunkCount && suggestion.metadata.chunkCount > 1 && (
+                                        <Badge variant="secondary" className="text-xs gap-1">
+                                            <Sparkles className="h-3 w-3" />
+                                            Tổng hợp từ {suggestion.metadata.chunkCount} đoạn
+                                        </Badge>
+                                    )}
                                     {suggestion.metadata.helpfulCount !== undefined && (
                                         <span className="flex items-center gap-1">
                                             <ThumbsUp className="h-3 w-3" />

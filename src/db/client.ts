@@ -1,10 +1,13 @@
-import { drizzle } from 'drizzle-orm/postgres-js'
-import postgres from 'postgres'
-import * as schema from './schema'
+import { createClient } from '@supabase/supabase-js'
 
-// Use Supabase connection string from environment variables
-const connectionString = import.meta.env.DATABASE_URL ||
-  `postgresql://postgres:${import.meta.env.VITE_SUPABASE_DB_PASSWORD}@${import.meta.env.VITE_SUPABASE_HOST}:5432/postgres`
+// Create Supabase client for browser
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
 
-export const client = postgres(connectionString, { prepare: false })
-export const db = drizzle(client, { schema });
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error('Missing Supabase environment variables')
+}
+
+export const supabase = createClient(supabaseUrl, supabaseKey)
+
+export const db = supabase
