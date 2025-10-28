@@ -1,6 +1,6 @@
 import { useAuth } from './useAuth';
 
-export type UserRole = 'student' | 'instructor' | 'admin';
+export type UserRole = 'student' | 'instructor' | 'admin' | 'lead' | 'manager';
 
 export interface RolePermissions {
   canCreateTickets: boolean;
@@ -13,6 +13,13 @@ export interface RolePermissions {
   canReviewTickets: boolean;
   canViewReviews: boolean;
   canManageReviews: boolean;
+  // Group system permissions
+  canCreateGroups: boolean;
+  canManageGroups: boolean;
+  canJoinGroups: boolean;
+  canGradeStudents: boolean;
+  canViewAllGroups: boolean;
+  canManageGroupMembers: boolean;
 }
 
 export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
@@ -27,6 +34,32 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canReviewTickets: false,
     canViewReviews: true, // Students can view reviews of their tickets
     canManageReviews: false,
+    // Group permissions for students
+    canCreateGroups: false,
+    canManageGroups: false,
+    canJoinGroups: true,
+    canGradeStudents: false,
+    canViewAllGroups: false,
+    canManageGroupMembers: false,
+  },
+  lead: { // Teaching Assistant Lead
+    canCreateTickets: true,
+    canAssignTickets: true,
+    canResolveTickets: true,
+    canViewAnalytics: true,
+    canManageUsers: false,
+    canAccessAllCourses: false, // Only assigned courses
+    canOverrideAI: true,
+    canReviewTickets: true,
+    canViewReviews: true,
+    canManageReviews: true,
+    // Group permissions for leads
+    canCreateGroups: true,
+    canManageGroups: true,
+    canJoinGroups: true,
+    canGradeStudents: true,
+    canViewAllGroups: false, // Only assigned courses
+    canManageGroupMembers: true,
   },
   instructor: {
     canCreateTickets: true,
@@ -39,6 +72,32 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canReviewTickets: true, // Instructors can review tickets
     canViewReviews: true,
     canManageReviews: true, // Can manage their own reviews
+    // Group permissions for instructors
+    canCreateGroups: true,
+    canManageGroups: true,
+    canJoinGroups: true,
+    canGradeStudents: true,
+    canViewAllGroups: false, // Only assigned courses
+    canManageGroupMembers: true,
+  },
+  manager: { // Department Manager
+    canCreateTickets: true,
+    canAssignTickets: true,
+    canResolveTickets: true,
+    canViewAnalytics: true,
+    canManageUsers: true,
+    canAccessAllCourses: true, // All courses in department
+    canOverrideAI: true,
+    canReviewTickets: true,
+    canViewReviews: true,
+    canManageReviews: true,
+    // Group permissions for managers
+    canCreateGroups: true,
+    canManageGroups: true,
+    canJoinGroups: true,
+    canGradeStudents: true,
+    canViewAllGroups: true, // All groups in department
+    canManageGroupMembers: true,
   },
   admin: {
     canCreateTickets: true,
@@ -51,6 +110,13 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     canReviewTickets: true, // Admins can review any ticket
     canViewReviews: true,
     canManageReviews: true, // Can manage all reviews
+    // Group permissions for admins
+    canCreateGroups: true,
+    canManageGroups: true,
+    canJoinGroups: true,
+    canGradeStudents: true,
+    canViewAllGroups: true, // All groups university-wide
+    canManageGroupMembers: true,
   },
 };
 
@@ -97,7 +163,16 @@ export const usePermissions = () => {
     canManageTicketReviews,
     userRole: (profile?.role || user?.role) as UserRole,
     isStudent: (profile?.role || user?.role) === 'student',
+    isLead: (profile?.role || user?.role) === 'lead',
     isInstructor: (profile?.role || user?.role) === 'instructor',
+    isManager: (profile?.role || user?.role) === 'manager',
     isAdmin: (profile?.role || user?.role) === 'admin',
+    // Group permission helpers
+    canCreateGroups: hasPermission('canCreateGroups'),
+    canManageGroups: hasPermission('canManageGroups'),
+    canJoinGroups: hasPermission('canJoinGroups'),
+    canGradeStudents: hasPermission('canGradeStudents'),
+    canViewAllGroups: hasPermission('canViewAllGroups'),
+    canManageGroupMembers: hasPermission('canManageGroupMembers'),
   };
 };

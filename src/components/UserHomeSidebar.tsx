@@ -26,6 +26,7 @@ import {
   Settings,
   Sun,
   Ticket,
+  Users,
   X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -97,6 +98,11 @@ export const UserHomeSidebar = ({ user, profile, onClose, isMobile = false }: Us
       title: "My Tickets",
       icon: Ticket,
       onClick: () => handleNavigation("/dashboard"),
+    },
+    {
+      title: "Groups",
+      icon: Users,
+      onClick: () => handleNavigation("/groups"),
     },
     {
       title: "Calendar",

@@ -3,7 +3,7 @@
  * Handles searching for similar entries, recording suggestions, and tracking feedback
  */
 
-import { db } from "@/db/client";
+import { supabase } from "@/integrations/supabase/client";
 import {
     knowledgeEntries,
     knowledgeFeedback,

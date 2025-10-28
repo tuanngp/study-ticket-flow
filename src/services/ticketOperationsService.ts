@@ -37,6 +37,7 @@ export interface TicketListOptions {
   type?: string;
   courseCode?: string;
   includeDeleted?: boolean;
+  includeGroupTickets?: boolean;
 }
 
 export interface PaginatedTickets {
@@ -186,6 +187,27 @@ export class TicketOperationsService {
       query = query.not("description", "is", null);
       query = query.neq("description", "");
 
+      // Exclude group tickets unless specifically requested
+      if (!options.includeGroupTickets) {
+        // Get all ticket IDs that are in group_tickets table
+        const { data: groupTicketIds } = await supabase
+          .from('group_tickets')
+          .select('ticket_id');
+        
+        if (groupTicketIds && groupTicketIds.length > 0) {
+          const idsToExclude = groupTicketIds.map(gt => gt.ticket_id);
+          console.log('Excluding group tickets:', idsToExclude);
+          // Use individual neq() calls for each ID to avoid parsing issues
+          idsToExclude.forEach(id => {
+            query = query.neq('id', id);
+          });
+        } else {
+          console.log('No group tickets found to exclude');
+        }
+      } else {
+        console.log('Including group tickets as requested');
+      }
+
       if (options.limit) {
         query = query.limit(options.limit);
       }
@@ -257,6 +279,28 @@ export class TicketOperationsService {
       // query = query.not("description", "is", null);
       // query = query.neq("description", "");
 
+      // Exclude tickets with project_group (group tickets) unless specifically requested
+      if (!options.includeGroupTickets) {
+        query = query.is("project_group", null);
+      }
+
+      // Exclude group tickets unless specifically requested
+      let excludedGroupTicketIds: string[] = [];
+      if (!options.includeGroupTickets) {
+        // Get all ticket IDs that are in group_tickets table
+        const { data: groupTicketIds } = await supabase
+          .from('group_tickets')
+          .select('ticket_id');
+        
+        if (groupTicketIds && groupTicketIds.length > 0) {
+          excludedGroupTicketIds = groupTicketIds.map(gt => gt.ticket_id);
+          // Use individual neq() calls for each ID to avoid parsing issues
+          excludedGroupTicketIds.forEach(id => {
+            query = query.neq('id', id);
+          });
+        }
+      }
+
       // Apply pagination
       query = query.range(offset, offset + limit - 1);
 
@@ -281,6 +325,7 @@ export class TicketOperationsService {
           hasPreviousPage: false
         };
       }
+
 
       const totalCount = count || 0;
       const totalPages = Math.ceil(totalCount / limit);

@@ -17,6 +17,8 @@ export const userRoleEnum = pgEnum("user_role", [
   "student",
   "instructor",
   "admin",
+  "lead",
+  "manager",
 ]);
 export const ticketTypeEnum = pgEnum("ticket_type", [
   "bug",
@@ -112,6 +114,47 @@ export const eventStatusEnum = pgEnum("event_status", [
 export const knowledgeVisibilityEnum = pgEnum("knowledge_visibility", [
   "public",
   "course_specific"
+]);
+
+// Group System Enums
+export const groupRoleEnum = pgEnum("group_role", [
+  "instructor",
+  "class_leader", 
+  "group_leader",
+  "member"
+]);
+
+export const groupStatusEnum = pgEnum("group_status", [
+  "active",
+  "inactive", 
+  "archived",
+  "pending_approval"
+]);
+
+export const groupTicketTypeEnum = pgEnum("group_ticket_type", [
+  "group_collaborative",
+  "individual_support",
+  "teacher_request",
+  "group_discussion"
+]);
+
+export const groupEventTypeEnum = pgEnum("group_event_type", [
+  "study_session",
+  "assignment_deadline",
+  "exam_schedule", 
+  "group_meeting",
+  "teacher_office_hours",
+  "project_presentation"
+]);
+
+export const gradeTypeEnum = pgEnum("grade_type", [
+  "group_project",
+  "individual_contribution",
+  "peer_review",
+  "attendance",
+  "participation",
+  "quiz",
+  "assignment"
 ]);
 
 // Tables
@@ -498,6 +541,18 @@ export const profilesRelations = relations(profiles, ({ many }) => ({
   calendarEvents: many(calendarEvents),
   knowledgeEntries: many(knowledgeEntries, { relationName: "instructor" }),
   knowledgeFeedback: many(knowledgeFeedback, { relationName: "student" }),
+  // Group system relations
+  createdGroups: many(groups, { relationName: "groupCreator" }),
+  instructedGroups: many(groups, { relationName: "groupInstructor" }),
+  groupMemberships: many(groupMembers, { relationName: "groupMemberUser" }),
+  groupInvitations: many(groupMembers, { relationName: "groupInviter" }),
+  groupTicketsCreated: many(groupTickets, { relationName: "groupTicketCreator" }),
+  groupEventsCreated: many(groupEvents, { relationName: "groupEventCreator" }),
+  groupGradesReceived: many(groupGrades, { relationName: "gradedUser" }),
+  groupGradesGiven: many(groupGrades, { relationName: "grader" }),
+  groupChatMessages: many(groupChatMessages, { relationName: "chatMessageUser" }),
+  groupAiSessionsCreated: many(groupAiSessions, { relationName: "aiSessionCreator" }),
+  eventAttendance: many(groupEventAttendance, { relationName: "attendanceUser" }),
 }));
 
 export const ticketsRelations = relations(tickets, ({ one, many }) => ({
@@ -523,6 +578,9 @@ export const ticketsRelations = relations(tickets, ({ one, many }) => ({
   knowledgeEntries: many(knowledgeEntries),
   knowledgeFeedback: many(knowledgeFeedback),
   knowledgeSuggestions: many(knowledgeSuggestions),
+  // Group system relations
+  groupTickets: many(groupTickets),
+  groupGrades: many(groupGrades),
 }));
 
 export const ticketCommentsRelations = relations(ticketComments, ({ one }) => ({
@@ -543,6 +601,8 @@ export const chatSessionsRelations = relations(chatSessions, ({ one, many }) => 
     references: [profiles.id],
   }),
   messages: many(chatMessages),
+  // Group system relations
+  groupAiSessions: many(groupAiSessions),
 }));
 
 export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
@@ -592,7 +652,7 @@ export const ticketReviewsRelations = relations(ticketReviews, ({ one }) => ({
 }));
 
 // Calendar Event Relations
-export const calendarEventsRelations = relations(calendarEvents, ({ one }) => ({
+export const calendarEventsRelations = relations(calendarEvents, ({ one, many }) => ({
   user: one(profiles, {
     fields: [calendarEvents.userId],
     references: [profiles.id],
@@ -601,6 +661,9 @@ export const calendarEventsRelations = relations(calendarEvents, ({ one }) => ({
     fields: [calendarEvents.ticketId],
     references: [tickets.id],
   }),
+  // Group system relations
+  groupEvents: many(groupEvents),
+  groupGrades: many(groupGrades),
 }));
 
 // Knowledge Base Relations
@@ -650,6 +713,285 @@ export const knowledgeSuggestionsRelations = relations(knowledgeSuggestions, ({ 
   }),
 }));
 
+// Group System Tables
+export const groups = pgTable("groups", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  description: text("description"),
+  
+  // Educational context
+  courseCode: text("course_code").notNull(),
+  className: text("class_name"),
+  semester: text("semester").notNull(),
+  
+  // Group settings
+  maxMembers: integer("max_members").notNull().default(100),
+  isPublic: boolean("is_public").notNull().default(true),
+  allowSelfJoin: boolean("allow_self_join").notNull().default(true),
+  
+  // Status and metadata
+  status: groupStatusEnum("status").notNull().default("active"),
+  createdBy: uuid("created_by")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  instructorId: uuid("instructor_id").references(() => profiles.id, {
+    onDelete: "set null",
+  }),
+  
+  // Timestamps
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+}, (table) => ({
+  courseCodeIdx: index("idx_groups_course_code").on(table.courseCode),
+  semesterIdx: index("idx_groups_semester").on(table.semester),
+  statusIdx: index("idx_groups_status").on(table.status),
+  createdByIdx: index("idx_groups_created_by").on(table.createdBy),
+  instructorIdIdx: index("idx_groups_instructor_id").on(table.instructorId),
+}));
+
+export const groupMembers = pgTable("group_members", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  groupId: uuid("group_id")
+    .notNull()
+    .references(() => groups.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  
+  // Role and permissions
+  role: groupRoleEnum("role").notNull().default("member"),
+  
+  // Status and timestamps
+  status: groupStatusEnum("status").notNull().default("active"),
+  joinedAt: timestamp("joined_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  leftAt: timestamp("left_at", { withTimezone: true }),
+  
+  // Invitation system
+  invitedBy: uuid("invited_by").references(() => profiles.id, {
+    onDelete: "set null",
+  }),
+  invitationAcceptedAt: timestamp("invitation_accepted_at", { withTimezone: true }),
+}, (table) => ({
+  groupIdIdx: index("idx_group_members_group_id").on(table.groupId),
+  userIdIdx: index("idx_group_members_user_id").on(table.userId),
+  roleIdx: index("idx_group_members_role").on(table.role),
+  statusIdx: index("idx_group_members_status").on(table.status),
+  uniqueGroupUser: index("idx_group_members_unique").on(table.groupId, table.userId),
+}));
+
+export const groupTickets = pgTable("group_tickets", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  groupId: uuid("group_id")
+    .notNull()
+    .references(() => groups.id, { onDelete: "cascade" }),
+  ticketId: uuid("ticket_id")
+    .notNull()
+    .references(() => tickets.id, { onDelete: "cascade" }),
+  
+  // Group-specific ticket properties
+  ticketType: groupTicketTypeEnum("ticket_type").notNull().default("individual_support"),
+  isShared: boolean("is_shared").notNull().default(false),
+  requiresTeacherApproval: boolean("requires_teacher_approval").notNull().default(false),
+  
+  // Collaboration metadata
+  createdBy: uuid("created_by")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  assignedToGroup: boolean("assigned_to_group").notNull().default(false),
+  
+  // Timestamps
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+}, (table) => ({
+  groupIdIdx: index("idx_group_tickets_group_id").on(table.groupId),
+  ticketIdIdx: index("idx_group_tickets_ticket_id").on(table.ticketId),
+  typeIdx: index("idx_group_tickets_type").on(table.ticketType),
+  createdByIdx: index("idx_group_tickets_created_by").on(table.createdBy),
+  uniqueGroupTicket: index("idx_group_tickets_unique").on(table.groupId, table.ticketId),
+}));
+
+export const groupEvents = pgTable("group_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  groupId: uuid("group_id")
+    .notNull()
+    .references(() => groups.id, { onDelete: "cascade" }),
+  eventId: uuid("event_id")
+    .notNull()
+    .references(() => calendarEvents.id, { onDelete: "cascade" }),
+  
+  // Group-specific event properties
+  eventType: groupEventTypeEnum("event_type").notNull().default("study_session"),
+  requiresAttendance: boolean("requires_attendance").notNull().default(false),
+  maxParticipants: integer("max_participants"),
+  
+  // Created by
+  createdBy: uuid("created_by")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  
+  // Timestamps
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+}, (table) => ({
+  groupIdIdx: index("idx_group_events_group_id").on(table.groupId),
+  eventIdIdx: index("idx_group_events_event_id").on(table.eventId),
+  typeIdx: index("idx_group_events_type").on(table.eventType),
+  createdByIdx: index("idx_group_events_created_by").on(table.createdBy),
+  uniqueGroupEvent: index("idx_group_events_unique").on(table.groupId, table.eventId),
+}));
+
+export const groupEventAttendance = pgTable("group_event_attendance", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  groupEventId: uuid("group_event_id")
+    .notNull()
+    .references(() => groupEvents.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  
+  // Attendance status
+  status: text("status").notNull().default("pending"),
+  reason: text("reason"),
+  
+  // Timestamps
+  respondedAt: timestamp("responded_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+}, (table) => ({
+  eventIdIdx: index("idx_group_event_attendance_event_id").on(table.groupEventId),
+  userIdIdx: index("idx_group_event_attendance_user_id").on(table.userId),
+  statusIdx: index("idx_group_event_attendance_status").on(table.status),
+  uniqueEventUser: index("idx_group_event_attendance_unique").on(table.groupEventId, table.userId),
+}));
+
+export const groupGrades = pgTable("group_grades", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  groupId: uuid("group_id")
+    .notNull()
+    .references(() => groups.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  
+  // Grade information
+  gradeType: gradeTypeEnum("grade_type").notNull(),
+  score: text("score").notNull(), // Using text to match existing pattern
+  maxScore: text("max_score").notNull().default("100.00"),
+  
+  // Grading metadata
+  gradedBy: uuid("graded_by")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  feedback: text("feedback"),
+  rubricData: jsonb("rubric_data").default({}),
+  
+  // Related entities
+  ticketId: uuid("ticket_id").references(() => tickets.id, {
+    onDelete: "set null",
+  }),
+  eventId: uuid("event_id").references(() => calendarEvents.id, {
+    onDelete: "set null",
+  }),
+  
+  // Timestamps
+  gradedAt: timestamp("graded_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+}, (table) => ({
+  groupIdIdx: index("idx_group_grades_group_id").on(table.groupId),
+  userIdIdx: index("idx_group_grades_user_id").on(table.userId),
+  typeIdx: index("idx_group_grades_type").on(table.gradeType),
+  gradedByIdx: index("idx_group_grades_graded_by").on(table.gradedBy),
+}));
+
+export const groupChatMessages = pgTable("group_chat_messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  groupId: uuid("group_id")
+    .notNull()
+    .references(() => groups.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  
+  // Message content
+  content: text("content").notNull(),
+  messageType: text("message_type").notNull().default("text"),
+  
+  // File attachments
+  attachments: jsonb("attachments").default([]),
+  
+  // Message metadata
+  replyTo: uuid("reply_to").references((): any => groupChatMessages.id, {
+    onDelete: "set null",
+  }),
+  isEdited: boolean("is_edited").notNull().default(false),
+  editedAt: timestamp("edited_at", { withTimezone: true }),
+  
+  // Timestamps
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+}, (table) => ({
+  groupIdIdx: index("idx_group_chat_messages_group_id").on(table.groupId),
+  userIdIdx: index("idx_group_chat_messages_user_id").on(table.userId),
+  createdAtIdx: index("idx_group_chat_messages_created_at").on(table.createdAt),
+}));
+
+export const groupAiSessions = pgTable("group_ai_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  groupId: uuid("group_id")
+    .notNull()
+    .references(() => groups.id, { onDelete: "cascade" }),
+  sessionId: uuid("session_id")
+    .notNull()
+    .references(() => chatSessions.id, { onDelete: "cascade" }),
+  
+  // Session metadata
+  sessionName: text("session_name"),
+  isShared: boolean("is_shared").notNull().default(true),
+  createdBy: uuid("created_by")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  
+  // Timestamps
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+}, (table) => ({
+  groupIdIdx: index("idx_group_ai_sessions_group_id").on(table.groupId),
+  sessionIdIdx: index("idx_group_ai_sessions_session_id").on(table.sessionId),
+  uniqueGroupSession: index("idx_group_ai_sessions_unique").on(table.groupId, table.sessionId),
+}));
+
 // Type exports for knowledge base tables
 export type KnowledgeEntry = typeof knowledgeEntries.$inferSelect;
 export type NewKnowledgeEntry = typeof knowledgeEntries.$inferInsert;
@@ -657,3 +999,161 @@ export type KnowledgeFeedback = typeof knowledgeFeedback.$inferSelect;
 export type NewKnowledgeFeedback = typeof knowledgeFeedback.$inferInsert;
 export type KnowledgeSuggestion = typeof knowledgeSuggestions.$inferSelect;
 export type NewKnowledgeSuggestion = typeof knowledgeSuggestions.$inferInsert;
+
+// Type exports for group system tables
+export type Group = typeof groups.$inferSelect;
+export type NewGroup = typeof groups.$inferInsert;
+export type GroupMember = typeof groupMembers.$inferSelect;
+export type NewGroupMember = typeof groupMembers.$inferInsert;
+export type GroupTicket = typeof groupTickets.$inferSelect;
+export type NewGroupTicket = typeof groupTickets.$inferInsert;
+export type GroupEvent = typeof groupEvents.$inferSelect;
+export type NewGroupEvent = typeof groupEvents.$inferInsert;
+export type GroupEventAttendance = typeof groupEventAttendance.$inferSelect;
+export type NewGroupEventAttendance = typeof groupEventAttendance.$inferInsert;
+export type GroupGrade = typeof groupGrades.$inferSelect;
+export type NewGroupGrade = typeof groupGrades.$inferInsert;
+export type GroupChatMessage = typeof groupChatMessages.$inferSelect;
+export type NewGroupChatMessage = typeof groupChatMessages.$inferInsert;
+export type GroupAiSession = typeof groupAiSessions.$inferSelect;
+export type NewGroupAiSession = typeof groupAiSessions.$inferInsert;
+
+// Group System Relations
+export const groupsRelations = relations(groups, ({ one, many }) => ({
+  createdBy: one(profiles, {
+    fields: [groups.createdBy],
+    references: [profiles.id],
+    relationName: "groupCreator",
+  }),
+  instructor: one(profiles, {
+    fields: [groups.instructorId],
+    references: [profiles.id],
+    relationName: "groupInstructor",
+  }),
+  members: many(groupMembers),
+  tickets: many(groupTickets),
+  events: many(groupEvents),
+  grades: many(groupGrades),
+  chatMessages: many(groupChatMessages),
+  aiSessions: many(groupAiSessions),
+}));
+
+export const groupMembersRelations = relations(groupMembers, ({ one }) => ({
+  group: one(groups, {
+    fields: [groupMembers.groupId],
+    references: [groups.id],
+  }),
+  user: one(profiles, {
+    fields: [groupMembers.userId],
+    references: [profiles.id],
+    relationName: "groupMemberUser",
+  }),
+  invitedBy: one(profiles, {
+    fields: [groupMembers.invitedBy],
+    references: [profiles.id],
+    relationName: "groupInviter",
+  }),
+}));
+
+export const groupTicketsRelations = relations(groupTickets, ({ one }) => ({
+  group: one(groups, {
+    fields: [groupTickets.groupId],
+    references: [groups.id],
+  }),
+  ticket: one(tickets, {
+    fields: [groupTickets.ticketId],
+    references: [tickets.id],
+  }),
+  createdBy: one(profiles, {
+    fields: [groupTickets.createdBy],
+    references: [profiles.id],
+    relationName: "groupTicketCreator",
+  }),
+}));
+
+export const groupEventsRelations = relations(groupEvents, ({ one, many }) => ({
+  group: one(groups, {
+    fields: [groupEvents.groupId],
+    references: [groups.id],
+  }),
+  event: one(calendarEvents, {
+    fields: [groupEvents.eventId],
+    references: [calendarEvents.id],
+  }),
+  createdBy: one(profiles, {
+    fields: [groupEvents.createdBy],
+    references: [profiles.id],
+    relationName: "groupEventCreator",
+  }),
+  attendance: many(groupEventAttendance),
+}));
+
+export const groupEventAttendanceRelations = relations(groupEventAttendance, ({ one }) => ({
+  groupEvent: one(groupEvents, {
+    fields: [groupEventAttendance.groupEventId],
+    references: [groupEvents.id],
+  }),
+  user: one(profiles, {
+    fields: [groupEventAttendance.userId],
+    references: [profiles.id],
+    relationName: "attendanceUser",
+  }),
+}));
+
+export const groupGradesRelations = relations(groupGrades, ({ one }) => ({
+  group: one(groups, {
+    fields: [groupGrades.groupId],
+    references: [groups.id],
+  }),
+  user: one(profiles, {
+    fields: [groupGrades.userId],
+    references: [profiles.id],
+    relationName: "gradedUser",
+  }),
+  gradedBy: one(profiles, {
+    fields: [groupGrades.gradedBy],
+    references: [profiles.id],
+    relationName: "grader",
+  }),
+  ticket: one(tickets, {
+    fields: [groupGrades.ticketId],
+    references: [tickets.id],
+  }),
+  event: one(calendarEvents, {
+    fields: [groupGrades.eventId],
+    references: [calendarEvents.id],
+  }),
+}));
+
+export const groupChatMessagesRelations = relations(groupChatMessages, ({ one }) => ({
+  group: one(groups, {
+    fields: [groupChatMessages.groupId],
+    references: [groups.id],
+  }),
+  user: one(profiles, {
+    fields: [groupChatMessages.userId],
+    references: [profiles.id],
+    relationName: "chatMessageUser",
+  }),
+  replyTo: one(groupChatMessages, {
+    fields: [groupChatMessages.replyTo],
+    references: [groupChatMessages.id],
+    relationName: "replyToMessage",
+  }),
+}));
+
+export const groupAiSessionsRelations = relations(groupAiSessions, ({ one }) => ({
+  group: one(groups, {
+    fields: [groupAiSessions.groupId],
+    references: [groups.id],
+  }),
+  session: one(chatSessions, {
+    fields: [groupAiSessions.sessionId],
+    references: [chatSessions.id],
+  }),
+  createdBy: one(profiles, {
+    fields: [groupAiSessions.createdBy],
+    references: [profiles.id],
+    relationName: "aiSessionCreator",
+  }),
+}));

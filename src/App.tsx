@@ -15,6 +15,8 @@ import Analytics from "./pages/Analytics";
 import Auth from "./pages/Auth";
 import CalendarPage from "./pages/Calendar";
 import Dashboard from "./pages/Dashboard";
+import { GroupsPage as Groups } from "./pages/Groups";
+import { GroupDetailPage as GroupDetail } from "./pages/GroupDetail";
 import Index from "./pages/Index";
 import KnowledgeBase from "./pages/KnowledgeBase";
 import NewTicket from "./pages/NewTicket";
@@ -51,6 +53,16 @@ const App = () => (
                   </ProtectedRoute>
                 } />
                 <Route path="/userhome" element={<UserHome />} />
+                <Route path="/groups" element={
+                  <ProtectedRoute>
+                    <Groups />
+                  </ProtectedRoute>
+                } />
+                <Route path="/groups/:groupId" element={
+                  <ProtectedRoute>
+                    <GroupDetail />
+                  </ProtectedRoute>
+                } />
                 <Route path="/calendar" element={
                   <ProtectedRoute>
                     <CalendarPage />
