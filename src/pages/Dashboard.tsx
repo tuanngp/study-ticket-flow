@@ -45,7 +45,8 @@ const Dashboard = () => {
         priority: filters.priority !== 'all' ? filters.priority : undefined,
         type: filters.type !== 'all' ? filters.type : undefined,
         courseCode: filters.dateRange !== 'all' ? filters.dateRange : undefined,
-        includeGroupTickets: false, // Explicitly exclude group tickets from dashboard
+        includeGroupTickets: true, // Include all tickets including group tickets
+        includeDeleted: true, // Include all tickets including deleted ones
       };
 
       if (tab === 'my-tickets') {

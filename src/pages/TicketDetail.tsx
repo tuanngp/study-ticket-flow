@@ -175,23 +175,194 @@ const TicketDetail = () => {
   };
 
   const handleAISelfReview = async () => {
-    if (!id || !user) return;
+    if (!id || !user || !ticket) return;
     try {
-      const ai = {
-        overall: 4,
-        quality: 4,
-        completeness: 3,
-        clarity: 4,
-        helpfulness: 3,
-        feedback: "AI đánh giá sơ bộ dựa trên nội dung ticket.",
-        suggestions: "Bổ sung log lỗi và các bước tái hiện chi tiết hơn.",
-        metadata: { source: 'ai', model: 'rule-based-v1' }
-      };
+      const ai = analyzeTicketContent(ticket);
       await ReviewService.createAISelfReview(id, user.id, ai);
       toast.success("Đã tạo đánh giá AI cho ticket của bạn");
     } catch (e: any) {
       toast.error(e.message || "Không thể tạo đánh giá AI");
     }
+  };
+
+  const analyzeTicketContent = (ticket: Ticket) => {
+    const title = ticket.title || '';
+    const description = ticket.description || '';
+    const type = ticket.type || '';
+    
+    // Calculate content quality metrics
+    const titleLength = title.trim().length;
+    const descriptionLength = description.trim().length;
+    const totalLength = titleLength + descriptionLength;
+    
+    // Check for specific content indicators
+    const hasCodeSnippets = /```[\s\S]*?```|`[^`]+`/.test(description);
+    const hasErrorMessages = /error|exception|fail|bug|issue/i.test(description);
+    const hasSteps = /step|bước|1\.|2\.|3\.|first|then|next/i.test(description);
+    const hasContext = /when|khi|where|ở đâu|what|gì|how|như thế nào/i.test(description);
+    const hasSpecificDetails = /version|phiên bản|file|tệp|line|dòng|function|hàm|class|lớp/i.test(description);
+    
+    // Calculate scores based on content quality
+    let quality = 1; // Start with minimum score
+    let completeness = 1;
+    let clarity = 1;
+    let helpfulness = 1;
+    
+    // Title quality (0-2 points)
+    if (titleLength >= 20) quality += 1;
+    if (titleLength >= 10) quality += 0.5;
+    if (titleLength < 5) quality -= 0.5;
+    
+    // Description quality (0-3 points)
+    if (descriptionLength >= 100) completeness += 1.5;
+    else if (descriptionLength >= 50) completeness += 1;
+    else if (descriptionLength >= 20) completeness += 0.5;
+    else if (descriptionLength < 10) completeness -= 0.5;
+    
+    // Content specificity (0-2 points)
+    if (hasCodeSnippets) completeness += 0.5;
+    if (hasErrorMessages) completeness += 0.5;
+    if (hasSteps) completeness += 0.5;
+    if (hasContext) completeness += 0.5;
+    if (hasSpecificDetails) completeness += 0.5;
+    
+    // Clarity assessment (0-2 points)
+    if (descriptionLength >= 50 && hasContext) clarity += 1;
+    if (hasSteps || hasCodeSnippets) clarity += 0.5;
+    if (descriptionLength < 20) clarity -= 0.5;
+    
+    // Helpfulness assessment (0-2 points)
+    if (hasErrorMessages && hasSteps) helpfulness += 1;
+    if (hasCodeSnippets) helpfulness += 0.5;
+    if (hasSpecificDetails) helpfulness += 0.5;
+    if (descriptionLength < 30) helpfulness -= 0.5;
+    
+    // Ensure scores are within 1-5 range and convert to integers
+    quality = Math.max(1, Math.min(5, Math.round(quality)));
+    completeness = Math.max(1, Math.min(5, Math.round(completeness)));
+    clarity = Math.max(1, Math.min(5, Math.round(clarity)));
+    helpfulness = Math.max(1, Math.min(5, Math.round(helpfulness)));
+    
+    // Calculate overall score (weighted average) and round to integer
+    const overall = Math.round(quality * 0.3 + completeness * 0.3 + clarity * 0.2 + helpfulness * 0.2);
+    
+    // Generate feedback based on scores
+    const feedback = generateFeedback(quality, completeness, clarity, helpfulness, {
+      titleLength,
+      descriptionLength,
+      hasCodeSnippets,
+      hasErrorMessages,
+      hasSteps,
+      hasContext,
+      hasSpecificDetails
+    });
+    
+    // Generate suggestions based on weaknesses
+    const suggestions = generateSuggestions(quality, completeness, clarity, helpfulness, {
+      titleLength,
+      descriptionLength,
+      hasCodeSnippets,
+      hasErrorMessages,
+      hasSteps,
+      hasContext,
+      hasSpecificDetails
+    });
+    
+    return {
+      overall,
+      quality,
+      completeness,
+      clarity,
+      helpfulness,
+      feedback,
+      suggestions,
+      metadata: { 
+        source: 'ai', 
+        model: 'rule-based-v2',
+        analysis: {
+          titleLength,
+          descriptionLength,
+          totalLength,
+          hasCodeSnippets,
+          hasErrorMessages,
+          hasSteps,
+          hasContext,
+          hasSpecificDetails
+        }
+      }
+    };
+  };
+
+  const generateFeedback = (quality: number, completeness: number, clarity: number, helpfulness: number, metrics: any) => {
+    const feedbacks = [];
+    
+    if (quality >= 4) {
+      feedbacks.push("Tiêu đề rõ ràng và mô tả tốt vấn đề.");
+    } else if (quality <= 2) {
+      feedbacks.push("Tiêu đề cần cụ thể hơn để mô tả vấn đề.");
+    }
+    
+    if (completeness >= 4) {
+      feedbacks.push("Mô tả chi tiết và đầy đủ thông tin cần thiết.");
+    } else if (completeness <= 2) {
+      feedbacks.push("Mô tả cần bổ sung thêm chi tiết về vấn đề.");
+    }
+    
+    if (clarity >= 4) {
+      feedbacks.push("Nội dung dễ hiểu và có cấu trúc tốt.");
+    } else if (clarity <= 2) {
+      feedbacks.push("Cần trình bày rõ ràng và có cấu trúc hơn.");
+    }
+    
+    if (helpfulness >= 4) {
+      feedbacks.push("Ticket cung cấp đủ thông tin để hỗ trợ giải quyết.");
+    } else if (helpfulness <= 2) {
+      feedbacks.push("Cần thêm thông tin hữu ích để hỗ trợ giải quyết vấn đề.");
+    }
+    
+    if (metrics.descriptionLength < 30) {
+      feedbacks.push("Mô tả quá ngắn, cần bổ sung thêm chi tiết.");
+    }
+    
+    if (!metrics.hasContext && metrics.descriptionLength < 100) {
+      feedbacks.push("Thiếu ngữ cảnh về khi nào và ở đâu vấn đề xảy ra.");
+    }
+    
+    return feedbacks.length > 0 ? feedbacks.join(' ') : "Ticket có chất lượng trung bình.";
+  };
+
+  const generateSuggestions = (quality: number, completeness: number, clarity: number, helpfulness: number, metrics: any) => {
+    const suggestions = [];
+    
+    if (quality <= 3) {
+      suggestions.push("Viết tiêu đề cụ thể hơn, mô tả chính xác vấn đề gặp phải.");
+    }
+    
+    if (completeness <= 3) {
+      suggestions.push("Bổ sung thêm chi tiết: mã lỗi, bước tái hiện, môi trường thực thi.");
+    }
+    
+    if (clarity <= 3) {
+      suggestions.push("Sắp xếp thông tin theo thứ tự logic: vấn đề → bước tái hiện → kết quả mong đợi.");
+    }
+    
+    if (helpfulness <= 3) {
+      suggestions.push("Thêm code snippets, log lỗi, hoặc screenshot để minh họa vấn đề.");
+    }
+    
+    if (!metrics.hasCodeSnippets && (metrics.type === 'coding_error' || metrics.type === 'bug')) {
+      suggestions.push("Thêm đoạn code gây lỗi và thông báo lỗi chi tiết.");
+    }
+    
+    if (!metrics.hasSteps && metrics.descriptionLength < 100) {
+      suggestions.push("Mô tả các bước để tái hiện vấn đề một cách chi tiết.");
+    }
+    
+    if (metrics.descriptionLength < 50) {
+      suggestions.push("Mở rộng mô tả để bao gồm: ngữ cảnh, mục tiêu, và kết quả mong đợi.");
+    }
+    
+    return suggestions.length > 0 ? suggestions.join(' ') : "Ticket đã có chất lượng tốt, tiếp tục duy trì.";
   };
 
   const handleEditTicket = () => {
