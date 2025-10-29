@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { NotificationService } from "./notificationService";
+import { normalizeTicketType } from "@/lib/utils";
 
 export interface Ticket {
   id: string;
@@ -263,7 +264,9 @@ export class TicketOperationsService {
       }
 
       if (options.type) {
-        query = query.eq("type", options.type);
+        // Normalize UI-friendly type names to database enum values
+        const normalizedType = normalizeTicketType(options.type);
+        query = query.eq("type", normalizedType);
       }
 
       if (options.courseCode) {

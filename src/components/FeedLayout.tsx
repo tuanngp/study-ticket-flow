@@ -188,7 +188,7 @@ export const FeedLayout = ({ children, onCreateTicket, user, profile, searchQuer
           <div className="flex items-center gap-2">
             <Button
               onClick={onCreateTicket}
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+              className="bg-green-600 hover:bg-green-700 text-white"
             >
               <Plus className="h-4 w-4 mr-2" />
               Ticket Mới
@@ -230,7 +230,7 @@ export const FeedLayout = ({ children, onCreateTicket, user, profile, searchQuer
             {/* New Ticket Button */}
             <Button
               onClick={onCreateTicket}
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+              className="w-full"
               size="lg"
             >
               <Plus className="h-4 w-4 mr-2" />

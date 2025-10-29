@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { FeedLayout } from "@/components/FeedLayout";
 import { FeedTicketCard } from "@/components/FeedTicketCard";
@@ -8,8 +8,8 @@ import { TicketOperationsService, Ticket } from "@/services/ticketOperationsServ
 import { useAuth } from "@/hooks/useAuth";
 import { FullPageLoadingSpinner } from "@/components/LoadingSpinner";
 import { toast } from "sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Globe, Plus } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { User, Globe } from "lucide-react";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -26,26 +26,28 @@ const Dashboard = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [activeTab, setActiveTab] = useState("my-tickets");
   const [isLoadingTickets, setIsLoadingTickets] = useState(false);
+  const fetchingRef = useRef(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(12);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 
-  const fetchTickets = useCallback(async (userId: string, page: number = currentPage, tab: string = activeTab) => {
-    if (isLoadingTickets) return;
+  const fetchTickets = useCallback(async (userId: string, page: number = 1, tab: string = activeTab) => {
+    if (!userId || fetchingRef.current) return;
 
     try {
+      fetchingRef.current = true;
       setIsLoadingTickets(true);
 
       let queryParams: any = {
         page,
         limit: pageSize,
-        status: filters.status !== 'all' ? filters.status : undefined,
-        priority: filters.priority !== 'all' ? filters.priority : undefined,
-        type: filters.type !== 'all' ? filters.type : undefined,
-        courseCode: filters.dateRange !== 'all' ? filters.dateRange : undefined,
-        includeGroupTickets: false, // Explicitly exclude group tickets from dashboard
+        status: filters.status && filters.status !== 'all' ? filters.status : undefined,
+        priority: filters.priority && filters.priority !== 'all' ? filters.priority : undefined,
+        type: filters.type && filters.type !== 'all' ? filters.type : undefined,
+        courseCode: filters.dateRange && filters.dateRange !== 'all' ? filters.dateRange : undefined,
+        includeGroupTickets: true,
       };
 
       if (tab === 'my-tickets') {
@@ -58,47 +60,57 @@ const Dashboard = () => {
 
       const result = await TicketOperationsService.getTicketsPaginated(queryParams);
 
-      // Debug logging
-      console.log('Dashboard fetchTickets:', {
-        userId,
-        userRole: user?.role,
-        profileRole: profile?.role,
-        tab,
-        queryParams,
-        resultCount: result.tickets.length,
-        tickets: result.tickets
+      // Sort tickets by created_at ascending (earliest to latest)
+      const sortedTickets = (result.tickets || []).sort((a, b) => {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return dateA - dateB; // Ascending: earliest first
       });
 
-      setTickets(result.tickets);
-      setFilteredTickets(result.tickets);
-      setTotalCount(result.totalCount);
-      setTotalPages(result.totalPages);
+      setTickets(sortedTickets);
+      setFilteredTickets(sortedTickets);
+      setTotalCount(result.totalCount || 0);
+      setTotalPages(result.totalPages || 0);
     } catch (error) {
       console.error('Error fetching tickets:', error);
       toast.error('Không thể tải tickets');
+      setTickets([]);
+      setFilteredTickets([]);
+      setTotalCount(0);
+      setTotalPages(0);
     } finally {
       setIsLoadingTickets(false);
+      fetchingRef.current = false;
     }
-  }, [user?.role, filters, pageSize, isLoadingTickets, currentPage, activeTab]);
+  }, [filters, pageSize, activeTab, profile?.role]);
 
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && !authLoading && isAuthenticated) {
+      console.log('Dashboard: Fetching tickets', { userId: user.id, activeTab, filters });
       fetchTickets(user.id, 1, activeTab);
       setCurrentPage(1);
     }
-  }, [user?.id, filters, activeTab]); // Add user?.id to dependencies
+  }, [user?.id, filters, activeTab, authLoading, isAuthenticated, fetchTickets]);
 
   useEffect(() => {
+    let filtered = tickets;
+    
     if (searchQuery.trim()) {
-      const filtered = tickets.filter(ticket =>
+      filtered = tickets.filter(ticket =>
         ticket.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         ticket.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         ticket.type.toLowerCase().includes(searchQuery.toLowerCase())
       );
-      setFilteredTickets(filtered);
-    } else {
-      setFilteredTickets(tickets);
     }
+
+    // Sort by created_at ascending (earliest to latest)
+    const sorted = [...filtered].sort((a, b) => {
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
+      return dateA - dateB; // Ascending: earliest first
+    });
+
+    setFilteredTickets(sorted);
   }, [tickets, searchQuery]);
 
   useEffect(() => {
@@ -116,7 +128,7 @@ const Dashboard = () => {
       if (user?.id) {
         await fetchTickets(user.id, currentPage, activeTab);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating ticket:', error);
       toast.error(`Không thể tạo ticket: ${error.message}`);
     }
@@ -159,27 +171,23 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] dark:bg-grid-slate-700/25 dark:[mask-image:linear-gradient(0deg,rgba(255,255,255,0.1),rgba(255,255,255,0.5))]" />
-
-      <FeedLayout
-        onCreateTicket={() => setShowCreateForm(true)}
-        user={user}
-        profile={profile}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        filters={filters}
-        onFilterChange={setFilters}
-      >
-        {/* Compact Tab Navigation */}
+    <FeedLayout
+      onCreateTicket={() => setShowCreateForm(true)}
+      user={user}
+      profile={profile}
+      searchQuery={searchQuery}
+      onSearchChange={setSearchQuery}
+      filters={filters}
+      onFilterChange={setFilters}
+    >
+        {/* Tab Navigation */}
         <div className="col-span-full mb-4">
           <Tabs value={activeTab} onValueChange={isLoadingTickets ? undefined : handleTabChange} className="w-full">
-            <TabsList className="grid w-full max-w-md grid-cols-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-slate-200 dark:border-slate-700 shadow-sm">
+            <TabsList className="grid w-full max-w-md grid-cols-2">
               <TabsTrigger
                 value="my-tickets"
                 disabled={isLoadingTickets}
-                className="flex items-center gap-2 text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 text-sm"
               >
                 <User className="h-4 w-4" />
                 Ticket của tôi
@@ -187,7 +195,7 @@ const Dashboard = () => {
               <TabsTrigger
                 value="all-tickets"
                 disabled={isLoadingTickets}
-                className="flex items-center gap-2 text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 text-sm"
               >
                 <Globe className="h-4 w-4" />
                 Tất cả ticket
@@ -196,20 +204,20 @@ const Dashboard = () => {
           </Tabs>
         </div>
 
-        {/* Compact Header Stats */}
+        {/* Header Stats */}
         <div className="col-span-full mb-4">
-          <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-lg p-4 border border-slate-200 dark:border-slate-700 shadow-sm">
+          <div className="bg-card rounded-lg p-4 border">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg">
+                <div className="p-2 bg-primary rounded-lg">
                   {activeTab === 'my-tickets' ? (
-                    <User className="h-5 w-5 text-white" />
+                    <User className="h-5 w-5 text-primary-foreground" />
                   ) : (
-                    <Globe className="h-5 w-5 text-white" />
+                    <Globe className="h-5 w-5 text-primary-foreground" />
                   )}
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                  <h2 className="text-lg font-bold">
                     {activeTab === 'my-tickets'
                       ? (user?.role === 'instructor' || user?.role === 'admin'
                         ? 'Ticket được gán cho tôi'
@@ -217,12 +225,12 @@ const Dashboard = () => {
                       : 'Tất cả ticket trong hệ thống'
                     }
                   </h2>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                  <p className="text-sm text-muted-foreground">
                     Tổng cộng {totalCount} ticket • Trang {currentPage}/{totalPages}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
                   <span>Mở: {filteredTickets.filter(t => t.status === 'open').length}</span>
@@ -240,17 +248,17 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Compact Ticket Grid */}
+        {/* Ticket Grid */}
         {isLoadingTickets ? (
           <div className="col-span-full text-center py-16">
             <div className="max-w-md mx-auto">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+              <h3 className="text-lg font-semibold mb-2">
                 Đang tải tickets...
               </h3>
-              <p className="text-slate-600 dark:text-slate-400">
+              <p className="text-muted-foreground">
                 {activeTab === 'my-tickets'
                   ? (user?.role === 'instructor' || user?.role === 'admin'
                     ? 'Đang tải tickets được gán cho bạn'
@@ -261,16 +269,16 @@ const Dashboard = () => {
             </div>
           </div>
         ) : filteredTickets.length === 0 ? (
-          <div className="col-span-full text-center py-16">
+          <div className="col-span-full text-center py-12">
             <div className="max-w-md mx-auto">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
                 {activeTab === 'my-tickets' ? (
-                  <User className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                  <User className="h-8 w-8 text-muted-foreground" />
                 ) : (
-                  <Globe className="h-8 w-8 text-green-600 dark:text-green-400" />
+                  <Globe className="h-8 w-8 text-muted-foreground" />
                 )}
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+              <h3 className="text-lg font-semibold mb-2">
                 {activeTab === 'my-tickets'
                   ? (user?.role === 'instructor' || user?.role === 'admin'
                     ? 'Chưa có ticket nào được gán cho bạn'
@@ -278,7 +286,7 @@ const Dashboard = () => {
                   : 'Chưa có ticket nào trong hệ thống'
                 }
               </h3>
-              <p className="text-slate-600 dark:text-slate-400 mb-4">
+              <p className="text-muted-foreground mb-6">
                 {activeTab === 'my-tickets'
                   ? (user?.role === 'instructor' || user?.role === 'admin'
                     ? 'Sinh viên sẽ gán ticket cho bạn khi cần hỗ trợ'
@@ -288,9 +296,8 @@ const Dashboard = () => {
               </p>
               <button
                 onClick={() => setShowCreateForm(true)}
-                className="text-white px-6 py-2 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg font-medium flex items-center gap-2 mx-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                className="bg-primary text-primary-foreground px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors"
               >
-                <Plus className="h-4 w-4" />
                 {activeTab === 'my-tickets' && (user?.role === 'instructor' || user?.role === 'admin')
                   ? 'Tạo Ticket Mới'
                   : 'Tạo Ticket'
@@ -300,7 +307,7 @@ const Dashboard = () => {
           </div>
         ) : (
           <>
-            {/* Compact Ticket Cards - 4 columns on large screens */}
+            {/* Ticket Cards */}
             <div className="col-span-full">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {filteredTickets.map((ticket) => (
@@ -317,27 +324,24 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Compact Pagination */}
+            {/* Pagination */}
             {totalPages > 1 && (
               <div className="col-span-full mt-8 flex justify-center">
-                <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-lg p-3 border border-slate-200 dark:border-slate-700 shadow-sm">
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    totalCount={totalCount}
-                    pageSize={pageSize}
-                    onPageChange={handlePageChange}
-                    onPageSizeChange={() => { }} // Disabled for compact view
-                    hasNextPage={currentPage < totalPages}
-                    hasPreviousPage={currentPage > 1}
-                  />
-                </div>
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalCount={totalCount}
+                  pageSize={pageSize}
+                  onPageChange={handlePageChange}
+                  onPageSizeChange={() => { }}
+                  hasNextPage={currentPage < totalPages}
+                  hasPreviousPage={currentPage > 1}
+                />
               </div>
             )}
           </>
         )}
-      </FeedLayout>
-    </div>
+    </FeedLayout>
   );
 };
 

@@ -37,14 +37,14 @@ const getAvatarColor = (name: string): string => {
   const colorIndex = Math.abs(hash) % 8;
 
   const colors = [
-    'bg-blue-500',      // Blue
-    'bg-blue-600',      // Blue darker
-    'bg-indigo-500',    // Indigo
-    'bg-indigo-600',    // Indigo darker
-    'bg-sky-500',       // Sky blue
-    'bg-sky-600',       // Sky blue darker
-    'bg-cyan-500',      // Cyan
-    'bg-cyan-600',      // Cyan darker
+    'bg-red-500',      // Red
+    'bg-blue-500',     // Blue
+    'bg-green-500',    // Green
+    'bg-yellow-500',   // Yellow
+    'bg-purple-500',   // Purple
+    'bg-pink-500',     // Pink
+    'bg-indigo-500',   // Indigo
+    'bg-teal-500',     // Teal
   ];
 
   return colors[colorIndex];
