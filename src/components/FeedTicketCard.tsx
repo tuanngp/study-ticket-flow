@@ -1,54 +1,23 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
-  Clock,
   User,
   MessageSquare,
   Bookmark,
   Share2,
   ThumbsUp,
   MoreHorizontal,
-  Image as ImageIcon,
-  Calendar,
   Tag as TagIcon,
   FileText,
-  Bug,
-  Lightbulb,
   HelpCircle,
   Settings,
   Code,
-  Database,
   AlertTriangle,
-  CheckCircle,
-  Star,
-  Sparkles,
   BookOpen,
-  Users,
-  Zap,
-  Brain,
-  Target,
-  Eye,
-  Edit3,
-  Trash2,
-  Copy,
-  ExternalLink,
-  TrendingUp,
-  Activity,
-  Timer,
   Award,
-  Shield,
-  ChevronRight,
-  GraduationCap,
-  UserCheck,
-  AlertCircle,
-  CheckCircle2,
-  Circle,
-  ArrowRight,
-  Heart,
-  BookmarkCheck
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -98,298 +67,287 @@ export const FeedTicketCard = ({
   const [showComments, setShowComments] = useState(false);
 
   // Educational ticket type configurations
+  // Maps both UI-friendly names and database enum values to display configs
   const getTicketTypeConfig = (type: string) => {
+    // Map database enum to UI-friendly name for lookups
+    const typeMap: Record<string, string> = {
+      // Database enum -> UI-friendly name
+      "bug": "coding_error",
+      "task": "project_setup",
+      "question": "concept_question",
+      "grading": "grading_issue",
+      "report": "system_issue",
+      // Already UI-friendly or same
+      "coding_error": "coding_error",
+      "project_setup": "project_setup",
+      "concept_question": "concept_question",
+      "grading_issue": "grading_issue",
+      "system_issue": "system_issue",
+      "assignment": "assignment",
+      "exam": "exam",
+      "submission": "submission",
+      "technical": "technical",
+      "academic": "academic",
+    };
+    const displayType = typeMap[type] || type;
+
     const configs = {
       coding_error: {
         icon: Code,
         title: "Lỗi lập trình",
         subtitle: "Cần hỗ trợ kỹ thuật",
-        gradient: "from-red-50 via-red-100 to-red-200 dark:from-red-950/30 dark:via-red-900/20 dark:to-red-800/30",
-        iconBg: "bg-gradient-to-br from-red-100 to-red-200 dark:from-red-900/40 dark:to-red-800/60",
+        gradient: "from-red-50 to-red-100 dark:from-red-950/20 dark:to-red-900/20",
+        iconBg: "bg-red-100 dark:bg-red-900/30",
         iconColor: "text-red-600 dark:text-red-400",
-        textColor: "text-red-800 dark:text-red-200",
-        subtextColor: "text-red-600 dark:text-red-400",
-        borderColor: "border-red-200 dark:border-red-800",
-        pattern: "bg-red-500/5"
+        textColor: "text-red-700 dark:text-red-300",
+        subtextColor: "text-red-500 dark:text-red-400"
       },
       project_setup: {
         icon: Settings,
         title: "Thiết lập dự án",
         subtitle: "Hướng dẫn cài đặt",
-        gradient: "from-blue-50 via-blue-100 to-blue-200 dark:from-blue-950/30 dark:via-blue-900/20 dark:to-blue-800/30",
-        iconBg: "bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/40 dark:to-blue-800/60",
+        gradient: "from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20",
+        iconBg: "bg-blue-100 dark:bg-blue-900/30",
         iconColor: "text-blue-600 dark:text-blue-400",
-        textColor: "text-blue-800 dark:text-blue-200",
-        subtextColor: "text-blue-600 dark:text-blue-400",
-        borderColor: "border-blue-200 dark:border-blue-800",
-        pattern: "bg-blue-500/5"
+        textColor: "text-blue-700 dark:text-blue-300",
+        subtextColor: "text-blue-500 dark:text-blue-400"
       },
       grading_issue: {
         icon: Award,
         title: "Vấn đề điểm số",
         subtitle: "Khiếu nại điểm",
-        gradient: "from-purple-50 via-purple-100 to-purple-200 dark:from-purple-950/30 dark:via-purple-900/20 dark:to-purple-800/30",
-        iconBg: "bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/40 dark:to-purple-800/60",
+        gradient: "from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20",
+        iconBg: "bg-purple-100 dark:bg-purple-900/30",
         iconColor: "text-purple-600 dark:text-purple-400",
-        textColor: "text-purple-800 dark:text-purple-200",
-        subtextColor: "text-purple-600 dark:text-purple-400",
-        borderColor: "border-purple-200 dark:border-purple-800",
-        pattern: "bg-purple-500/5"
+        textColor: "text-purple-700 dark:text-purple-300",
+        subtextColor: "text-purple-500 dark:text-purple-400"
       },
       concept_question: {
         icon: HelpCircle,
         title: "Câu hỏi lý thuyết",
         subtitle: "Cần giải thích",
-        gradient: "from-green-50 via-green-100 to-green-200 dark:from-green-950/30 dark:via-green-900/20 dark:to-green-800/30",
-        iconBg: "bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/40 dark:to-green-800/60",
+        gradient: "from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20",
+        iconBg: "bg-green-100 dark:bg-green-900/30",
         iconColor: "text-green-600 dark:text-green-400",
-        textColor: "text-green-800 dark:text-green-200",
-        subtextColor: "text-green-600 dark:text-green-400",
-        borderColor: "border-green-200 dark:border-green-800",
-        pattern: "bg-green-500/5"
+        textColor: "text-green-700 dark:text-green-300",
+        subtextColor: "text-green-500 dark:text-green-400"
       },
       system_issue: {
         icon: AlertTriangle,
         title: "Lỗi hệ thống",
         subtitle: "Vấn đề kỹ thuật",
-        gradient: "from-orange-50 via-orange-100 to-orange-200 dark:from-orange-950/30 dark:via-orange-900/20 dark:to-orange-800/30",
-        iconBg: "bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-900/40 dark:to-orange-800/60",
+        gradient: "from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20",
+        iconBg: "bg-orange-100 dark:bg-orange-900/30",
         iconColor: "text-orange-600 dark:text-orange-400",
-        textColor: "text-orange-800 dark:text-orange-200",
-        subtextColor: "text-orange-600 dark:text-orange-400",
-        borderColor: "border-orange-200 dark:border-orange-800",
-        pattern: "bg-orange-500/5"
+        textColor: "text-orange-700 dark:text-orange-300",
+        subtextColor: "text-orange-500 dark:text-orange-400"
       },
       assignment: {
         icon: BookOpen,
         title: "Bài tập",
         subtitle: "Hướng dẫn làm bài",
-        gradient: "from-indigo-50 via-indigo-100 to-indigo-200 dark:from-indigo-950/30 dark:via-indigo-900/20 dark:to-indigo-800/30",
-        iconBg: "bg-gradient-to-br from-indigo-100 to-indigo-200 dark:from-indigo-900/40 dark:to-indigo-800/60",
+        gradient: "from-indigo-50 to-indigo-100 dark:from-indigo-950/20 dark:to-indigo-900/20",
+        iconBg: "bg-indigo-100 dark:bg-indigo-900/30",
         iconColor: "text-indigo-600 dark:text-indigo-400",
-        textColor: "text-indigo-800 dark:text-indigo-200",
-        subtextColor: "text-indigo-600 dark:text-indigo-400",
-        borderColor: "border-indigo-200 dark:border-indigo-800",
-        pattern: "bg-indigo-500/5"
+        textColor: "text-indigo-700 dark:text-indigo-300",
+        subtextColor: "text-indigo-500 dark:text-indigo-400"
       },
       exam: {
         icon: FileText,
         title: "Thi cử",
         subtitle: "Hỗ trợ thi",
-        gradient: "from-teal-50 via-teal-100 to-teal-200 dark:from-teal-950/30 dark:via-teal-900/20 dark:to-teal-800/30",
-        iconBg: "bg-gradient-to-br from-teal-100 to-teal-200 dark:from-teal-900/40 dark:to-teal-800/60",
+        gradient: "from-teal-50 to-teal-100 dark:from-teal-950/20 dark:to-teal-900/20",
+        iconBg: "bg-teal-100 dark:bg-teal-900/30",
         iconColor: "text-teal-600 dark:text-teal-400",
-        textColor: "text-teal-800 dark:text-teal-200",
-        subtextColor: "text-teal-600 dark:text-teal-400",
-        borderColor: "border-teal-200 dark:border-teal-800",
-        pattern: "bg-teal-500/5"
+        textColor: "text-teal-700 dark:text-teal-300",
+        subtextColor: "text-teal-500 dark:text-teal-400"
       },
       default: {
         icon: FileText,
         title: "Ticket",
         subtitle: "Yêu cầu hỗ trợ",
-        gradient: "from-gray-50 via-gray-100 to-gray-200 dark:from-gray-950/30 dark:via-gray-900/20 dark:to-gray-800/30",
-        iconBg: "bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-900/40 dark:to-gray-800/60",
+        gradient: "from-gray-50 to-gray-100 dark:from-gray-950/20 dark:to-gray-900/20",
+        iconBg: "bg-gray-100 dark:bg-gray-900/30",
         iconColor: "text-gray-600 dark:text-gray-400",
-        textColor: "text-gray-800 dark:text-gray-200",
-        subtextColor: "text-gray-600 dark:text-gray-400",
-        borderColor: "border-gray-200 dark:border-gray-800",
-        pattern: "bg-gray-500/5"
+        textColor: "text-gray-700 dark:text-gray-300",
+        subtextColor: "text-gray-500 dark:text-gray-400"
       }
     };
 
-    return configs[type as keyof typeof configs] || configs.default;
+    return configs[displayType as keyof typeof configs] || configs.default;
   };
 
-  // Removed comment count fetching - too many API calls
-
-  const getPriorityConfig = (priority: string) => {
-    const configs = {
-      low: {
-        color: "bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 hover:border-blue-300 dark:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/30 dark:hover:bg-blue-500/30 dark:hover:border-blue-500/50",
-        icon: Circle,
-        label: "Thấp"
-      },
-      medium: {
-        color: "bg-yellow-50 text-yellow-600 border-yellow-200 hover:bg-yellow-100 hover:border-yellow-300 dark:bg-yellow-500/20 dark:text-yellow-400 dark:border-yellow-500/30 dark:hover:bg-yellow-500/30 dark:hover:border-yellow-500/50",
-        icon: Circle,
-        label: "Trung bình"
-      },
-      high: {
-        color: "bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100 hover:border-orange-300 dark:bg-orange-500/20 dark:text-orange-400 dark:border-orange-500/30 dark:hover:bg-orange-500/30 dark:hover:border-orange-500/50",
-        icon: AlertCircle,
-        label: "Cao"
-      },
-      critical: {
-        color: "bg-red-50 text-red-600 border-red-200 hover:bg-red-100 hover:border-red-300 dark:bg-red-500/20 dark:text-red-400 dark:border-red-500/30 dark:hover:bg-red-500/30 dark:hover:border-red-500/50",
-        icon: AlertTriangle,
-        label: "Khẩn cấp"
-      },
-    };
-    return configs[priority as keyof typeof configs] || configs.medium;
-  };
-
-  const getStatusConfig = (status: string) => {
-    const configs = {
-      open: {
-        color: "bg-yellow-50 text-yellow-600 border-yellow-200 hover:bg-yellow-100 hover:border-yellow-300 dark:bg-yellow-500/20 dark:text-yellow-400 dark:border-yellow-500/30 dark:hover:bg-yellow-500/30 dark:hover:border-yellow-500/50",
-        icon: Circle,
-        label: "Mở"
-      },
-      in_progress: {
-        color: "bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 hover:border-blue-300 dark:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/30 dark:hover:bg-blue-500/30 dark:hover:border-blue-500/50",
-        icon: Clock,
-        label: "Đang xử lý"
-      },
-      resolved: {
-        color: "bg-green-50 text-green-600 border-green-200 hover:bg-green-100 hover:border-green-300 dark:bg-green-500/20 dark:text-green-400 dark:border-green-500/30 dark:hover:bg-green-500/30 dark:hover:border-green-500/50",
-        icon: CheckCircle2,
-        label: "Đã giải quyết"
-      },
-      closed: {
-        color: "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100 hover:border-gray-300 dark:bg-gray-500/20 dark:text-gray-400 dark:border-gray-500/30 dark:hover:bg-gray-500/30 dark:hover:border-gray-500/50",
-        icon: CheckCircle,
-        label: "Đã đóng"
-      },
-    };
-    return configs[status as keyof typeof configs] || configs.open;
-  };
-
-  const priorityConfig = getPriorityConfig(ticket.priority);
-  const statusConfig = getStatusConfig(ticket.status);
   const typeConfig = getTicketTypeConfig(ticket.type);
+
+  // Helper functions for simplified badge styling
+  const getPriorityColor = (priority: string) => {
+    const colors = {
+      low: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+      medium: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300",
+      high: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
+      critical: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
+    };
+    return colors[priority as keyof typeof colors] || colors.medium;
+  };
+
+  const getStatusColor = (status: string) => {
+    const colors = {
+      open: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300",
+      in_progress: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+      resolved: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+      closed: "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300",
+    };
+    return colors[status as keyof typeof colors] || colors.open;
+  };
+
+  const getTypeIcon = (type: string) => {
+    // Map database enum to UI-friendly name
+    const typeMap: Record<string, string> = {
+      "bug": "coding_error",
+      "task": "project_setup",
+      "question": "concept_question",
+      "grading": "grading_issue",
+      "report": "system_issue",
+    };
+    const displayType = typeMap[type] || type;
+
+    const icons = {
+      coding_error: "🐛",
+      project_setup: "⚙️",
+      grading_issue: "🏆",
+      concept_question: "❓",
+      system_issue: "⚠️",
+      assignment: "📚",
+      exam: "📝",
+    };
+    return icons[displayType as keyof typeof icons] || "📄";
+  };
 
   return (
     <Card
-      className="group hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 cursor-pointer bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-0 hover:border-blue-200 dark:hover:border-blue-800 hover:-translate-y-1"
+      className="group hover:shadow-lg transition-all duration-200 cursor-pointer bg-card/50 hover:bg-card border-border/50"
       onClick={onClick}
     >
-      {/* Header with user info */}
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10 ring-2 ring-blue-100 dark:ring-blue-900/30">
+            <Avatar className="h-8 w-8">
               <AvatarImage src={ticket.creator?.avatar_url || ""} />
-              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-semibold">
+              <AvatarFallback className="text-xs">
                 {ticket.creator?.full_name?.charAt(0) || 'U'}
               </AvatarFallback>
             </Avatar>
             <div>
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                {ticket.creator?.full_name || 'Người dùng'}
+              <p className="text-sm font-medium">{ticket.creator?.full_name || 'Unknown'}</p>
+              <p className="text-xs text-muted-foreground">
+                {formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true })}
               </p>
-              <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                <Clock className="h-3 w-3" />
-                <span>{formatDistanceToNow(new Date(ticket.created_at), { addSuffix: true })}</span>
-              </div>
             </div>
           </div>
-
+          
           {showActions && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-50 dark:hover:bg-blue-900/20"
-            >
+            <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           )}
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
-        {/* Course info */}
-        {ticket.courseCode && (
-          <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-md">
-            <GraduationCap className="h-3 w-3" />
-            <span className="font-medium">{ticket.courseCode}</span>
-            {ticket.className && <span>• {ticket.className}</span>}
-          </div>
-        )}
-
-        {/* Image or Type Placeholder */}
+      <CardContent className="space-y-1">
+        {/* Images - Display only first image, large and beautiful */}
         {ticket.images && ticket.images.length > 0 ? (
-          <div className="relative">
-            <img
-              src={ticket.images[0]}
-              alt={`Ticket image`}
-              className="w-full h-48 object-cover rounded-lg border border-slate-200 dark:border-slate-700"
-            />
-            {ticket.images.length > 1 && (
-              <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
-                +{ticket.images.length - 1} ảnh khác
-              </div>
-            )}
+          <div className="space-y-2">
+            <div className="relative">
+              <img
+                src={ticket.images[0]}
+                alt={`Ticket image`}
+                className="w-full h-64 object-cover rounded-lg"
+              />
+              {ticket.images.length > 1 && (
+                <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full">
+                  +{ticket.images.length - 1} more
+                </div>
+              )}
+            </div>
           </div>
         ) : (
-          <div className={`relative w-full h-48 bg-gradient-to-br ${typeConfig.gradient} rounded-lg overflow-hidden border ${typeConfig.borderColor}`}>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center space-y-3">
-                <div className={`w-16 h-16 mx-auto ${typeConfig.iconBg} rounded-full flex items-center justify-center shadow-lg`}>
-                  <typeConfig.icon className={`w-8 h-8 ${typeConfig.iconColor}`} />
+          /* Beautiful placeholder for tickets without images - themed by type */
+          (() => {
+            const config = typeConfig;
+            const IconComponent = config.icon;
+            return (
+              <div className={`relative w-full h-64 bg-gradient-to-br ${config.gradient} rounded-lg overflow-hidden`}>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center space-y-3">
+                    <div className={`w-16 h-16 mx-auto ${config.iconBg} rounded-full flex items-center justify-center`}>
+                      <IconComponent className={`w-8 h-8 ${config.iconColor}`} />
+                    </div>
+                    <div className="space-y-1">
+                      <p className={`text-sm font-medium ${config.textColor}`}>{config.title}</p>
+                      <p className={`text-xs ${config.subtextColor}`}>{config.subtitle}</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <p className={`text-sm font-semibold ${typeConfig.textColor}`}>{typeConfig.title}</p>
-                  <p className={`text-xs ${typeConfig.subtextColor}`}>{typeConfig.subtitle}</p>
-                </div>
+                {/* Decorative pattern - themed colors */}
+                <div className={`absolute top-0 right-0 w-32 h-32 ${config.iconBg.replace('bg-', 'bg-').replace('/30', '/10')} rounded-full -translate-y-16 translate-x-16`}></div>
+                <div className={`absolute bottom-0 left-0 w-24 h-24 ${config.iconBg.replace('bg-', 'bg-').replace('/30', '/10')} rounded-full translate-y-12 -translate-x-12`}></div>
               </div>
-            </div>
-            {/* Decorative elements */}
-            <div className={`absolute top-0 right-0 w-32 h-32 ${typeConfig.iconBg.replace('bg-', 'bg-').replace('/30', '/10')} rounded-full -translate-y-16 translate-x-16`}></div>
-            <div className={`absolute bottom-0 left-0 w-24 h-24 ${typeConfig.iconBg.replace('bg-', 'bg-').replace('/30', '/10')} rounded-full translate-y-12 -translate-x-12`}></div>
-          </div>
+            );
+          })()
         )}
 
-        {/* Title and Description */}
-        <div className="space-y-2">
-          <h3 className="font-bold text-lg leading-tight text-slate-900 dark:text-white line-clamp-2">
+        {/* Title and Description - Fixed height for consistency */}
+        <div className="space-y-1 h-16 flex flex-col justify-center">
+          <h3 className="font-bold text-xl leading-tight line-clamp-1">
             {ticket.title}
           </h3>
-          <div
-            className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 prose prose-sm max-w-none"
-            dangerouslySetInnerHTML={{ __html: ticket.description }}
-          />
+          
+          {/* Description - Single line only */}
+          <p className="text-sm text-muted-foreground line-clamp-1">
+            {ticket.description}
+          </p>
         </div>
 
-        {/* Tags */}
+        {/* Tags - Add spacing from separator */}
         {ticket.tags && ticket.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1 mt-2">
             {ticket.tags.slice(0, 3).map((tag, index) => (
-              <Badge key={index} variant="secondary" className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+              <Badge key={index} variant="secondary" className="text-xs">
                 <TagIcon className="h-3 w-3 mr-1" />
                 {tag}
               </Badge>
             ))}
             {ticket.tags.length > 3 && (
               <Badge variant="outline" className="text-xs">
-                +{ticket.tags.length - 3} khác
+                +{ticket.tags.length - 3} more
               </Badge>
             )}
           </div>
         )}
 
-        {/* Status and Priority Badges */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <Badge className={`${priorityConfig.color} border font-medium transition-all duration-200 cursor-pointer hover:shadow-sm`}>
-            <priorityConfig.icon className="h-3 w-3 mr-1" />
-            {priorityConfig.label}
+        {/* Status and Priority */}
+        <div className="flex items-center gap-2">
+          <Badge className={getPriorityColor(ticket.priority)}>
+            {ticket.priority}
           </Badge>
-          <Badge className={`${statusConfig.color} border font-medium transition-all duration-200 cursor-pointer hover:shadow-sm`}>
-            <statusConfig.icon className="h-3 w-3 mr-1" />
-            {statusConfig.label}
+          <Badge className={getStatusColor(ticket.status)}>
+            {ticket.status.replace('_', ' ')}
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            {getTypeIcon(ticket.type)} {ticket.type}
           </Badge>
         </div>
 
         {/* Assignee */}
         {ticket.assignee && (
-          <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-700/50 px-3 py-2 rounded-lg">
-            <UserCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
-            <span>Được giao cho <span className="font-medium">{ticket.assignee.full_name}</span></span>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <User className="h-3 w-3" />
+            <span>Assigned to {ticket.assignee.full_name}</span>
           </div>
         )}
 
         {/* Actions */}
-        <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-700">
+        <div className="flex items-center justify-between pt-2 border-t">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
@@ -398,15 +356,12 @@ export const FeedTicketCard = ({
                 e.stopPropagation();
                 setIsLiked(!isLiked);
               }}
-              className={`${isLiked
-                ? 'text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-                : 'text-slate-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-                } transition-all duration-200 rounded-lg px-3 py-2`}
+              className={`${isLiked ? 'text-primary' : 'text-muted-foreground'}`}
             >
-              <Heart className={`h-4 w-4 mr-1 ${isLiked ? 'fill-current' : ''}`} />
-              <span className="text-xs font-medium">12</span>
+              <ThumbsUp className="h-4 w-4 mr-1" />
+              <span className="text-xs">12</span>
             </Button>
-
+            
             <Button
               variant="ghost"
               size="sm"
@@ -414,11 +369,12 @@ export const FeedTicketCard = ({
                 e.stopPropagation();
                 setShowComments(!showComments);
               }}
-              className="text-slate-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200 rounded-lg px-3 py-2"
+              className="text-muted-foreground"
             >
-              <MessageSquare className="h-4 w-4" />
+              <MessageSquare className="h-4 w-4 mr-1" />
+              <span className="text-xs">...</span>
             </Button>
-
+            
             <Button
               variant="ghost"
               size="sm"
@@ -426,43 +382,30 @@ export const FeedTicketCard = ({
                 e.stopPropagation();
                 setIsBookmarked(!isBookmarked);
               }}
-              className={`${isBookmarked
-                ? 'text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-                : 'text-slate-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-                } transition-all duration-200 rounded-lg px-3 py-2`}
+              className={`${isBookmarked ? 'text-primary' : 'text-muted-foreground'}`}
             >
-              <BookmarkCheck className={`h-4 w-4 ${isBookmarked ? 'fill-current' : ''}`} />
+              <Bookmark className="h-4 w-4" />
             </Button>
           </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => e.stopPropagation()}
-              className="text-slate-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200 rounded-lg px-3 py-2"
-            >
-              <Share2 className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => e.stopPropagation()}
-              className="text-slate-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200 rounded-lg px-3 py-2"
-            >
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </div>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => e.stopPropagation()}
+            className="text-muted-foreground"
+          >
+            <Share2 className="h-4 w-4" />
+          </Button>
         </div>
 
         {/* Comments Section */}
         {showComments && (
-          <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-600 dark:text-slate-400 mb-2">
-              Bình luận
+          <div className="mt-4 pt-4 border-t">
+            <div className="text-sm text-muted-foreground mb-2">
+              Comments
             </div>
-            <div className="text-xs text-slate-500 dark:text-slate-500">
-              Nhấp để xem tất cả bình luận trong chi tiết ticket
+            <div className="text-xs text-muted-foreground">
+              Click to view full comments in ticket detail
             </div>
           </div>
         )}

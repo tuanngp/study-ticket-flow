@@ -43,7 +43,7 @@ export const SmartAvatar: FC<SmartAvatarProps> = ({
           alt={name}
           className="object-cover"
         />
-        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-semibold">
+        <AvatarFallback className="text-white font-semibold">
           {getInitials(name)}
         </AvatarFallback>
       </Avatar>

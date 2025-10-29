@@ -39,6 +39,7 @@ import { ImageUpload } from "./ImageUpload";
 import { RichTextEditor } from "./RichTextEditor";
 import { ValidationMessage } from "./ValidationMessage";
 import { InstructorService, Instructor } from "@/services/instructorService";
+import { normalizeTicketType } from "@/lib/utils";
 
 interface UnifiedTicketCreationProps {
   onSubmit: (data: any) => void;
@@ -216,6 +217,9 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
           return;
         }
       }
+
+      // Map UI-friendly type to database enum value
+      processedFormData.type = normalizeTicketType(formData.type);
 
       await onSubmit(processedFormData);
     } catch (error) {
