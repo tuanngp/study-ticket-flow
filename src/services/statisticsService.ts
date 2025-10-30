@@ -285,6 +285,30 @@ export class StatisticsService {
       const resolvedTickets = tickets?.filter(t => t.status === 'resolved').length || 0;
       const closedTickets = tickets?.filter(t => t.status === 'closed').length || 0;
 
+      // Calculate total views
+      const ticketViews = tickets?.reduce((sum, t) => {
+        return sum + (t.views_count ?? t.viewsCount ?? 0);
+      }, 0) || 0;
+
+      // Calculate total likes for all user tickets
+      let ticketLikes = 0;
+      if (tickets && tickets.length > 0) {
+        // tickets[] có thể đã có trường likes_count hoặc likesCount. Nếu không, cần truy vấn riêng bảng ticket_likes.
+        // Ưu tiên trường đếm trực tiếp:
+        if (tickets[0].likes_count !== undefined || tickets[0].likesCount !== undefined) {
+          ticketLikes = tickets.reduce((sum, t) => sum + (t.likes_count ?? t.likesCount ?? 0), 0);
+        } else {
+          // Nếu không có trường đó, count manual theo bảng ticket_likes:
+          const { data: allLikes, error: likeError } = await supabase
+            .from('ticket_likes')
+            .select('ticket_id');
+          if (!likeError && Array.isArray(allLikes)) {
+            const userTicketIds = new Set(tickets.map(t => t.id));
+            ticketLikes = allLikes.filter(like => userTicketIds.has(like.ticket_id)).length;
+          }
+        }
+      }
+
       // Calculate average resolution time
       const resolvedTicketsWithTime = tickets?.filter(t =>
         (t.status === 'resolved' || t.status === 'closed') &&
@@ -455,6 +479,8 @@ export class StatisticsService {
           closedTickets,
           averageResolutionTime,
           userSatisfaction,
+          ticketViews,
+          ticketLikes,
         },
         trends: {
           ticketsByStatus,

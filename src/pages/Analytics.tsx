@@ -25,7 +25,9 @@ import {
   Award,
   Zap,
   Star,
-  MessageSquare
+  MessageSquare,
+  Eye,
+  ThumbsUp
 } from 'lucide-react';
 import { StatisticsService } from '@/services/statisticsService';
 import { formatDistanceToNow } from 'date-fns';
@@ -46,6 +48,8 @@ interface AnalyticsData {
     closedTickets: number;
     averageResolutionTime: number;
     userSatisfaction: number;
+    ticketViews?: number;
+    ticketLikes?: number;
   };
   trends: {
     ticketsByStatus: Array<{ status: string; count: number; percentage: number }>;
@@ -121,6 +125,15 @@ const Analytics = () => {
     retry: 2, // Limit retries
     retryDelay: 1000, // 1 second delay between retries
   });
+
+  useEffect(() => {
+    if (!user?.id) return;
+    // Đăng ký realtime update thống kê khi tickets thay đổi
+    const unsubscribe = StatisticsService.subscribeToStatsChanges(user.id, () => {
+      refetch();
+    });
+    return () => unsubscribe && unsubscribe();
+  }, [user?.id, refetch]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -336,6 +349,8 @@ const Analytics = () => {
       closedTickets: 0,
       averageResolutionTime: 0,
       userSatisfaction: 0,
+      ticketViews: 0,
+      ticketLikes: 0,
     },
     trends: {
       ticketsByStatus: [],
@@ -407,7 +422,7 @@ const Analytics = () => {
             </div>
 
             {/* Overview Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Tickets</CardTitle>
@@ -456,6 +471,32 @@ const Analytics = () => {
                   <div className="text-2xl font-bold">{data.overview.averageResolutionTime}h</div>
                   <p className="text-xs text-muted-foreground">
                     Your average resolution time
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Ticket Viewed</CardTitle>
+                  <Eye className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-purple-600">{data.overview.ticketViews ?? 0}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Total views of your tickets
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Ticket Likes</CardTitle>
+                  <ThumbsUp className="h-4 w-4 text-orange-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-orange-500">{data.overview.ticketLikes ?? 0}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Total likes received for your tickets
                   </p>
                 </CardContent>
               </Card>

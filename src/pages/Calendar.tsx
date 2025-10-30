@@ -11,9 +11,11 @@ import { CalendarService, CalendarEvent } from '@/services/calendarService';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { useNavigate } from 'react-router-dom';
 
 const CalendarPage: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate(); // thêm hook này
   const queryClient = useQueryClient();
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isEventFormOpen, setIsEventFormOpen] = useState(false);
@@ -21,20 +23,15 @@ const CalendarPage: React.FC = () => {
   const [isEventDetailOpen, setIsEventDetailOpen] = useState(false);
 
   // Get upcoming events
-  const { data: upcomingEvents = [], isLoading: isLoadingUpcoming } = useQuery({
+  const { data: rawUpcomingEvents, isLoading: isLoadingUpcoming } = useQuery<CalendarEvent[]>({
     queryKey: ['upcoming-events', user?.id],
     queryFn: () => CalendarService.getUpcomingEvents(user!.id),
     enabled: !!user?.id,
-    onSuccess: (data) => {
-      // Upcoming events loaded
-    },
-    onError: (error) => {
-      console.error('Error loading upcoming events:', error);
-    },
   });
 
   // Filter out null/undefined events
-  const validUpcomingEvents = upcomingEvents.filter(event => event != null);
+  const upcomingEvents = rawUpcomingEvents || [];
+  const validUpcomingEvents = upcomingEvents.filter((event) => event != null);
 
   // Handle event click
   const handleEventClick = (event: CalendarEvent) => {
@@ -92,6 +89,11 @@ const CalendarPage: React.FC = () => {
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => navigate('/dashboard')}>
+            Quay lại Dashboard
+          </Button>
+        </div>
         <div>
           <h1 className="text-3xl font-bold">Calendar</h1>
           <p className="text-muted-foreground">

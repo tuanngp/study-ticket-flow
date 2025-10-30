@@ -187,14 +187,6 @@ export const FeedLayout = ({ children, onCreateTicket, user, profile, searchQuer
 
           {/* Right side */}
           <div className="flex items-center gap-2">
-            <Button
-              onClick={onCreateTicket}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Ticket Mới
-            </Button>
-
             {user && (
               <NotificationBell userId={user.id} />
             )}
@@ -228,15 +220,6 @@ export const FeedLayout = ({ children, onCreateTicket, user, profile, searchQuer
         <aside className={`${sidebarCollapsed ? 'w-0' : 'w-64'
           } transition-all duration-300 border-r bg-background/50 backdrop-blur-sm sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto z-40`}>
           <div className="p-4 space-y-6">
-            {/* New Ticket Button */}
-            <Button
-              onClick={onCreateTicket}
-              className="w-full"
-              size="lg"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Ticket Mới
-            </Button>
 
             {/* Filters */}
             <div className="space-y-4">
@@ -379,16 +362,15 @@ export const FeedLayout = ({ children, onCreateTicket, user, profile, searchQuer
             {/* Feed Settings */}
             <div className="flex items-center justify-between mb-6">
               <h1 className="text-2xl font-bold">Ticket của tôi</h1>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Cài đặt feed
-                </Button>
-                <Badge variant="outline">5/5</Badge>
-              </div>
+              <Button
+                onClick={onCreateTicket}
+                className="bg-gradient-primary hover:bg-green-700 text-white"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Tạo ticket mới
+              </Button>
             </div>
 
-            {/* Feed Content */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {children}
             </div>

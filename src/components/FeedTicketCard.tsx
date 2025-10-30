@@ -23,10 +23,12 @@ import {
   Wrench,
   GraduationCap,
   Eye,
+  Trash,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { LikeService } from '@/services/likeService';
 import { CommentService } from '@/services/commentService';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 
 interface FeedTicketCardProps {
   ticket: {
@@ -74,6 +76,7 @@ export const FeedTicketCard = ({
   const [likeCount, setLikeCount] = useState<number>(0);
   const [showComments, setShowComments] = useState(false);
   const [commentCount, setCommentCount] = useState<number | null>(null);
+  const [likeLoading, setLikeLoading] = useState(false);
 
   // Fetch comment count for each ticket card
   useEffect(() => {
@@ -317,14 +320,37 @@ export const FeedTicketCard = ({
           </div>
           
           {showActions && (
-            <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={e => e.stopPropagation()}
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (window.confirm('Are you sure you want to delete this ticket?')) {
+                      onDelete && onDelete();
+                    }
+                  }}
+                >
+                  <Trash className="h-4 w-4 mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-1">
+      <CardContent className="flex flex-col h-full space-y-1">
         {/* Images - Display only first image, large and beautiful */}
         {ticket.images && ticket.images.length > 0 ? (
           <div className="space-y-2">
@@ -419,27 +445,30 @@ export const FeedTicketCard = ({
         )}
 
         {/* Actions */}
-        <div className="flex items-center justify-between pt-2 border-t">
+        <div className="flex items-center justify-between pt-2 border-t mt-auto">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
               size="sm"
-              onClick={(e) => {
+              onClick={async (e) => {
                 e.stopPropagation();
-                // Optimistic toggle
-                setIsLiked((prev) => !prev);
-                setLikeCount((prev) => (isLiked ? Math.max(0, prev - 1) : prev + 1));
-                LikeService.toggleLike(ticket.id).then((res) => {
-                  if (!res.success) {
-                    // Revert on failure
-                    setIsLiked((prev) => !prev);
-                    setLikeCount((prev) => (isLiked ? prev + 1 : Math.max(0, prev - 1)));
+                // Disable while awaiting result
+                if (likeLoading) return;
+                setLikeLoading(true);
+                try {
+                  const res = await LikeService.toggleLike(ticket.id);
+                  if (res.success) {
+                    setIsLiked(res.liked);
+                    setLikeCount((prev) => res.liked ? prev + 1 : Math.max(0, prev - 1));
                   }
-                });
+                } finally {
+                  setLikeLoading(false);
+                }
               }}
-              className={`${isLiked ? 'text-primary' : 'text-muted-foreground'}`}
+              aria-pressed={isLiked}
+              className={`transition-colors duration-200 ${isLiked ? 'text-primary scale-110' : 'text-muted-foreground scale-100'} ${likeLoading ? 'opacity-60 pointer-events-none' : ''}`}
             >
-              <ThumbsUp className="h-4 w-4 mr-1" />
+              <ThumbsUp className={`h-4 w-4 mr-1 transition-transform ${isLiked ? 'scale-125 text-primary' : ''}`} />
               <span className="text-xs">{likeCount}</span>
             </Button>
             <div className="text-muted-foreground flex items-center gap-1 select-none">
