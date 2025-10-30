@@ -1,6 +1,7 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { t } from '@/lib/translations';
 
 interface TrendData {
   month: string;
@@ -18,7 +19,7 @@ export const TicketTrendsChart = ({ data }: TicketTrendsChartProps) => {
         <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
           <p className="font-medium">{label}</p>
           <p className="text-sm text-muted-foreground">
-            Avg. Resolution Time: <span className="font-semibold text-foreground">{payload[0].value}h</span>
+            Thời gian giải quyết TB: <span className="font-semibold text-foreground">{payload[0].value}h</span>
           </p>
         </div>
       );
@@ -31,10 +32,10 @@ export const TicketTrendsChart = ({ data }: TicketTrendsChartProps) => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <div className="w-3 h-3 bg-primary rounded-full"></div>
-          Resolution Time Trends
+          Xu hướng thời gian giải quyết
         </CardTitle>
         <CardDescription>
-          Average resolution time by month
+          Thời gian giải quyết trung bình theo tháng
         </CardDescription>
       </CardHeader>
       <CardContent>

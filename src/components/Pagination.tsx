@@ -29,7 +29,7 @@ export const Pagination = ({
   const getPageNumbers = () => {
     const pages = [];
     const maxVisiblePages = 5;
-    
+
     if (totalPages <= maxVisiblePages) {
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
@@ -37,12 +37,12 @@ export const Pagination = ({
     } else {
       const start = Math.max(1, currentPage - 2);
       const end = Math.min(totalPages, start + maxVisiblePages - 1);
-      
+
       for (let i = start; i <= end; i++) {
         pages.push(i);
       }
     }
-    
+
     return pages;
   };
 
@@ -50,10 +50,10 @@ export const Pagination = ({
     return (
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
-          Showing {totalCount} {totalCount === 1 ? 'ticket' : 'tickets'}
+          Hiển thị {totalCount} {totalCount === 1 ? 'ticket' : 'ticket'}
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Show</span>
+          <span className="text-sm text-muted-foreground">Hiển thị</span>
           <Select value={pageSize.toString()} onValueChange={(value) => onPageSizeChange(Number(value))}>
             <SelectTrigger className="w-20">
               <SelectValue />
@@ -64,7 +64,7 @@ export const Pagination = ({
               <SelectItem value="24">24</SelectItem>
             </SelectContent>
           </Select>
-          <span className="text-sm text-muted-foreground">per page</span>
+          <span className="text-sm text-muted-foreground">mỗi trang</span>
         </div>
       </div>
     );
@@ -75,7 +75,7 @@ export const Pagination = ({
       <div className="text-sm text-muted-foreground">
         Showing {startItem}-{endItem} of {totalCount} {totalCount === 1 ? 'ticket' : 'tickets'}
       </div>
-      
+
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Show</span>
@@ -91,7 +91,7 @@ export const Pagination = ({
           </Select>
           <span className="text-sm text-muted-foreground">per page</span>
         </div>
-        
+
         <div className="flex items-center gap-1">
           <Button
             variant="outline"
@@ -102,7 +102,7 @@ export const Pagination = ({
           >
             <ChevronsLeft className="h-4 w-4" />
           </Button>
-          
+
           <Button
             variant="outline"
             size="sm"
@@ -112,7 +112,7 @@ export const Pagination = ({
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          
+
           {getPageNumbers().map((page) => (
             <Button
               key={page}
@@ -124,7 +124,7 @@ export const Pagination = ({
               {page}
             </Button>
           ))}
-          
+
           <Button
             variant="outline"
             size="sm"
@@ -134,7 +134,7 @@ export const Pagination = ({
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
-          
+
           <Button
             variant="outline"
             size="sm"

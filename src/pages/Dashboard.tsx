@@ -1,16 +1,16 @@
-import { useEffect, useState, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import { FeedLayout } from "@/components/FeedLayout";
 import { FeedTicketCard } from "@/components/FeedTicketCard";
-import { UnifiedTicketCreation } from "@/components/UnifiedTicketCreation";
-import { Pagination } from "@/components/Pagination";
-import { TicketOperationsService, Ticket } from "@/services/ticketOperationsService";
-import { useAuth } from "@/hooks/useAuth";
 import { FullPageLoadingSpinner } from "@/components/LoadingSpinner";
-import { toast } from "sonner";
+import { Pagination } from "@/components/Pagination";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Globe } from "lucide-react";
+import { UnifiedTicketCreation } from "@/components/UnifiedTicketCreation";
+import { useAuth } from "@/hooks/useAuth";
+import { Ticket, TicketOperationsService } from "@/services/ticketOperationsService";
 import { ViewService } from "@/services/viewService";
+import { Globe, User } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -106,7 +106,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     let filtered = tickets;
-    
+
     if (searchQuery.trim()) {
       filtered = tickets.filter(ticket =>
         ticket.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -194,162 +194,142 @@ const Dashboard = () => {
       filters={filters}
       onFilterChange={setFilters}
     >
-        {/* Tab Navigation */}
-        <div className="col-span-full mb-4">
-          <Tabs value={activeTab} onValueChange={isLoadingTickets ? undefined : handleTabChange} className="w-full">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
-              <TabsTrigger
-                value="my-tickets"
-                disabled={isLoadingTickets}
-                className="flex items-center gap-2 text-sm"
-              >
-                <User className="h-4 w-4" />
-                Ticket của tôi
-              </TabsTrigger>
-              <TabsTrigger
-                value="all-tickets"
-                disabled={isLoadingTickets}
-                className="flex items-center gap-2 text-sm"
-              >
-                <Globe className="h-4 w-4" />
-                Tất cả ticket
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+      {/* Tab Navigation & Header Stats */}
+      <div className="col-span-full mb-4">
+        <div className="bg-card rounded-lg p-3 border">
+          <div className="flex items-center justify-between gap-6">
+            {/* Tab Navigation */}
+            <Tabs value={activeTab} onValueChange={isLoadingTickets ? undefined : handleTabChange}>
+              <TabsList className="grid grid-cols-2">
+                <TabsTrigger
+                  value="my-tickets"
+                  disabled={isLoadingTickets}
+                  className="flex items-center gap-2 text-sm"
+                >
+                  <User className="h-4 w-4" />
+                  Ticket của tôi
+                </TabsTrigger>
+                <TabsTrigger
+                  value="all-tickets"
+                  disabled={isLoadingTickets}
+                  className="flex items-center gap-2 text-sm"
+                >
+                  <Globe className="h-4 w-4" />
+                  Tất cả ticket
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
 
-        {/* Header Stats */}
-        <div className="col-span-full mb-4">
-          <div className="bg-card rounded-lg p-4 border">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary rounded-lg">
-                  {activeTab === 'my-tickets' ? (
-                    <User className="h-5 w-5 text-primary-foreground" />
-                  ) : (
-                    <Globe className="h-5 w-5 text-primary-foreground" />
-                  )}
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold">
-                    {activeTab === 'my-tickets'
-                      ? 'Ticket của tôi'
-                      : 'Tất cả ticket trong hệ thống'
-                    }
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    Tổng cộng {totalCount} ticket • Trang {currentPage}/{totalPages}
-                  </p>
-                </div>
+            {/* Stats */}
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <span>Tổng cộng {totalCount} ticket • Trang {currentPage}/{totalPages}</span>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                <span>Mở: {filteredTickets.filter(t => t.status === 'open').length}</span>
               </div>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                  <span>Mở: {filteredTickets.filter(t => t.status === 'open').length}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span>Đang xử lý: {filteredTickets.filter(t => t.status === 'in_progress').length}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span>Đã giải quyết: {filteredTickets.filter(t => t.status === 'resolved').length}</span>
-                </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <span>Đang xử lý: {filteredTickets.filter(t => t.status === 'in_progress').length}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span>Đã giải quyết: {filteredTickets.filter(t => t.status === 'resolved').length}</span>
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Ticket Grid */}
-        {isLoadingTickets ? (
-          <div className="col-span-full text-center py-16">
-            <div className="max-w-md mx-auto">
-              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-              <h3 className="text-lg font-semibold mb-2">
-                Đang tải tickets...
-              </h3>
-              <p className="text-muted-foreground">
-                {activeTab === 'my-tickets'
-                  ? 'Đang tải tickets của bạn'
-                  : 'Đang tải tất cả tickets'
-                }
-              </p>
+      {/* Ticket Grid */}
+      {isLoadingTickets ? (
+        <div className="col-span-full text-center py-16">
+          <div className="max-w-md mx-auto">
+            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
+            <h3 className="text-lg font-semibold mb-2">
+              Đang tải tickets...
+            </h3>
+            <p className="text-muted-foreground">
+              {activeTab === 'my-tickets'
+                ? 'Đang tải tickets của bạn'
+                : 'Đang tải tất cả tickets'
+              }
+            </p>
           </div>
-        ) : filteredTickets.length === 0 ? (
-          <div className="col-span-full text-center py-12">
-            <div className="max-w-md mx-auto">
-              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                {activeTab === 'my-tickets' ? (
-                  <User className="h-8 w-8 text-muted-foreground" />
-                ) : (
-                  <Globe className="h-8 w-8 text-muted-foreground" />
-                )}
-              </div>
-              <h3 className="text-lg font-semibold mb-2">
-                {activeTab === 'my-tickets'
-                  ? 'Chưa có ticket nào của bạn'
-                  : 'Chưa có ticket nào trong hệ thống'
-                }
-              </h3>
-              <p className="text-muted-foreground mb-6">
-                {activeTab === 'my-tickets'
-                  ? 'Tạo ticket đầu tiên để bắt đầu sử dụng hệ thống'
-                  : 'Hệ thống chưa có ticket nào. Hãy tạo ticket đầu tiên!'
-                }
-              </p>
-              <button
-                onClick={() => setShowCreateForm(true)}
-                className="bg-primary text-primary-foreground px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors"
-              >
-                Tạo Ticket
-              </button>
+        </div>
+      ) : filteredTickets.length === 0 ? (
+        <div className="col-span-full text-center py-12">
+          <div className="max-w-md mx-auto">
+            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+              {activeTab === 'my-tickets' ? (
+                <User className="h-8 w-8 text-muted-foreground" />
+              ) : (
+                <Globe className="h-8 w-8 text-muted-foreground" />
+              )}
             </div>
+            <h3 className="text-lg font-semibold mb-2">
+              {activeTab === 'my-tickets'
+                ? 'Chưa có ticket nào của bạn'
+                : 'Chưa có ticket nào trong hệ thống'
+              }
+            </h3>
+            <p className="text-muted-foreground mb-6">
+              {activeTab === 'my-tickets'
+                ? 'Tạo ticket đầu tiên để bắt đầu sử dụng hệ thống'
+                : 'Hệ thống chưa có ticket nào. Hãy tạo ticket đầu tiên!'
+              }
+            </p>
+            <button
+              onClick={() => setShowCreateForm(true)}
+              className="bg-primary text-primary-foreground px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              Tạo Ticket
+            </button>
           </div>
-        ) : (
-          <>
-            {/* Ticket Cards */}
-            <div className="col-span-full">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                {filteredTickets.map((ticket) => (
-                  <FeedTicketCard
-                    key={ticket.id}
-                    ticket={ticket}
-                    onClick={() => handleTicketClick(ticket.id)}
-                    onEdit={() => navigate(`/tickets/${ticket.id}?edit=true`)}
-                    onDelete={() => {
-                      console.log('Delete ticket:', ticket.id);
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 0 && (
-              <div className="col-span-full mt-8 flex justify-center">
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  totalCount={totalCount}
-                  pageSize={pageSize}
-                  onPageChange={handlePageChange}
-                  onPageSizeChange={async (size) => {
-                    setPageSize(size);
-                    setCurrentPage(1);
-                    if (user?.id) {
-                      await fetchTickets(user.id, 1, activeTab, size);
-                    }
+        </div>
+      ) : (
+        <>
+          {/* Ticket Cards */}
+          <div className="col-span-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {filteredTickets.map((ticket) => (
+                <FeedTicketCard
+                  key={ticket.id}
+                  ticket={ticket}
+                  onClick={() => handleTicketClick(ticket.id)}
+                  onEdit={() => navigate(`/tickets/${ticket.id}?edit=true`)}
+                  onDelete={() => {
+                    console.log('Delete ticket:', ticket.id);
                   }}
-                  hasNextPage={currentPage < totalPages}
-                  hasPreviousPage={currentPage > 1}
                 />
-              </div>
-            )}
-          </>
-        )}
+              ))}
+            </div>
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 0 && (
+            <div className="col-span-full mt-8 flex justify-center">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalCount={totalCount}
+                pageSize={pageSize}
+                onPageChange={handlePageChange}
+                onPageSizeChange={async (size) => {
+                  setPageSize(size);
+                  setCurrentPage(1);
+                  if (user?.id) {
+                    await fetchTickets(user.id, 1, activeTab, size);
+                  }
+                }}
+                hasNextPage={currentPage < totalPages}
+                hasPreviousPage={currentPage > 1}
+              />
+            </div>
+          )}
+        </>
+      )}
     </FeedLayout>
   );
 };

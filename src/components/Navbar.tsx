@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { AuthService } from "@/services/authService";
+import { t } from "@/lib/translations";
 import { LogOut, Ticket } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -61,7 +62,12 @@ export const Navbar = ({ user, profile }: NavbarProps) => {
                       {profile?.full_name || user.email}
                     </p>
                     <p className="text-xs text-muted-foreground capitalize">
-                      {profile?.role || "student"}
+                      {profile?.role === 'student' ? 'Sinh viên' :
+                       profile?.role === 'instructor' ? 'Giảng viên' :
+                       profile?.role === 'lead' ? 'Trưởng nhóm' :
+                       profile?.role === 'manager' ? 'Quản lý' :
+                       profile?.role === 'admin' ? 'Quản trị viên' :
+                       'Người dùng'}
                     </p>
                   </div>
                 </button>

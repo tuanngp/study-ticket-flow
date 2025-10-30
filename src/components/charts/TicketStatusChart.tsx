@@ -1,6 +1,7 @@
 import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { t } from '@/lib/translations';
 
 interface TicketStatusData {
   status: string;
@@ -24,7 +25,11 @@ export const TicketStatusChart = ({ data }: TicketStatusChartProps) => {
   const chartData = data
     .filter(item => item.count > 0)
     .map(item => ({
-      name: item.status.replace('_', ' ').toUpperCase(),
+      name: item.status === 'open' ? 'Mở' :
+            item.status === 'in_progress' ? 'Đang xử lý' :
+            item.status === 'resolved' ? 'Đã giải quyết' :
+            item.status === 'closed' ? 'Đã đóng' :
+            item.status.replace('_', ' ').toUpperCase(),
       value: item.count,
       percentage: item.percentage,
       fill: COLORS[item.status as keyof typeof COLORS] || '#6b7280'
@@ -37,17 +42,17 @@ export const TicketStatusChart = ({ data }: TicketStatusChartProps) => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <div className="w-3 h-3 bg-primary rounded-full"></div>
-            Ticket Status Distribution
+            Phân bố trạng thái ticket
           </CardTitle>
           <CardDescription>
-            Current distribution of tickets by status
+            Phân bố hiện tại của ticket theo trạng thái
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-80 flex items-center justify-center">
             <div className="text-center text-muted-foreground">
               <div className="text-4xl mb-2">📊</div>
-              <p>No tickets data available</p>
+              <p>Không có dữ liệu ticket nào</p>
             </div>
           </div>
         </CardContent>
@@ -62,10 +67,10 @@ export const TicketStatusChart = ({ data }: TicketStatusChartProps) => {
         <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
           <p className="font-medium">{data.name}</p>
           <p className="text-sm text-muted-foreground">
-            Count: <span className="font-semibold text-foreground">{data.value}</span>
+            Số lượng: <span className="font-semibold text-foreground">{data.value}</span>
           </p>
           <p className="text-sm text-muted-foreground">
-            Percentage: <span className="font-semibold text-foreground">{data.percentage}%</span>
+            Phần trăm: <span className="font-semibold text-foreground">{data.percentage}%</span>
           </p>
         </div>
       );
@@ -78,10 +83,10 @@ export const TicketStatusChart = ({ data }: TicketStatusChartProps) => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <div className="w-3 h-3 bg-primary rounded-full"></div>
-          Ticket Status Distribution
+          Phân bố trạng thái ticket
         </CardTitle>
         <CardDescription>
-          Current distribution of tickets by status
+          Phân bố hiện tại của ticket theo trạng thái
         </CardDescription>
       </CardHeader>
       <CardContent>

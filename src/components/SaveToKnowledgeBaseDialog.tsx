@@ -22,8 +22,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
-import type { KnowledgeEntry } from "@/db/schema";
-import { KnowledgeEntryService, type CreateKnowledgeEntryInput } from "@/services/knowledgeEntryService";
+import { t } from "@/lib/translations";
+import { KnowledgeEntryService, type CreateKnowledgeEntryInput, type KnowledgeEntry } from "@/services/knowledgeEntryService";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { BookOpen, Eye, Loader2 } from "lucide-react";
 import React from "react";
@@ -433,10 +433,10 @@ export const SaveToKnowledgeBaseDialog: React.FC<SaveToKnowledgeBaseDialogProps>
                                 {isSubmitting ? (
                                     <>
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Saving...
+                                        {t("loading.saving")}
                                     </>
                                 ) : (
-                                    "Save to Knowledge Base"
+                                    <span>{t("knowledgeBaseSection.saveToKnowledgeBase")}</span>
                                 )}
                             </Button>
                         </DialogFooter>

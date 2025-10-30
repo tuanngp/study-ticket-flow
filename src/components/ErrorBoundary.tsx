@@ -1,6 +1,6 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { Button } from './ui/button';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { Component, ErrorInfo, ReactNode } from 'react';
+import { Button } from './ui/button';
 
 interface Props {
   children: ReactNode;
@@ -43,20 +43,20 @@ export class ErrorBoundary extends Component<Props, State> {
               <div className="mx-auto w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center">
                 <AlertTriangle className="h-8 w-8 text-destructive" />
               </div>
-              
+
               <div className="space-y-2">
                 <h2 className="text-2xl font-bold text-foreground">
-                  Something went wrong
+                  Đã xảy ra lỗi
                 </h2>
                 <p className="text-muted-foreground">
-                  We encountered an unexpected error. Please try refreshing the page.
+                  Chúng tôi gặp phải lỗi không mong muốn. Vui lòng thử làm mới trang.
                 </p>
               </div>
 
               {process.env.NODE_ENV === 'development' && this.state.error && (
                 <details className="text-left bg-muted p-4 rounded-lg">
                   <summary className="cursor-pointer font-medium text-sm">
-                    Error Details (Development)
+                    Chi Tiết Lỗi (Development)
                   </summary>
                   <pre className="mt-2 text-xs text-muted-foreground overflow-auto">
                     {this.state.error.stack}
@@ -71,14 +71,14 @@ export class ErrorBoundary extends Component<Props, State> {
                   className="flex items-center gap-2"
                 >
                   <RefreshCw className="h-4 w-4" />
-                  Try Again
+                  Thử Lại
                 </Button>
                 <Button
                   onClick={() => window.location.reload()}
                   className="flex items-center gap-2"
                 >
                   <RefreshCw className="h-4 w-4" />
-                  Refresh Page
+                  Làm Mới Trang
                 </Button>
               </div>
             </div>

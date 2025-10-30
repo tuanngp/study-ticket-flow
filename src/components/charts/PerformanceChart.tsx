@@ -1,6 +1,7 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { t } from '@/lib/translations';
 
 interface PerformanceData {
   name: string;
@@ -28,13 +29,13 @@ export const PerformanceChart = ({ data }: PerformanceChartProps) => {
         <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
           <p className="font-medium">{label}</p>
           <p className="text-sm text-muted-foreground">
-            Resolved: <span className="font-semibold text-foreground">{data.resolved}</span>
+            Đã giải quyết: <span className="font-semibold text-foreground">{data.resolved}</span>
           </p>
           <p className="text-sm text-muted-foreground">
-            Avg. Time: <span className="font-semibold text-foreground">{data.avgTime}h</span>
+            Thời gian TB: <span className="font-semibold text-foreground">{data.avgTime}h</span>
           </p>
           <p className="text-sm text-muted-foreground">
-            Rating: <span className="font-semibold text-foreground">⭐ {data.rating.toFixed(1)}</span>
+            Đánh giá: <span className="font-semibold text-foreground">⭐ {data.rating.toFixed(1)}</span>
           </p>
         </div>
       );
@@ -47,10 +48,10 @@ export const PerformanceChart = ({ data }: PerformanceChartProps) => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <div className="w-3 h-3 bg-primary rounded-full"></div>
-          Top Performers
+          Người thực hiện xuất sắc
         </CardTitle>
         <CardDescription>
-          Staff performance comparison
+          So sánh hiệu suất nhân viên
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -63,10 +64,10 @@ export const PerformanceChart = ({ data }: PerformanceChartProps) => {
                 className="text-xs"
                 tick={{ fontSize: 12 }}
               />
-              <YAxis 
+              <YAxis
                 className="text-xs"
                 tick={{ fontSize: 12 }}
-                label={{ value: 'Tickets', angle: -90, position: 'insideLeft' }}
+                label={{ value: 'Ticket', angle: -90, position: 'insideLeft' }}
               />
               <Tooltip content={<CustomTooltip />} />
               <Legend />

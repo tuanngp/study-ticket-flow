@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Ticket, Clock, CheckCircle2, AlertCircle } from "lucide-react";
 import { StatisticsService, TicketStats } from "@/services/statisticsService";
+import { AlertCircle, CheckCircle2, Clock, Ticket } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface StatsCardsProps {
   userId: string;
@@ -32,28 +32,28 @@ export const StatsCards = ({ userId }: StatsCardsProps) => {
 
   const cards = [
     {
-      title: "Total Tickets",
+      title: "Tổng Ticket",
       value: stats.total,
       icon: Ticket,
       color: "text-primary",
       bgColor: "bg-primary/10",
     },
     {
-      title: "Open",
+      title: "Đang Mở",
       value: stats.open,
       icon: AlertCircle,
       color: "text-warning",
       bgColor: "bg-warning/10",
     },
     {
-      title: "In Progress",
+      title: "Đang Xử Lý",
       value: stats.inProgress,
       icon: Clock,
       color: "text-blue-500",
       bgColor: "bg-blue-500/10",
     },
     {
-      title: "Resolved",
+      title: "Đã Giải Quyết",
       value: stats.resolved,
       icon: CheckCircle2,
       color: "text-success",

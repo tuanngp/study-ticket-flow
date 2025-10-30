@@ -1,6 +1,7 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { t } from '@/lib/translations';
 
 interface PriorityData {
   priority: string;
@@ -24,7 +25,11 @@ export const TicketPriorityChart = ({ data }: TicketPriorityChartProps) => {
   const chartData = data
     .filter(item => item.count > 0)
     .map(item => ({
-      name: item.priority.charAt(0).toUpperCase() + item.priority.slice(1),
+      name: item.priority === 'low' ? 'Thấp' :
+            item.priority === 'medium' ? 'Trung bình' :
+            item.priority === 'high' ? 'Cao' :
+            item.priority === 'critical' ? 'Khẩn cấp' :
+            item.priority.charAt(0).toUpperCase() + item.priority.slice(1),
       count: item.count,
       percentage: item.percentage,
       fill: PRIORITY_COLORS[item.priority as keyof typeof PRIORITY_COLORS] || '#6b7280'
@@ -37,17 +42,17 @@ export const TicketPriorityChart = ({ data }: TicketPriorityChartProps) => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <div className="w-3 h-3 bg-primary rounded-full"></div>
-            Priority Distribution
+            Phân bố mức ưu tiên
           </CardTitle>
           <CardDescription>
-            Distribution of tickets by priority level
+            Phân bố ticket theo mức ưu tiên
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-80 flex items-center justify-center">
             <div className="text-center text-muted-foreground">
               <div className="text-4xl mb-2">📊</div>
-              <p>No priority data available</p>
+              <p>Không có dữ liệu ưu tiên nào</p>
             </div>
           </div>
         </CardContent>
@@ -62,10 +67,10 @@ export const TicketPriorityChart = ({ data }: TicketPriorityChartProps) => {
         <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
           <p className="font-medium">{label}</p>
           <p className="text-sm text-muted-foreground">
-            Count: <span className="font-semibold text-foreground">{data.count}</span>
+            Số lượng: <span className="font-semibold text-foreground">{data.count}</span>
           </p>
           <p className="text-sm text-muted-foreground">
-            Percentage: <span className="font-semibold text-foreground">{data.percentage}%</span>
+            Phần trăm: <span className="font-semibold text-foreground">{data.percentage}%</span>
           </p>
         </div>
       );
@@ -78,10 +83,10 @@ export const TicketPriorityChart = ({ data }: TicketPriorityChartProps) => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <div className="w-3 h-3 bg-primary rounded-full"></div>
-          Priority Distribution
+          Phân bố mức ưu tiên
         </CardTitle>
         <CardDescription>
-          Distribution of tickets by priority level
+          Phân bố ticket theo mức ưu tiên
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -94,10 +99,10 @@ export const TicketPriorityChart = ({ data }: TicketPriorityChartProps) => {
                 className="text-xs"
                 tick={{ fontSize: 12 }}
               />
-              <YAxis 
+              <YAxis
                 className="text-xs"
                 tick={{ fontSize: 12 }}
-                label={{ value: 'Count', angle: -90, position: 'insideLeft' }}
+                label={{ value: 'Số lượng', angle: -90, position: 'insideLeft' }}
               />
               <Tooltip content={<CustomTooltip />} />
               <Legend />

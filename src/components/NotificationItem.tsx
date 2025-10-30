@@ -2,17 +2,18 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Notification } from "@/services/notificationService";
 import { formatDistanceToNow } from "date-fns";
+import { vi } from "date-fns/locale";
 import {
-    AlertCircle,
-    AlertTriangle,
-    Bell,
-    Calendar,
-    CheckCircle,
-    Clock,
-    FileText,
-    MessageSquare,
-    TrendingUp,
-    User,
+  AlertCircle,
+  AlertTriangle,
+  Bell,
+  Calendar,
+  CheckCircle,
+  Clock,
+  FileText,
+  MessageSquare,
+  TrendingUp,
+  User,
 } from "lucide-react";
 import { FC } from "react";
 import { useNavigate } from "react-router-dom";
@@ -145,7 +146,7 @@ export const NotificationItem: FC<NotificationItemProps> = ({
           {/* Timestamp */}
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Clock className="h-3 w-3" />
-            <span>{formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}</span>
+            <span>{formatDistanceToNow(new Date(notification.created_at), { addSuffix: true, locale: vi })}</span>
           </div>
 
           {/* Actions */}
@@ -177,7 +178,7 @@ export const NotificationItem: FC<NotificationItemProps> = ({
               variant="ghost"
               onClick={handleMarkAsRead}
               className="h-8 w-8 p-0"
-              title="Mark as read"
+              title="Đánh dấu đã đọc"
             >
               <CheckCircle className="h-4 w-4" />
             </Button>
@@ -187,7 +188,7 @@ export const NotificationItem: FC<NotificationItemProps> = ({
             variant="ghost"
             onClick={handleDelete}
             className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-            title="Delete"
+            title="Xóa"
           >
             ×
           </Button>

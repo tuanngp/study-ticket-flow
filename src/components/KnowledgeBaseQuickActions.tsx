@@ -57,13 +57,13 @@ export const KnowledgeBaseQuickActions: React.FC<KnowledgeBaseQuickActionsProps>
         mutationFn: (entryId: string) =>
             KnowledgeEntryService.deleteEntry(entryId, instructorId),
         onSuccess: () => {
-            toast.success('Knowledge entry deleted successfully');
+            toast.success('Xóa mục kiến thức thành công');
             queryClient.invalidateQueries({ queryKey: ['knowledge-entries', instructorId] });
             setDeleteDialogOpen(false);
             setEntryToDelete(null);
         },
         onError: (error: any) => {
-            toast.error(`Failed to delete entry: ${error.message}`);
+            toast.error(`Không thể xóa mục: ${error.message}`);
         },
     });
 
@@ -152,7 +152,7 @@ export const KnowledgeBaseQuickActions: React.FC<KnowledgeBaseQuickActionsProps>
                     {/* Recent Entries */}
                     <div>
                         <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                            Recent Entries
+                            Mục Gần Đây
                             <Badge variant="secondary" className="text-xs">
                                 {recentEntries.length}
                             </Badge>
@@ -181,7 +181,7 @@ export const KnowledgeBaseQuickActions: React.FC<KnowledgeBaseQuickActionsProps>
                                                     variant={entry.visibility === 'public' ? 'default' : 'outline'}
                                                     className="text-xs"
                                                 >
-                                                    {entry.visibility === 'public' ? 'Public' : entry.courseCode}
+                                                    {entry.visibility === 'public' ? 'Công khai' : entry.courseCode}
                                                 </Badge>
                                             </div>
                                         </div>
@@ -214,7 +214,7 @@ export const KnowledgeBaseQuickActions: React.FC<KnowledgeBaseQuickActionsProps>
                         <div>
                             <h4 className="text-sm font-semibold mb-3 flex items-center gap-2 text-orange-600">
                                 <AlertCircle className="h-4 w-4" />
-                                Needs Attention
+                                Cần Chú Ý
                                 <Badge variant="destructive" className="text-xs">
                                     {entriesNeedingAttention.length}
                                 </Badge>
@@ -236,10 +236,10 @@ export const KnowledgeBaseQuickActions: React.FC<KnowledgeBaseQuickActionsProps>
                                                     </p>
                                                     <div className="flex items-center gap-2 mt-1">
                                                         <span className="text-xs text-orange-700 font-medium">
-                                                            {helpfulPercentage.toFixed(0)}% helpful
+                                                            {helpfulPercentage.toFixed(0)}% hữu ích
                                                         </span>
                                                         <span className="text-xs text-muted-foreground">
-                                                            ({totalFeedback} feedback)
+                                                            ({totalFeedback} phản hồi)
                                                         </span>
                                                     </div>
                                                 </div>
@@ -249,7 +249,7 @@ export const KnowledgeBaseQuickActions: React.FC<KnowledgeBaseQuickActionsProps>
                                                     onClick={() => handleEdit(entry.id)}
                                                     className="h-7 text-xs"
                                                 >
-                                                    Review
+                                                    Xem lại
                                                 </Button>
                                             </div>
                                         </div>
@@ -266,7 +266,7 @@ export const KnowledgeBaseQuickActions: React.FC<KnowledgeBaseQuickActionsProps>
                         className="w-full"
                     >
                         <ExternalLink className="h-4 w-4 mr-2" />
-                        View All Entries
+                        Xem Tất Cả Mục
                     </Button>
                 </CardContent>
             </Card>
@@ -275,21 +275,21 @@ export const KnowledgeBaseQuickActions: React.FC<KnowledgeBaseQuickActionsProps>
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Knowledge Entry</AlertDialogTitle>
+                        <AlertDialogTitle>Xóa Mục Kiến Thức</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Are you sure you want to delete this knowledge entry? This action cannot be undone.
-                            Students will no longer see this entry in suggestions.
+                            Bạn có chắc chắn muốn xóa mục kiến thức này? Hành động này không thể hoàn tác.
+                            Sinh viên sẽ không còn thấy mục này trong gợi ý.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel onClick={() => setEntryToDelete(null)}>
-                            Cancel
+                            Hủy
                         </AlertDialogCancel>
                         <AlertDialogAction
                             onClick={confirmDelete}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
-                            Delete
+                            Xóa
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

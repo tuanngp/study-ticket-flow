@@ -1,44 +1,39 @@
-import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { UserHomeSidebar } from '@/components/UserHomeSidebar';
-import { AuthService, UserProfile } from '@/services/authService';
-import {
-  BarChart3,
-  TrendingUp,
-  Users,
-  Ticket,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  Calendar,
-  Download,
-  RefreshCw,
-  Activity,
-  Target,
-  Award,
-  Zap,
-  Star,
-  MessageSquare,
-  Eye,
-  ThumbsUp
-} from 'lucide-react';
-import { StatisticsService } from '@/services/statisticsService';
-import { formatDistanceToNow } from 'date-fns';
-import { vi } from 'date-fns/locale';
-import { TicketStatusChart } from '@/components/charts/TicketStatusChart';
-import { TicketTrendsChart } from '@/components/charts/TicketTrendsChart';
-import { TicketPriorityChart } from '@/components/charts/TicketPriorityChart';
 import { PeakHoursChart } from '@/components/charts/PeakHoursChart';
 import { PerformanceChart } from '@/components/charts/PerformanceChart';
-import { ReviewDisplay } from '@/components/ReviewDisplay';
-import { ReviewService, ReviewResult, ReviewStats } from '@/services/reviewService';
+import { TicketPriorityChart } from '@/components/charts/TicketPriorityChart';
+import { TicketStatusChart } from '@/components/charts/TicketStatusChart';
+import { TicketTrendsChart } from '@/components/charts/TicketTrendsChart';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { UserHomeSidebar } from '@/components/UserHomeSidebar';
+import { AuthService, UserProfile } from '@/services/authService';
+import { ReviewResult, ReviewService, ReviewStats } from '@/services/reviewService';
+import { StatisticsService } from '@/services/statisticsService';
+import { useQuery } from '@tanstack/react-query';
+import { formatDistanceToNow } from 'date-fns';
+import {
+  AlertCircle,
+  Award,
+  BarChart3,
+  Calendar,
+  CheckCircle,
+  Clock,
+  Download,
+  Eye,
+  MessageSquare,
+  RefreshCw,
+  Star,
+  Target,
+  ThumbsUp,
+  Ticket,
+  Zap
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface AnalyticsData {
   overview: {
@@ -220,7 +215,7 @@ const Analytics = () => {
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-muted-foreground">Loading analytics...</p>
+                <p className="text-muted-foreground">Đang tải phân tích...</p>
               </div>
             </div>
           </SidebarInset>
@@ -381,10 +376,10 @@ const Analytics = () => {
               <div>
                 <h1 className="text-3xl font-bold flex items-center gap-2">
                   <BarChart3 className="h-8 w-8 text-primary" />
-                  My Analytics Dashboard
+                  Bảng Phân Tích Của Tôi
                 </h1>
                 <p className="text-muted-foreground">
-                  Personal statistics and insights for your tickets
+                  Thống kê cá nhân và thông tin chi tiết về ticket của bạn
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -395,18 +390,18 @@ const Analytics = () => {
                   disabled={isRefreshing}
                 >
                   <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  Refresh
+                  Làm mới
                 </Button>
                 <Button variant="outline" size="sm">
                   <Download className="h-4 w-4 mr-2" />
-                  Export
+                  Xuất dữ liệu
                 </Button>
               </div>
             </div>
 
             {/* Time Range Selector */}
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">Time Range:</span>
+              <span className="text-sm font-medium">Khoảng thời gian:</span>
               <div className="flex gap-1">
                 {(['week', 'month', 'quarter', 'year'] as const).map((range) => (
                   <Button
@@ -415,7 +410,7 @@ const Analytics = () => {
                     size="sm"
                     onClick={() => setTimeRange(range)}
                   >
-                    {range.charAt(0).toUpperCase() + range.slice(1)}
+                    {range === 'week' ? 'Tuần' : range === 'month' ? 'Tháng' : range === 'quarter' ? 'Quý' : 'Năm'}
                   </Button>
                 ))}
               </div>
@@ -425,78 +420,78 @@ const Analytics = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Tickets</CardTitle>
+                  <CardTitle className="text-sm font-medium">Tổng Ticket</CardTitle>
                   <Ticket className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{data.overview.totalTickets}</div>
                   <p className="text-xs text-muted-foreground">
-                    Your total tickets
+                    Tổng số ticket của bạn
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Open Tickets</CardTitle>
+                  <CardTitle className="text-sm font-medium">Ticket Đang Mở</CardTitle>
                   <AlertCircle className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-blue-600">{data.overview.openTickets}</div>
                   <p className="text-xs text-muted-foreground">
-                    Your active tickets
+                    Ticket đang hoạt động của bạn
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Resolved</CardTitle>
+                  <CardTitle className="text-sm font-medium">Đã Giải Quyết</CardTitle>
                   <CheckCircle className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-green-600">{data.overview.resolvedTickets}</div>
                   <p className="text-xs text-muted-foreground">
-                    Your resolved tickets
+                    Ticket đã giải quyết của bạn
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Avg. Resolution</CardTitle>
+                  <CardTitle className="text-sm font-medium">Thời Gian TB</CardTitle>
                   <Clock className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{data.overview.averageResolutionTime}h</div>
                   <p className="text-xs text-muted-foreground">
-                    Your average resolution time
+                    Thời gian giải quyết trung bình
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Ticket Viewed</CardTitle>
+                  <CardTitle className="text-sm font-medium">Lượt Xem</CardTitle>
                   <Eye className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-purple-600">{data.overview.ticketViews ?? 0}</div>
                   <p className="text-xs text-muted-foreground">
-                    Total views of your tickets
+                    Tổng lượt xem ticket của bạn
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Ticket Likes</CardTitle>
+                  <CardTitle className="text-sm font-medium">Lượt Thích</CardTitle>
                   <ThumbsUp className="h-4 w-4 text-orange-500" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-orange-500">{data.overview.ticketLikes ?? 0}</div>
                   <p className="text-xs text-muted-foreground">
-                    Total likes received for your tickets
+                    Tổng lượt thích ticket của bạn
                   </p>
                 </CardContent>
               </Card>
@@ -505,11 +500,11 @@ const Analytics = () => {
             {/* Main Analytics Tabs */}
             <Tabs defaultValue="overview" className="space-y-6">
               <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="trends">Trends</TabsTrigger>
-                <TabsTrigger value="performance">Performance</TabsTrigger>
-                <TabsTrigger value="insights">Insights</TabsTrigger>
-                <TabsTrigger value="reviews">Reviews</TabsTrigger>
+                <TabsTrigger value="overview">Tổng Quan</TabsTrigger>
+                <TabsTrigger value="trends">Xu Hướng</TabsTrigger>
+                <TabsTrigger value="performance">Hiệu Suất</TabsTrigger>
+                <TabsTrigger value="insights">Thông Tin</TabsTrigger>
+                <TabsTrigger value="reviews">Đánh Giá</TabsTrigger>
               </TabsList>
 
               {/* Overview Tab */}

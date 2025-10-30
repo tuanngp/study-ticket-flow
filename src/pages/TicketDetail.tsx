@@ -1,6 +1,7 @@
 import { Navbar } from "@/components/Navbar";
 import { ReviewButton, ReviewSummary } from "@/components/ReviewButton";
 import { ReviewDisplay } from "@/components/ReviewDisplay";
+import { RichTextEditor } from "@/components/RichTextEditor";
 import { SaveToKnowledgeBaseDialog } from "@/components/SaveToKnowledgeBaseDialog";
 import { TicketAISuggestions } from "@/components/TicketAISuggestions";
 import { TicketCalendarIntegration } from "@/components/TicketCalendarIntegration";
@@ -11,15 +12,15 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { RichTextEditor } from "@/components/RichTextEditor";
 import type { KnowledgeEntry } from "@/db/schema";
 import { usePermissions } from "@/hooks/usePermissions";
 import { AuthService, UserProfile } from "@/services/authService";
 import { Comment, CommentService } from "@/services/commentService";
-import { InstructorService, Instructor } from "@/services/instructorService";
+import { Instructor, InstructorService } from "@/services/instructorService";
 import { ReviewService } from "@/services/reviewService";
 import { Ticket, TicketOperationsService } from "@/services/ticketOperationsService";
 import { formatDistanceToNow } from "date-fns";
+import { vi } from "date-fns/locale";
 import { ArrowLeft, BookOpen, Clock, Edit, Save, Send, Star, Trash2, User, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
@@ -202,63 +203,63 @@ const TicketDetail = () => {
     const title = ticket.title || '';
     const description = ticket.description || '';
     const type = ticket.type || '';
-    
+
     // Calculate content quality metrics
     const titleLength = title.trim().length;
     const descriptionLength = description.trim().length;
     const totalLength = titleLength + descriptionLength;
-    
+
     // Check for specific content indicators
     const hasCodeSnippets = /```[\s\S]*?```|`[^`]+`/.test(description);
     const hasErrorMessages = /error|exception|fail|bug|issue/i.test(description);
     const hasSteps = /step|bước|1\.|2\.|3\.|first|then|next/i.test(description);
     const hasContext = /when|khi|where|ở đâu|what|gì|how|như thế nào/i.test(description);
     const hasSpecificDetails = /version|phiên bản|file|tệp|line|dòng|function|hàm|class|lớp/i.test(description);
-    
+
     // Calculate scores based on content quality
     let quality = 1; // Start with minimum score
     let completeness = 1;
     let clarity = 1;
     let helpfulness = 1;
-    
+
     // Title quality (0-2 points)
     if (titleLength >= 20) quality += 1;
     if (titleLength >= 10) quality += 0.5;
     if (titleLength < 5) quality -= 0.5;
-    
+
     // Description quality (0-3 points)
     if (descriptionLength >= 100) completeness += 1.5;
     else if (descriptionLength >= 50) completeness += 1;
     else if (descriptionLength >= 20) completeness += 0.5;
     else if (descriptionLength < 10) completeness -= 0.5;
-    
+
     // Content specificity (0-2 points)
     if (hasCodeSnippets) completeness += 0.5;
     if (hasErrorMessages) completeness += 0.5;
     if (hasSteps) completeness += 0.5;
     if (hasContext) completeness += 0.5;
     if (hasSpecificDetails) completeness += 0.5;
-    
+
     // Clarity assessment (0-2 points)
     if (descriptionLength >= 50 && hasContext) clarity += 1;
     if (hasSteps || hasCodeSnippets) clarity += 0.5;
     if (descriptionLength < 20) clarity -= 0.5;
-    
+
     // Helpfulness assessment (0-2 points)
     if (hasErrorMessages && hasSteps) helpfulness += 1;
     if (hasCodeSnippets) helpfulness += 0.5;
     if (hasSpecificDetails) helpfulness += 0.5;
     if (descriptionLength < 30) helpfulness -= 0.5;
-    
+
     // Ensure scores are within 1-5 range and convert to integers
     quality = Math.max(1, Math.min(5, Math.round(quality)));
     completeness = Math.max(1, Math.min(5, Math.round(completeness)));
     clarity = Math.max(1, Math.min(5, Math.round(clarity)));
     helpfulness = Math.max(1, Math.min(5, Math.round(helpfulness)));
-    
+
     // Calculate overall score (weighted average) and round to integer
     const overall = Math.round(quality * 0.3 + completeness * 0.3 + clarity * 0.2 + helpfulness * 0.2);
-    
+
     // Generate feedback based on scores
     const feedback = generateFeedback(quality, completeness, clarity, helpfulness, {
       titleLength,
@@ -269,7 +270,7 @@ const TicketDetail = () => {
       hasContext,
       hasSpecificDetails
     });
-    
+
     // Generate suggestions based on weaknesses
     const suggestions = generateSuggestions(quality, completeness, clarity, helpfulness, {
       titleLength,
@@ -280,7 +281,7 @@ const TicketDetail = () => {
       hasContext,
       hasSpecificDetails
     });
-    
+
     return {
       overall,
       quality,
@@ -289,8 +290,8 @@ const TicketDetail = () => {
       helpfulness,
       feedback,
       suggestions,
-      metadata: { 
-        source: 'ai', 
+      metadata: {
+        source: 'ai',
         model: 'rule-based-v2',
         analysis: {
           titleLength,
@@ -308,73 +309,73 @@ const TicketDetail = () => {
 
   const generateFeedback = (quality: number, completeness: number, clarity: number, helpfulness: number, metrics: any) => {
     const feedbacks = [];
-    
+
     if (quality >= 4) {
       feedbacks.push("Tiêu đề rõ ràng và mô tả tốt vấn đề.");
     } else if (quality <= 2) {
       feedbacks.push("Tiêu đề cần cụ thể hơn để mô tả vấn đề.");
     }
-    
+
     if (completeness >= 4) {
       feedbacks.push("Mô tả chi tiết và đầy đủ thông tin cần thiết.");
     } else if (completeness <= 2) {
       feedbacks.push("Mô tả cần bổ sung thêm chi tiết về vấn đề.");
     }
-    
+
     if (clarity >= 4) {
       feedbacks.push("Nội dung dễ hiểu và có cấu trúc tốt.");
     } else if (clarity <= 2) {
       feedbacks.push("Cần trình bày rõ ràng và có cấu trúc hơn.");
     }
-    
+
     if (helpfulness >= 4) {
       feedbacks.push("Ticket cung cấp đủ thông tin để hỗ trợ giải quyết.");
     } else if (helpfulness <= 2) {
       feedbacks.push("Cần thêm thông tin hữu ích để hỗ trợ giải quyết vấn đề.");
     }
-    
+
     if (metrics.descriptionLength < 30) {
       feedbacks.push("Mô tả quá ngắn, cần bổ sung thêm chi tiết.");
     }
-    
+
     if (!metrics.hasContext && metrics.descriptionLength < 100) {
       feedbacks.push("Thiếu ngữ cảnh về khi nào và ở đâu vấn đề xảy ra.");
     }
-    
+
     return feedbacks.length > 0 ? feedbacks.join(' ') : "Ticket có chất lượng trung bình.";
   };
 
   const generateSuggestions = (quality: number, completeness: number, clarity: number, helpfulness: number, metrics: any) => {
     const suggestions = [];
-    
+
     if (quality <= 3) {
       suggestions.push("Viết tiêu đề cụ thể hơn, mô tả chính xác vấn đề gặp phải.");
     }
-    
+
     if (completeness <= 3) {
       suggestions.push("Bổ sung thêm chi tiết: mã lỗi, bước tái hiện, môi trường thực thi.");
     }
-    
+
     if (clarity <= 3) {
       suggestions.push("Sắp xếp thông tin theo thứ tự logic: vấn đề → bước tái hiện → kết quả mong đợi.");
     }
-    
+
     if (helpfulness <= 3) {
       suggestions.push("Thêm code snippets, log lỗi, hoặc screenshot để minh họa vấn đề.");
     }
-    
+
     if (!metrics.hasCodeSnippets && (metrics.type === 'coding_error' || metrics.type === 'bug')) {
       suggestions.push("Thêm đoạn code gây lỗi và thông báo lỗi chi tiết.");
     }
-    
+
     if (!metrics.hasSteps && metrics.descriptionLength < 100) {
       suggestions.push("Mô tả các bước để tái hiện vấn đề một cách chi tiết.");
     }
-    
+
     if (metrics.descriptionLength < 50) {
       suggestions.push("Mở rộng mô tả để bao gồm: ngữ cảnh, mục tiêu, và kết quả mong đợi.");
     }
-    
+
     return suggestions.length > 0 ? suggestions.join(' ') : "Ticket đã có chất lượng tốt, tiếp tục duy trì.";
   };
 
@@ -594,7 +595,7 @@ const TicketDetail = () => {
           className="mb-6 flex items-center gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Dashboard
+          Về Dashboard
         </Button>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -608,39 +609,39 @@ const TicketDetail = () => {
                         <Input
                           value={editData.title}
                           onChange={(e) => setEditData(prev => ({ ...prev, title: e.target.value }))}
-                          placeholder="Ticket title"
+                          placeholder="Tiêu đề ticket"
                           className="text-2xl font-bold"
                         />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <label className="text-sm font-medium mb-2 block">Type</label>
+                            <label className="text-sm font-medium mb-2 block">Loại</label>
                             <Select value={editData.type} onValueChange={(value) => setEditData(prev => ({ ...prev, type: value }))}>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select type" />
+                                <SelectValue placeholder="Chọn loại" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="bug">Bug Report</SelectItem>
-                                <SelectItem value="feature">Feature Request</SelectItem>
-                                <SelectItem value="question">Question</SelectItem>
-                                <SelectItem value="task">Task</SelectItem>
-                                <SelectItem value="grading">Grading Issue</SelectItem>
-                                <SelectItem value="assignment">Assignment Help</SelectItem>
-                                <SelectItem value="technical">Technical Support</SelectItem>
-                                <SelectItem value="academic">Academic Support</SelectItem>
+                                <SelectItem value="bug">Báo cáo lỗi</SelectItem>
+                                <SelectItem value="feature">Yêu cầu tính năng</SelectItem>
+                                <SelectItem value="question">Câu hỏi</SelectItem>
+                                <SelectItem value="task">Nhiệm vụ</SelectItem>
+                                <SelectItem value="grading">Vấn đề điểm số</SelectItem>
+                                <SelectItem value="assignment">Hỗ trợ bài tập</SelectItem>
+                                <SelectItem value="technical">Hỗ trợ kỹ thuật</SelectItem>
+                                <SelectItem value="academic">Hỗ trợ học tập</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
                           <div>
-                            <label className="text-sm font-medium mb-2 block">Priority</label>
+                            <label className="text-sm font-medium mb-2 block">Mức độ ưu tiên</label>
                             <Select value={editData.priority} onValueChange={(value) => setEditData(prev => ({ ...prev, priority: value }))}>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select priority" />
+                                <SelectValue placeholder="Chọn mức độ ưu tiên" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="low">Low</SelectItem>
-                                <SelectItem value="medium">Medium</SelectItem>
-                                <SelectItem value="high">High</SelectItem>
-                                <SelectItem value="critical">Critical</SelectItem>
+                                <SelectItem value="low">Thấp</SelectItem>
+                                <SelectItem value="medium">Trung bình</SelectItem>
+                                <SelectItem value="high">Cao</SelectItem>
+                                <SelectItem value="critical">Khẩn cấp</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -649,17 +650,17 @@ const TicketDetail = () => {
                           <Input
                             value={editData.courseCode}
                             onChange={(e) => setEditData(prev => ({ ...prev, courseCode: e.target.value }))}
-                            placeholder="Course Code (e.g., PRJ301)"
+                            placeholder="Mã môn học (VD: PRJ301)"
                           />
                           <Input
                             value={editData.className}
                             onChange={(e) => setEditData(prev => ({ ...prev, className: e.target.value }))}
-                            placeholder="Class Name (e.g., SE1730)"
+                            placeholder="Tên lớp (VD: SE1730)"
                           />
                           <Input
                             value={editData.projectGroup}
                             onChange={(e) => setEditData(prev => ({ ...prev, projectGroup: e.target.value }))}
-                            placeholder="Project Group (e.g., Team 07)"
+                            placeholder="Nhóm dự án (VD: Team 07)"
                           />
                         </div>
                       </div>
@@ -668,10 +669,10 @@ const TicketDetail = () => {
                         <CardTitle className="text-2xl mb-2">{ticket?.title}</CardTitle>
                         <CardDescription className="flex items-center gap-2 text-sm">
                           <User className="h-4 w-4" />
-                          Created by {ticket?.creator?.full_name || ticket?.creator?.email}
+                          Tạo bởi {ticket?.creator?.full_name || ticket?.creator?.email}
                           <span>•</span>
                           <Clock className="h-4 w-4" />
-                          {formatDistanceToNow(new Date(ticket?.created_at), { addSuffix: true })}
+                          {formatDistanceToNow(new Date(ticket?.created_at), { addSuffix: true, locale: vi })}
                         </CardDescription>
                       </>
                     )}
@@ -681,11 +682,11 @@ const TicketDetail = () => {
                       <>
                         <Button onClick={handleSaveEdit} size="sm" className="gap-2">
                           <Save className="h-4 w-4" />
-                          Save
+                          Lưu
                         </Button>
                         <Button onClick={handleCancelEdit} variant="outline" size="sm" className="gap-2">
                           <X className="h-4 w-4" />
-                          Cancel
+                          Hủy
                         </Button>
                       </>
                     ) : (
@@ -693,7 +694,7 @@ const TicketDetail = () => {
                         {canEditTicket && (
                           <Button onClick={handleEditTicket} variant="outline" size="sm" className="gap-2">
                             <Edit className="h-4 w-4" />
-                            Edit
+                            Chỉnh sửa
                           </Button>
                         )}
                         {canDeleteTicket && (
@@ -701,26 +702,26 @@ const TicketDetail = () => {
                             <DialogTrigger asChild>
                               <Button variant="destructive" size="sm" className="gap-2">
                                 <Trash2 className="h-4 w-4" />
-                                Delete
+                                Xóa
                               </Button>
                             </DialogTrigger>
                             <DialogContent>
                               <DialogHeader>
-                                <DialogTitle>Delete Ticket</DialogTitle>
+                                <DialogTitle>Xóa Ticket</DialogTitle>
                                 <DialogDescription>
-                                  Are you sure you want to delete this ticket? This action cannot be undone.
+                                  Bạn có chắc chắn muốn xóa ticket này? Hành động này không thể hoàn tác.
                                 </DialogDescription>
                               </DialogHeader>
                               <div className="flex justify-end gap-2 mt-4">
                                 <Button variant="outline" onClick={() => { }}>
-                                  Cancel
+                                  Hủy
                                 </Button>
                                 <Button
                                   variant="destructive"
                                   onClick={handleDeleteTicket}
                                   disabled={isDeleting}
                                 >
-                                  {isDeleting ? "Deleting..." : "Delete"}
+                                  {isDeleting ? "Đang xóa..." : "Xóa"}
                                 </Button>
                               </div>
                             </DialogContent>
@@ -736,7 +737,7 @@ const TicketDetail = () => {
                   <RichTextEditor
                     value={editData.description}
                     onChange={(html) => setEditData(prev => ({ ...prev, description: html }))}
-                    placeholder="Ticket description"
+                    placeholder="Mô tả ticket"
                   />
                 ) : (
                   <div className="prose max-w-none">
@@ -763,13 +764,13 @@ const TicketDetail = () => {
 
             <Card className="shadow-lg" id="comments">
               <CardHeader>
-                <CardTitle>Comments</CardTitle>
+                <CardTitle>Bình luận</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4 mb-6">
                   {comments.length === 0 ? (
                     <p className="text-muted-foreground text-center py-8">
-                      No comments yet. Be the first to comment!
+                      Chưa có bình luận nào. Hãy là người đầu tiên bình luận!
                     </p>
                   ) : (
                     comments.map((comment) => (
@@ -782,11 +783,12 @@ const TicketDetail = () => {
                             <span className="text-xs text-muted-foreground">
                               {formatDistanceToNow(new Date(comment.created_at), {
                                 addSuffix: true,
+                                locale: vi
                               })}
                             </span>
                             {comment.updated_at !== comment.created_at && (
                               <span className="text-xs text-muted-foreground italic">
-                                (edited)
+                                (đã chỉnh sửa)
                               </span>
                             )}
                           </div>
@@ -812,21 +814,21 @@ const TicketDetail = () => {
                                 </DialogTrigger>
                                 <DialogContent>
                                   <DialogHeader>
-                                    <DialogTitle>Delete Comment</DialogTitle>
+                                    <DialogTitle>Xóa Bình Luận</DialogTitle>
                                     <DialogDescription>
-                                      Are you sure you want to delete this comment? This action cannot be undone.
+                                      Bạn có chắc chắn muốn xóa bình luận này? Hành động này không thể hoàn tác.
                                     </DialogDescription>
                                   </DialogHeader>
                                   <div className="flex justify-end gap-2 mt-4">
                                     <Button variant="outline" onClick={() => { }}>
-                                      Cancel
+                                      Hủy
                                     </Button>
                                     <Button
                                       variant="destructive"
                                       onClick={() => handleDeleteComment(comment.id)}
                                       disabled={deletingCommentId === comment.id}
                                     >
-                                      {deletingCommentId === comment.id ? "Deleting..." : "Delete"}
+                                      {deletingCommentId === comment.id ? "Đang xóa..." : "Xóa"}
                                     </Button>
                                   </div>
                                 </DialogContent>
@@ -848,7 +850,7 @@ const TicketDetail = () => {
                                 className="gap-1"
                               >
                                 <Save className="h-3 w-3" />
-                                Save
+                                Lưu
                               </Button>
                               <Button
                                 size="sm"
@@ -857,7 +859,7 @@ const TicketDetail = () => {
                                 className="gap-1"
                               >
                                 <X className="h-3 w-3" />
-                                Cancel
+                                Hủy
                               </Button>
                             </div>
                           </div>
@@ -895,7 +897,7 @@ const TicketDetail = () => {
                       </div>
                     ) : (
                       <Textarea
-                        placeholder="Add a comment..."
+                        placeholder="Thêm bình luận..."
                         value={newComment}
                         onChange={(e) => {
                           setNewComment(e.target.value);
@@ -920,14 +922,14 @@ const TicketDetail = () => {
                   {!showMarkdownPreview && newComment.trim() && (
                     <div className="text-xs text-muted-foreground">
                       <details className="cursor-pointer">
-                        <summary className="hover:text-foreground">Markdown Guide</summary>
+                        <summary className="hover:text-foreground">Hướng dẫn Markdown</summary>
                         <div className="mt-2 space-y-1 pl-4">
-                          <div><code>**bold**</code> → <strong>bold</strong></div>
-                          <div><code>*italic*</code> → <em>italic</em></div>
+                          <div><code>**đậm**</code> → <strong>đậm</strong></div>
+                          <div><code>*nghiêng*</code> → <em>nghiêng</em></div>
                           <div><code>`code`</code> → <code>code</code></div>
-                          <div><code>```code block```</code> → code block</div>
-                          <div><code>[link](url)</code> → link</div>
-                          <div><code>- list item</code> → • list item</div>
+                          <div><code>```khối code```</code> → khối code</div>
+                          <div><code>[liên kết](url)</code> → liên kết</div>
+                          <div><code>- mục danh sách</code> → • mục danh sách</div>
                         </div>
                       </details>
                     </div>
@@ -938,7 +940,7 @@ const TicketDetail = () => {
                       {savedEntryId && (
                         <Badge variant="secondary" className="gap-1">
                           <BookOpen className="h-3 w-3" />
-                          Saved to Knowledge Base
+                          Đã lưu vào Kho Kiến Thức
                         </Badge>
                       )}
                       <Button
@@ -948,7 +950,7 @@ const TicketDetail = () => {
                         className="gap-2 ml-auto"
                       >
                         <BookOpen className="h-4 w-4" />
-                        Save to Knowledge Base
+                        Lưu vào Kho Kiến Thức
                       </Button>
                     </div>
                   )}
@@ -975,13 +977,13 @@ const TicketDetail = () => {
           <div className="space-y-6">
             <Card className="shadow-lg">
               <CardHeader>
-                <CardTitle>Details</CardTitle>
+                <CardTitle>Chi Tiết</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Images Section */}
                 {ticket?.images && ticket.images.length > 0 && (
                   <div>
-                    <p className="text-sm font-medium mb-2">Images ({ticket.images.length})</p>
+                    <p className="text-sm font-medium mb-2">Hình ảnh ({ticket.images.length})</p>
                     <div className="space-y-2">
                       {ticket.images.map((imageUrl, index) => (
                         <div
@@ -999,7 +1001,7 @@ const TicketDetail = () => {
                           />
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
                             <div className="bg-white text-black px-3 py-1 rounded-full text-sm font-medium">
-                              Click to view
+                              Nhấn để xem
                             </div>
                           </div>
                         </div>
@@ -1009,7 +1011,7 @@ const TicketDetail = () => {
                 )}
 
                 <div>
-                  <p className="text-sm font-medium mb-2">Status</p>
+                  <p className="text-sm font-medium mb-2">Trạng thái</p>
                   <Select
                     value={ticket?.status}
                     onValueChange={handleUpdateStatus}
@@ -1018,26 +1020,28 @@ const TicketDetail = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="open">Open</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="resolved">Resolved</SelectItem>
-                      <SelectItem value="closed">Closed</SelectItem>
+                      <SelectItem value="open">Mở</SelectItem>
+                      <SelectItem value="in_progress">Đang xử lý</SelectItem>
+                      <SelectItem value="resolved">Đã giải quyết</SelectItem>
+                      <SelectItem value="closed">Đã đóng</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium mb-2">Priority</p>
-                  <Badge className="capitalize">{ticket?.priority}</Badge>
+                  <p className="text-sm font-medium mb-2">Mức độ ưu tiên</p>
+                  <Badge className="capitalize">
+                    {ticket?.priority === 'low' ? 'Thấp' : ticket?.priority === 'medium' ? 'Trung bình' : ticket?.priority === 'high' ? 'Cao' : ticket?.priority === 'critical' ? 'Khẩn cấp' : ticket?.priority}
+                  </Badge>
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium mb-2">Type</p>
+                  <p className="text-sm font-medium mb-2">Loại</p>
                   <Badge variant="outline" className="capitalize">{ticket?.type}</Badge>
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium mb-2">Assignee</p>
+                  <p className="text-sm font-medium mb-2">Người được gán</p>
                   {isTicketCreator ? (
                     <Select
                       value={ticket?.assignee_id || "unassigned"}
@@ -1071,7 +1075,7 @@ const TicketDetail = () => {
                     </Select>
                   ) : (
                     <p className="text-sm text-muted-foreground">
-                      {ticket?.assignee?.full_name || ticket?.assignee?.email || "Unassigned"}
+                      {ticket?.assignee?.full_name || ticket?.assignee?.email || "Chưa gán"}
                     </p>
                   )}
                 </div>
@@ -1079,12 +1083,12 @@ const TicketDetail = () => {
 
                 {ticket?.ai_suggested_priority && (
                   <div className="pt-4 border-t">
-                    <p className="text-sm font-medium mb-2">AI Suggestions</p>
+                    <p className="text-sm font-medium mb-2">Gợi ý từ AI</p>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm">
-                        <span className="text-muted-foreground">Priority:</span>
+                        <span className="text-muted-foreground">Mức độ ưu tiên:</span>
                         <Badge variant="outline" className="capitalize">
-                          {ticket.ai_suggested_priority}
+                          {ticket.ai_suggested_priority === 'low' ? 'Thấp' : ticket.ai_suggested_priority === 'medium' ? 'Trung bình' : ticket.ai_suggested_priority === 'high' ? 'Cao' : ticket.ai_suggested_priority === 'critical' ? 'Khẩn cấp' : ticket.ai_suggested_priority}
                         </Badge>
                       </div>
                     </div>

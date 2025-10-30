@@ -1,6 +1,7 @@
 import React from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { t } from '@/lib/translations';
 
 interface PeakHourData {
   hour: number;
@@ -24,7 +25,7 @@ export const PeakHoursChart = ({ data }: PeakHoursChartProps) => {
         <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
           <p className="font-medium">{label}</p>
           <p className="text-sm text-muted-foreground">
-            Tickets: <span className="font-semibold text-foreground">{payload[0].value}</span>
+            Ticket: <span className="font-semibold text-foreground">{payload[0].value}</span>
           </p>
         </div>
       );
@@ -37,10 +38,10 @@ export const PeakHoursChart = ({ data }: PeakHoursChartProps) => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <div className="w-3 h-3 bg-primary rounded-full"></div>
-          Peak Hours Analysis
+          Phân tích giờ cao điểm
         </CardTitle>
         <CardDescription>
-          When most tickets are created throughout the day
+          Thời điểm tạo nhiều ticket nhất trong ngày
         </CardDescription>
       </CardHeader>
       <CardContent>

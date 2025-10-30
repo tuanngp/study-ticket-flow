@@ -1,9 +1,9 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -60,7 +60,7 @@ export const NotificationBell: FC<NotificationBellProps> = ({ userId }) => {
 
       <PopoverContent className="w-[400px] p-0" align="end">
         <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="font-semibold">Notifications</h3>
+          <h3 className="font-semibold">Thông Báo</h3>
           <div className="flex items-center gap-2">
             {unreadCount > 0 && (
               <Button
@@ -69,7 +69,7 @@ export const NotificationBell: FC<NotificationBellProps> = ({ userId }) => {
                 onClick={handleMarkAllAsRead}
                 className="text-xs"
               >
-                Mark all as read
+                Đánh dấu tất cả đã đọc
               </Button>
             )}
           </div>
@@ -83,7 +83,7 @@ export const NotificationBell: FC<NotificationBellProps> = ({ userId }) => {
           ) : notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
               <Bell className="h-8 w-8 mb-2 opacity-50" />
-              <p className="text-sm">No notifications</p>
+              <p className="text-sm">Không có thông báo</p>
             </div>
           ) : (
             <div className="p-2 space-y-2">
@@ -106,7 +106,7 @@ export const NotificationBell: FC<NotificationBellProps> = ({ userId }) => {
               className="w-full text-sm"
               onClick={handleViewAll}
             >
-              View all notifications
+              Xem tất cả thông báo
             </Button>
           </div>
         )}

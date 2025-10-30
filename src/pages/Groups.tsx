@@ -1,43 +1,40 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { SmartAvatar } from '@/components/SmartAvatar';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { SmartAvatar } from '@/components/SmartAvatar';
-import { UserHomeSidebar } from '@/components/UserHomeSidebar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SidebarProvider } from '@/components/ui/sidebar';
+import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
-import { GroupService, type GroupWithDetails, type CreateGroupData } from '@/services/groupService';
 import { AuthService } from '@/services/authService';
-import { toast } from 'sonner';
-import { 
-  Plus, 
-  Search, 
-  Users, 
-  Calendar, 
-  MessageSquare, 
-  Settings, 
-  Crown,
-  Shield,
-  UserCheck,
-  User,
-  Filter,
-  MoreHorizontal,
-  Menu,
-  X,
-  Ticket,
+import { GroupService, type CreateGroupData, type GroupWithDetails } from '@/services/groupService';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { formatDistanceToNow } from 'date-fns';
+import {
   BarChart3,
   Bell,
-  LogOut
+  Calendar,
+  Crown,
+  LogOut,
+  Menu,
+  MessageSquare,
+  Plus,
+  Search,
+  Settings,
+  Shield,
+  Ticket,
+  User,
+  UserCheck,
+  Users,
+  X
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export const GroupsPage = () => {
   const navigate = useNavigate();
@@ -78,10 +75,10 @@ export const GroupsPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-groups'] });
       setIsCreateDialogOpen(false);
-      toast.success('Group created successfully!');
+      toast.success('Tạo nhóm thành công!');
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to create group');
+      toast.error(error.message || 'Không thể tạo nhóm');
     },
   });
 
@@ -90,20 +87,20 @@ export const GroupsPage = () => {
     mutationFn: (groupId: string) => GroupService.joinGroup(groupId, user!.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-groups'] });
-      toast.success('Successfully joined group!');
+      toast.success('Tham gia nhóm thành công!');
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Failed to join group');
+      toast.error(error.message || 'Không thể tham gia nhóm');
     },
   });
 
   // Filter groups
   const filteredGroups = userGroups?.filter(group => {
     const matchesSearch = group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         group.description?.toLowerCase().includes(searchTerm.toLowerCase());
+      group.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCourse = !filterCourse || filterCourse === 'all' || group.courseCode === filterCourse;
     const matchesSemester = !filterSemester || filterSemester === 'all' || group.semester === filterSemester;
-    
+
     return matchesSearch && matchesCourse && matchesSemester;
   }) || [];
 
@@ -172,11 +169,11 @@ export const GroupsPage = () => {
       {isSidebarOpen && (
         <>
           {/* Light overlay */}
-          <div 
-            className="fixed inset-0 z-40 bg-black/10" 
+          <div
+            className="fixed inset-0 z-40 bg-black/10"
             onClick={() => setIsSidebarOpen(false)}
           />
-          
+
           {/* Compact Sidebar */}
           <div className="fixed left-0 top-0 h-full w-64 z-50 bg-card border-r border-border shadow-lg">
             <SidebarProvider>
@@ -223,7 +220,7 @@ export const GroupsPage = () => {
                     <Ticket className="h-4 w-4" />
                     My Tickets
                   </Button>
-                  
+
                   <Button
                     variant="ghost"
                     className="w-full justify-start gap-3"
@@ -235,7 +232,7 @@ export const GroupsPage = () => {
                     <BarChart3 className="h-4 w-4" />
                     Analytics
                   </Button>
-                  
+
                   <Button
                     variant="ghost"
                     className="w-full justify-start gap-3"
@@ -247,7 +244,7 @@ export const GroupsPage = () => {
                     <Calendar className="h-4 w-4" />
                     Calendar
                   </Button>
-                  
+
                   <Button
                     variant="ghost"
                     className="w-full justify-start gap-3"
@@ -259,7 +256,7 @@ export const GroupsPage = () => {
                     <Bell className="h-4 w-4" />
                     Notifications
                   </Button>
-                  
+
                   <Button
                     variant="ghost"
                     className="w-full justify-start gap-3"
@@ -281,15 +278,15 @@ export const GroupsPage = () => {
                     onClick={async () => {
                       const { error } = await AuthService.signOut();
                       if (error) {
-                        toast.error("Failed to sign out");
+                        toast.error("Không thể đăng xuất");
                         return;
                       }
-                      toast.success("Signed out successfully");
+                      toast.success("Đăng xuất thành công");
                       navigate("/");
                     }}
                   >
                     <LogOut className="h-4 w-4" />
-                    Sign Out
+                    Đăng xuất
                   </Button>
                 </div>
               </div>
@@ -302,25 +299,25 @@ export const GroupsPage = () => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Groups</h1>
+            <h1 className="text-3xl font-bold">Nhóm</h1>
             <p className="text-muted-foreground">
-              Collaborate with your classmates and manage group activities
+              Cộng tác với bạn học và quản lý hoạt động nhóm
             </p>
           </div>
-          
+
           {canCreateGroups && (
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="mr-2 h-4 w-4" />
-                  Create Group
+                  Tạo Nhóm
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                  <DialogTitle>Create New Group</DialogTitle>
+                  <DialogTitle>Tạo Nhóm Mới</DialogTitle>
                   <DialogDescription>
-                    Create a new study group for your course.
+                    Tạo nhóm học tập mới cho môn học của bạn.
                   </DialogDescription>
                 </DialogHeader>
                 <CreateGroupForm onSubmit={handleCreateGroup} isLoading={createGroupMutation.isPending} />
@@ -329,82 +326,82 @@ export const GroupsPage = () => {
           )}
         </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Search groups..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        
-        <Select value={filterCourse} onValueChange={setFilterCourse}>
-          <SelectTrigger className="w-full sm:w-[200px]">
-            <SelectValue placeholder="Filter by course" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Courses</SelectItem>
-            {availableCourses?.map((course) => (
-              <SelectItem key={course.code} value={course.code}>
-                {course.code} - {course.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={filterSemester} onValueChange={setFilterSemester}>
-          <SelectTrigger className="w-full sm:w-[200px]">
-            <SelectValue placeholder="Filter by semester" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Semesters</SelectItem>
-            <SelectItem value="2024A">2024A</SelectItem>
-            <SelectItem value="2024B">2024B</SelectItem>
-            <SelectItem value="2025A">2025A</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Groups Grid */}
-      {filteredGroups.length === 0 ? (
-        <div className="text-center py-12">
-          <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No groups found</h3>
-          <p className="text-muted-foreground mb-4">
-            {searchTerm || (filterCourse && filterCourse !== 'all') || (filterSemester && filterSemester !== 'all')
-              ? 'Try adjusting your search filters'
-              : 'Create your first group or join an existing one'}
-          </p>
-          {canCreateGroups && (
-            <Button onClick={() => setIsCreateDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Group
-            </Button>
-          )}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredGroups.map((group) => (
-            <GroupCard
-              key={group.id}
-              group={group}
-              userRole={profile?.role}
-              onGroupClick={handleGroupClick}
-              onJoinGroup={handleJoinGroup}
-              canJoin={canJoinGroups}
-              canManage={canManageGroups}
-              getRoleIcon={getRoleIcon}
-              getRoleColor={getRoleColor}
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Tìm kiếm nhóm..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
             />
-          ))}
+          </div>
+
+          <Select value={filterCourse} onValueChange={setFilterCourse}>
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue placeholder="Lọc theo môn học" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả môn học</SelectItem>
+              {availableCourses?.map((course) => (
+                <SelectItem key={course.code} value={course.code}>
+                  {course.code} - {course.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={filterSemester} onValueChange={setFilterSemester}>
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue placeholder="Lọc theo học kỳ" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả học kỳ</SelectItem>
+              <SelectItem value="2024A">2024A</SelectItem>
+              <SelectItem value="2024B">2024B</SelectItem>
+              <SelectItem value="2025A">2025A</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      )}
-      
-      {/* Add bottom padding to prevent content from being hidden behind floating button */}
-      <div className="pb-20"></div>
+
+        {/* Groups Grid */}
+        {filteredGroups.length === 0 ? (
+          <div className="text-center py-12">
+            <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Không tìm thấy nhóm</h3>
+            <p className="text-muted-foreground mb-4">
+              {searchTerm || (filterCourse && filterCourse !== 'all') || (filterSemester && filterSemester !== 'all')
+                ? 'Thử điều chỉnh bộ lọc tìm kiếm'
+                : 'Tạo nhóm đầu tiên hoặc tham gia nhóm có sẵn'}
+            </p>
+            {canCreateGroups && (
+              <Button onClick={() => setIsCreateDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Tạo Nhóm
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredGroups.map((group) => (
+              <GroupCard
+                key={group.id}
+                group={group}
+                userRole={profile?.role}
+                onGroupClick={handleGroupClick}
+                onJoinGroup={handleJoinGroup}
+                canJoin={canJoinGroups}
+                canManage={canManageGroups}
+                getRoleIcon={getRoleIcon}
+                getRoleColor={getRoleColor}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Add bottom padding to prevent content from being hidden behind floating button */}
+        <div className="pb-20"></div>
       </div>
     </div>
   );
@@ -421,15 +418,15 @@ interface GroupCardProps {
   getRoleColor: (role: string) => string;
 }
 
-const GroupCard = ({ 
-  group, 
-  userRole, 
-  onGroupClick, 
-  onJoinGroup, 
-  canJoin, 
+const GroupCard = ({
+  group,
+  userRole,
+  onGroupClick,
+  onJoinGroup,
+  canJoin,
   canManage,
   getRoleIcon,
-  getRoleColor 
+  getRoleColor
 }: GroupCardProps) => {
   const [isJoined, setIsJoined] = useState(false); // This would come from group membership check
 
@@ -444,7 +441,7 @@ const GroupCard = ({
   };
 
   return (
-    <Card 
+    <Card
       className="cursor-pointer hover:shadow-md transition-all duration-200 hover:border-primary/50"
       onClick={handleCardClick}
     >
@@ -466,7 +463,7 @@ const GroupCard = ({
           </div>
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         {/* Group Info */}
         <div className="flex items-center justify-between text-sm text-muted-foreground">
@@ -478,14 +475,14 @@ const GroupCard = ({
             <div className="flex items-center gap-1">
               <Calendar className="h-4 w-4" />
               <span>
-                {group.createdAt 
+                {group.createdAt
                   ? `${formatDistanceToNow(new Date(group.createdAt))} ago`
                   : 'Recently created'
                 }
               </span>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-1">
             {group.isPublic ? (
               <Badge variant="outline" className="text-xs">Public</Badge>
@@ -507,7 +504,7 @@ const GroupCard = ({
               <p className="text-sm font-medium truncate">
                 {group.instructor.fullName || group.instructor.email}
               </p>
-              <p className="text-xs text-muted-foreground">Instructor</p>
+              <p className="text-xs text-muted-foreground">Giảng viên</p>
             </div>
           </div>
         )}
@@ -524,13 +521,13 @@ const GroupCard = ({
               <MessageSquare className="h-4 w-4" />
             </Button>
           </div>
-          
+
           {canJoin && !isJoined && (
             <Button size="sm" onClick={handleJoinClick}>
               Join Group
             </Button>
           )}
-          
+
           {isJoined && (
             <Badge className="bg-green-500/10 text-green-500 border-green-500/20">
               Joined
@@ -567,44 +564,44 @@ const CreateGroupForm = ({ onSubmit, isLoading }: CreateGroupFormProps) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="name">Group Name</Label>
+        <Label htmlFor="name">Tên nhóm</Label>
         <Input
           id="name"
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder="Enter group name"
+          placeholder="Nhập tên nhóm"
           required
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
+        <Label htmlFor="description">Mô tả</Label>
         <Textarea
           id="description"
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          placeholder="Describe the purpose of this group"
+          placeholder="Mô tả mục đích của nhóm này"
           rows={3}
         />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="courseCode">Course Code</Label>
+          <Label htmlFor="courseCode">Mã môn học</Label>
           <Input
             id="courseCode"
             value={formData.courseCode}
             onChange={(e) => setFormData({ ...formData, courseCode: e.target.value })}
-            placeholder="e.g., PRJ301"
+            placeholder="VD: PRJ301"
             required
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="semester">Semester</Label>
+          <Label htmlFor="semester">Học kỳ</Label>
           <Select value={formData.semester} onValueChange={(value) => setFormData({ ...formData, semester: value })}>
             <SelectTrigger>
-              <SelectValue placeholder="Select semester" />
+              <SelectValue placeholder="Chọn học kỳ" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="2024A">2024A</SelectItem>
@@ -616,17 +613,17 @@ const CreateGroupForm = ({ onSubmit, isLoading }: CreateGroupFormProps) => {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="className">Class Name (Optional)</Label>
+        <Label htmlFor="className">Tên lớp (Tùy chọn)</Label>
         <Input
           id="className"
           value={formData.className}
           onChange={(e) => setFormData({ ...formData, className: e.target.value })}
-          placeholder="e.g., SE1730"
+          placeholder="VD: SE1730"
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="maxMembers">Maximum Members</Label>
+        <Label htmlFor="maxMembers">Số thành viên tối đa</Label>
         <Input
           id="maxMembers"
           type="number"
@@ -645,7 +642,7 @@ const CreateGroupForm = ({ onSubmit, isLoading }: CreateGroupFormProps) => {
           onChange={(e) => setFormData({ ...formData, isPublic: e.target.checked })}
           className="rounded"
         />
-        <Label htmlFor="isPublic">Public group (visible to all students)</Label>
+        <Label htmlFor="isPublic">Nhóm công khai (hiển thị với tất cả sinh viên)</Label>
       </div>
 
       <div className="flex items-center space-x-2">
@@ -656,15 +653,15 @@ const CreateGroupForm = ({ onSubmit, isLoading }: CreateGroupFormProps) => {
           onChange={(e) => setFormData({ ...formData, allowSelfJoin: e.target.checked })}
           className="rounded"
         />
-        <Label htmlFor="allowSelfJoin">Allow students to join without invitation</Label>
+        <Label htmlFor="allowSelfJoin">Cho phép sinh viên tham gia mà không cần lời mời</Label>
       </div>
 
       <div className="flex justify-end space-x-2 pt-4">
         <Button type="button" variant="outline">
-          Cancel
+          Hủy
         </Button>
         <Button type="submit" disabled={isLoading}>
-          {isLoading ? 'Creating...' : 'Create Group'}
+          {isLoading ? 'Đang tạo...' : 'Tạo Nhóm'}
         </Button>
       </div>
     </form>

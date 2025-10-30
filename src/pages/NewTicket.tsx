@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { UnifiedTicketCreation } from "@/components/UnifiedTicketCreation";
 import { AuthService, UserProfile } from "@/services/authService";
 import { AITriageResult, TicketFormData, TicketService } from "@/services/ticketService";
+import { t } from "@/lib/translations";
 import {
   ArrowLeft
 } from "lucide-react";
@@ -84,7 +85,7 @@ const NewTicket = () => {
     e.preventDefault();
 
     if (!user) {
-      toast.error("You must be logged in to create a ticket");
+      toast.error(t("tickets.createFailed"));
       return;
     }
 
@@ -100,10 +101,10 @@ const NewTicket = () => {
     try {
       const createdTicket = await TicketService.createTicket(formData, user.id);
 
-      toast.success("Ticket created successfully!");
+      toast.success(t("tickets.ticketCreated"));
       navigate(`/tickets/${createdTicket.id}`);
     } catch (error: any) {
-      toast.error(error.message || "Failed to create ticket");
+      toast.error(error.message || t("tickets.createFailed"));
     } finally {
       setIsLoading(false);
     }
@@ -114,7 +115,7 @@ const NewTicket = () => {
       <div className="min-h-screen bg-gradient-subtle flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading...</p>
+          <p className="mt-4 text-muted-foreground">{t("loading.loading")}</p>
         </div>
       </div>
     );
@@ -131,7 +132,7 @@ const NewTicket = () => {
           className="mb-6 flex items-center gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Dashboard
+          {t("nav.backToDashboard")}
         </Button>
 
         {/* Unified Ticket Creation */}
@@ -141,7 +142,7 @@ const NewTicket = () => {
             try {
               const session = await AuthService.getCurrentSession();
               if (!session?.user) {
-                toast.error("You must be logged in to create a ticket");
+                toast.error(t("tickets.createFailed"));
                 return;
               }
 

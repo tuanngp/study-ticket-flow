@@ -1,83 +1,66 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { formatDistanceToNow, format } from 'date-fns';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { SmartAvatar } from '@/components/SmartAvatar';
 import { GroupAIAssistant } from '@/components/GroupAIAssistant';
 import { GroupCalendar } from '@/components/GroupCalendar';
 import { GroupGrades } from '@/components/GroupGrades';
 import { GroupTicketCard } from '@/components/GroupTicketCard';
-import { UnifiedTicketCreation } from '@/components/UnifiedTicketCreation';
 import { Pagination } from '@/components/Pagination';
+import { SmartAvatar } from '@/components/SmartAvatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { UnifiedTicketCreation } from '@/components/UnifiedTicketCreation';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
-import { 
-  GroupService, 
-  GroupTicketService, 
-  GroupEventService, 
-  GroupGradeService,
+import {
   GroupChatService,
-  type GroupWithDetails,
-  type GroupMemberWithDetails,
-  type GroupTicketWithDetails,
-  type GroupEventWithDetails,
-  type GroupGradeWithDetails,
-  type GroupChatMessageWithDetails,
-  type GroupTicketType,
+  GroupEventService,
+  GroupGradeService,
+  GroupService,
+  GroupTicketService,
+  type GradeType,
   type GroupEventType,
-  type GradeType
+  type GroupMemberWithDetails,
+  type GroupTicketType
 } from '@/services/groupService';
-import { toast } from 'sonner';
-import { 
-  Users, 
-  MessageSquare, 
-  Calendar, 
-  Ticket, 
-  Award, 
-  Settings, 
-  Plus,
-  Crown,
-  Shield,
-  UserCheck,
-  User,
-  Clock,
-  CheckCircle,
-  XCircle,
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { format, formatDistanceToNow } from 'date-fns';
+import {
   AlertCircle,
-  Send,
-  MoreHorizontal,
-  Edit,
-  Trash2,
-  UserPlus,
-  UserMinus,
-  Lock,
-  Unlock,
-  Eye,
-  EyeOff,
-  Download,
-  Upload,
   BarChart3,
-  Target,
   BookOpen,
+  CheckCircle,
+  Clock,
+  Copy,
+  Crown,
+  Download,
+  Eye,
   FileText,
   Link,
-  Copy,
+  Lock,
+  MoreHorizontal,
+  Plus,
+  Send,
+  Settings,
   Share2,
-  Bell,
-  BellOff,
-  Star,
-  StarOff
+  Shield,
+  Ticket,
+  Trash2,
+  Upload,
+  User,
+  UserCheck,
+  UserMinus,
+  UserPlus,
+  Users,
+  XCircle
 } from 'lucide-react';
-import { GroupGrades } from '@/components/GroupGrades';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export const GroupDetailPage = () => {
   const { groupId } = useParams<{ groupId: string }>();
@@ -86,10 +69,10 @@ export const GroupDetailPage = () => {
   const { canManageGroups, canGradeStudents, canManageGroupMembers } = usePermissions();
   const queryClient = useQueryClient();
 
-    const [activeTab, setActiveTab] = useState('overview');
-    const [isCreateTicketOpen, setIsCreateTicketOpen] = useState(false);
-    const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
-    const [isCreateGradeOpen, setIsCreateGradeOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [isCreateTicketOpen, setIsCreateTicketOpen] = useState(false);
+  const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
+  const [isCreateGradeOpen, setIsCreateGradeOpen] = useState(false);
   const [isManageGroupOpen, setIsManageGroupOpen] = useState(false);
   const [manageGroupTab, setManageGroupTab] = useState('settings');
   const [groupSettings, setGroupSettings] = useState({
@@ -110,7 +93,7 @@ export const GroupDetailPage = () => {
   const [showCreateTicketForm, setShowCreateTicketForm] = useState(false);
   const [ticketCurrentPage, setTicketCurrentPage] = useState(1);
   const [ticketPageSize, setTicketPageSize] = useState(12);
-    const [newMessage, setNewMessage] = useState('');
+  const [newMessage, setNewMessage] = useState('');
 
   // Fetch group details
   const { data: group, isLoading: isLoadingGroup, error: groupError } = useQuery({
@@ -156,9 +139,9 @@ export const GroupDetailPage = () => {
     queryKey: ['group-tickets', groupId, ticketFilters, ticketCurrentPage, ticketPageSize, ticketSearchQuery],
     queryFn: async () => {
       if (!groupId) return { tickets: [], totalCount: 0, totalPages: 0 };
-      
+
       const tickets = await GroupTicketService.getGroupTickets(groupId);
-      
+
       // Apply filters
       let filteredTickets = tickets;
       if (ticketFilters.status && ticketFilters.status !== 'all') {
@@ -170,7 +153,7 @@ export const GroupDetailPage = () => {
       if (ticketFilters.type && ticketFilters.type !== 'all') {
         filteredTickets = filteredTickets.filter(ticket => ticket.ticketType === ticketFilters.type);
       }
-      
+
       // Apply search
       if (ticketSearchQuery.trim()) {
         filteredTickets = filteredTickets.filter(ticket =>
@@ -179,14 +162,14 @@ export const GroupDetailPage = () => {
           ticket.ticketType?.toLowerCase().includes(ticketSearchQuery.toLowerCase())
         );
       }
-      
+
       // Apply pagination
       const totalCount = filteredTickets.length;
       const totalPages = Math.ceil(totalCount / ticketPageSize);
       const startIndex = (ticketCurrentPage - 1) * ticketPageSize;
       const endIndex = startIndex + ticketPageSize;
       const paginatedTickets = filteredTickets.slice(startIndex, endIndex);
-      
+
       return {
         tickets: paginatedTickets,
         totalCount,
@@ -287,12 +270,12 @@ export const GroupDetailPage = () => {
         ...oldData,
         ...updatedGroup
       }));
-      
+
       queryClient.invalidateQueries({ queryKey: ['group', groupId] });
       queryClient.invalidateQueries({ queryKey: ['user-groups'] });
       // Force refetch the group data
       queryClient.refetchQueries({ queryKey: ['group', groupId] });
-      
+
       toast.success('Group settings updated successfully!');
       setIsManageGroupOpen(false);
     },
@@ -316,7 +299,7 @@ export const GroupDetailPage = () => {
 
   // Update member role mutation
   const updateMemberRoleMutation = useMutation({
-    mutationFn: ({ memberId, newRole }: { memberId: string; newRole: string }) => 
+    mutationFn: ({ memberId, newRole }: { memberId: string; newRole: string }) =>
       GroupService.updateMemberRole(groupId!, memberId, newRole as any, user!.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-members', groupId] });
@@ -402,8 +385,8 @@ export const GroupDetailPage = () => {
           {groupError ? 'Access Denied' : 'Group not found'}
         </h1>
         <p className="text-muted-foreground mb-4">
-          {groupError 
-            ? 'You do not have permission to view this group.' 
+          {groupError
+            ? 'You do not have permission to view this group.'
             : 'The group you are looking for does not exist.'
           }
         </p>
@@ -452,9 +435,9 @@ export const GroupDetailPage = () => {
             </p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
-          <GroupAIAssistant 
+          <GroupAIAssistant
             groupId={groupId!}
             groupName={group.name}
             courseCode={group.courseCode}
@@ -482,7 +465,7 @@ export const GroupDetailPage = () => {
                 {group.description || 'No description provided'}
               </p>
             </div>
-            
+
             <div>
               <h4 className="font-semibold mb-2">Settings</h4>
               <div className="space-y-1">
@@ -498,7 +481,7 @@ export const GroupDetailPage = () => {
                 </div>
               </div>
             </div>
-            
+
             <div>
               <h4 className="font-semibold mb-2">Instructor</h4>
               {group.instructor ? (
@@ -625,7 +608,7 @@ export const GroupDetailPage = () => {
                           Create a new event for the group.
                         </DialogDescription>
                       </DialogHeader>
-                      <CreateEventForm 
+                      <CreateEventForm
                         onSubmit={(data) => createEventMutation.mutate(data)}
                         isLoading={createEventMutation.isPending}
                       />
@@ -679,7 +662,7 @@ export const GroupDetailPage = () => {
                         Record a grade for a group member.
                       </DialogDescription>
                     </DialogHeader>
-                    <CreateGradeForm 
+                    <CreateGradeForm
                       members={members || []}
                       onSubmit={(data) => createGradeMutation.mutate(data)}
                       isLoading={createGradeMutation.isPending}
@@ -873,7 +856,7 @@ export const GroupDetailPage = () => {
                       />
                     ))}
                   </div>
-                  
+
                   {/* Pagination */}
                   {ticketsData.totalPages > 1 && (
                     <div className="mt-6">
@@ -913,7 +896,7 @@ export const GroupDetailPage = () => {
 
         {/* Events Tab */}
         <TabsContent value="events" className="space-y-6">
-          <GroupCalendar 
+          <GroupCalendar
             groupId={groupId!}
             groupName={group.name}
             courseCode={group.courseCode}
@@ -922,7 +905,7 @@ export const GroupDetailPage = () => {
 
         {/* Grades Tab */}
         <TabsContent value="grades" className="space-y-6">
-          <GroupGrades 
+          <GroupGrades
             groupId={groupId!}
             groupName={group.name}
             courseCode={group.courseCode}
@@ -959,7 +942,7 @@ export const GroupDetailPage = () => {
                         <div className="flex items-center gap-2">
                           <p className="font-medium text-sm">{message.user.fullName}</p>
                           <p className="text-xs text-muted-foreground">
-                            {message.createdAt 
+                            {message.createdAt
                               ? `${message.createdAt ? formatDistanceToNow(new Date(message.createdAt)) : 'Unknown time'} ago`
                               : 'Just now'
                             }
@@ -982,7 +965,7 @@ export const GroupDetailPage = () => {
                   placeholder="Type a message..."
                   onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                 />
-                <Button 
+                <Button
                   onClick={handleSendMessage}
                   disabled={!newMessage.trim() || sendMessageMutation.isPending}
                 >
@@ -1006,7 +989,7 @@ export const GroupDetailPage = () => {
               Comprehensive group management with advanced features
             </DialogDescription>
           </DialogHeader>
-          
+
           {/* Management Tabs */}
           <Tabs value={manageGroupTab} onValueChange={setManageGroupTab} className="w-full">
             <TabsList className="grid w-full grid-cols-6">
@@ -1025,7 +1008,7 @@ export const GroupDetailPage = () => {
                   <Settings className="h-5 w-5" />
                   Group Settings
                 </h3>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="groupName">Group Name</Label>
@@ -1047,7 +1030,7 @@ export const GroupDetailPage = () => {
                     />
                   </div>
                 </div>
-                
+
                 <div>
                   <Label htmlFor="description">Description</Label>
                   <Textarea
@@ -1061,18 +1044,18 @@ export const GroupDetailPage = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-center space-x-2">
-                    <input 
-                      type="checkbox" 
-                      id="isPublic" 
+                    <input
+                      type="checkbox"
+                      id="isPublic"
                       checked={groupSettings.isPublic}
                       onChange={(e) => setGroupSettings(prev => ({ ...prev, isPublic: e.target.checked }))}
                     />
                     <Label htmlFor="isPublic">Public Group</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <input 
-                      type="checkbox" 
-                      id="allowSelfJoin" 
+                    <input
+                      type="checkbox"
+                      id="allowSelfJoin"
                       checked={groupSettings.allowSelfJoin}
                       onChange={(e) => setGroupSettings(prev => ({ ...prev, allowSelfJoin: e.target.checked }))}
                     />
@@ -1119,8 +1102,8 @@ export const GroupDetailPage = () => {
                         <div className="flex items-center gap-1">
                           {canManageGroupMembers && (
                             <>
-                              <Select 
-                                value={member.role} 
+                              <Select
+                                value={member.role}
                                 onValueChange={(newRole) => handleUpdateMemberRole(member.id, newRole)}
                               >
                                 <SelectTrigger className="w-32">
@@ -1134,8 +1117,8 @@ export const GroupDetailPage = () => {
                                   )}
                                 </SelectContent>
                               </Select>
-                              <Button 
-                                variant="outline" 
+                              <Button
+                                variant="outline"
                                 size="sm"
                                 onClick={() => handleRemoveMember(member.id)}
                                 disabled={member.role === 'instructor'}
@@ -1159,7 +1142,7 @@ export const GroupDetailPage = () => {
                   <Shield className="h-5 w-5" />
                   Permission Settings
                 </h3>
-                
+
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <h4 className="font-medium">Member Permissions</h4>
@@ -1211,7 +1194,7 @@ export const GroupDetailPage = () => {
                   <BarChart3 className="h-5 w-5" />
                   Group Analytics
                 </h3>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <Card>
                     <CardHeader className="pb-2">
@@ -1349,7 +1332,7 @@ export const GroupDetailPage = () => {
                   <Settings className="h-5 w-5" />
                   Advanced Settings
                 </h3>
-                
+
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <h4 className="font-medium">Notifications</h4>

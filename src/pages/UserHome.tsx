@@ -1,5 +1,6 @@
 import { KnowledgeBaseCard } from '@/components/KnowledgeBaseCard';
 import { KnowledgeBaseQuickActions } from '@/components/KnowledgeBaseQuickActions';
+import { FullPageLoadingSpinner } from '@/components/LoadingSpinner';
 import { StatsCards } from '@/components/StatsCards';
 import { TicketList } from '@/components/TicketList';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,7 @@ import { UserHomeSidebar } from '@/components/UserHomeSidebar';
 import { useAuth } from '@/hooks/useAuth';
 import { BarChart3, Calendar, Plus, Ticket, Users } from 'lucide-react';
 import { useEffect } from 'react';
-import { FullPageLoadingSpinner } from '@/components/LoadingSpinner';
+import { useNavigate } from 'react-router-dom';
 
 const UserHome = () => {
   const navigate = useNavigate();
@@ -35,9 +36,9 @@ const UserHome = () => {
             {/* Header */}
             <div className="flex justify-between items-center mb-8">
               <div>
-                <h1 className="text-3xl font-bold mb-2">Welcome Home</h1>
+                <h1 className="text-3xl font-bold mb-2">Chào mừng trở lại</h1>
                 <p className="text-muted-foreground">
-                  Hello, {profile?.full_name || user?.email}! Here's your overview.
+                  Xin chào, {profile?.full_name || user?.email}! Đây là tổng quan của bạn.
                 </p>
               </div>
               <Button
@@ -45,7 +46,7 @@ const UserHome = () => {
                 className="bg-gradient-primary hover:shadow-glow"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                New Ticket
+                Tạo Ticket
               </Button>
             </div>
 
@@ -60,10 +61,10 @@ const UserHome = () => {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Ticket className="h-5 w-5" />
-                      Recent Tickets
+                      Ticket Gần Đây
                     </CardTitle>
                     <CardDescription>
-                      Your latest ticket activity
+                      Hoạt động ticket mới nhất của bạn
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -78,10 +79,10 @@ const UserHome = () => {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Users className="h-5 w-5" />
-                      Quick Actions
+                      Thao Tác Nhanh
                     </CardTitle>
                     <CardDescription>
-                      Common tasks and shortcuts
+                      Các tác vụ và phím tắt thường dùng
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -91,7 +92,7 @@ const UserHome = () => {
                       onClick={() => navigate("/tickets/new")}
                     >
                       <Plus className="h-4 w-4" />
-                      Create Ticket
+                      Tạo Ticket
                     </Button>
                     <Button
                       variant="outline"
@@ -99,7 +100,7 @@ const UserHome = () => {
                       onClick={() => navigate("/analytics")}
                     >
                       <BarChart3 className="h-4 w-4" />
-                      View Analytics
+                      Xem Phân Tích
                     </Button>
                     <Button
                       variant="outline"
@@ -107,7 +108,7 @@ const UserHome = () => {
                       onClick={() => navigate("/calendar")}
                     >
                       <Calendar className="h-4 w-4" />
-                      Open Calendar
+                      Mở Lịch
                     </Button>
                   </CardContent>
                 </Card>
@@ -123,16 +124,16 @@ const UserHome = () => {
                 {/* Profile Summary */}
                 <Card className="shadow-md">
                   <CardHeader>
-                    <CardTitle>Profile Summary</CardTitle>
+                    <CardTitle>Tóm Tắt Hồ Sơ</CardTitle>
                     <CardDescription>
-                      Your account information
+                      Thông tin tài khoản của bạn
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Role:</span>
+                      <span className="text-sm text-muted-foreground">Vai trò:</span>
                       <span className="text-sm font-medium capitalize">
-                        {profile?.role || "student"}
+                        {profile?.role === 'student' ? 'Sinh viên' : profile?.role === 'instructor' ? 'Giảng viên' : profile?.role === 'admin' ? 'Quản trị viên' : profile?.role}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -142,9 +143,9 @@ const UserHome = () => {
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Member since:</span>
+                      <span className="text-sm text-muted-foreground">Thành viên từ:</span>
                       <span className="text-sm font-medium">
-                        {new Date(user?.created_at).toLocaleDateString()}
+                        {new Date(user?.created_at).toLocaleDateString('vi-VN')}
                       </span>
                     </div>
                   </CardContent>

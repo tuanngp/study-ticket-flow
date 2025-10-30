@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
+import { t } from '@/lib/translations';
 
 const CalendarPage: React.FC = () => {
   const { user } = useAuth();
@@ -95,14 +96,14 @@ const CalendarPage: React.FC = () => {
           </Button>
         </div>
         <div>
-          <h1 className="text-3xl font-bold">Calendar</h1>
+          <h1 className="text-3xl font-bold">{t("calendar.title")}</h1>
           <p className="text-muted-foreground">
-            Manage your events and track your schedule
+            Quản lý sự kiện và theo dõi lịch trình của bạn
           </p>
         </div>
         <Button onClick={() => handleCreateEvent(new Date())}>
           <Plus className="h-4 w-4 mr-2" />
-          Create Event
+          {t("calendar.addEvent")}
         </Button>
       </div>
 

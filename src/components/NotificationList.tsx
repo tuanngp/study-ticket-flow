@@ -73,18 +73,18 @@ export const NotificationList: FC<NotificationListProps> = ({
     return (
       <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
         <div className="text-6xl mb-4">🔔</div>
-        <h3 className="text-lg font-semibold mb-2">No notifications</h3>
-        <p className="text-sm">You're all caught up!</p>
+        <h3 className="text-lg font-semibold mb-2">Không có thông báo</h3>
+        <p className="text-sm">Bạn đã xem hết rồi!</p>
       </div>
     );
   }
 
   return (
     <div>
-      {renderGroup("Today", groupedNotifications.today)}
-      {renderGroup("Yesterday", groupedNotifications.yesterday)}
-      {renderGroup("This Week", groupedNotifications.thisWeek)}
-      {renderGroup("Older", groupedNotifications.older)}
+      {renderGroup("Hôm nay", groupedNotifications.today)}
+      {renderGroup("Hôm qua", groupedNotifications.yesterday)}
+      {renderGroup("Tuần này", groupedNotifications.thisWeek)}
+      {renderGroup("Cũ hơn", groupedNotifications.older)}
     </div>
   );
 };

@@ -72,10 +72,10 @@ export const KnowledgeBaseCard: React.FC<KnowledgeBaseCardProps> = ({ instructor
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <BookOpen className="h-5 w-5" />
-                        My Knowledge Base
+                        Kho Kiến Thức Của Tôi
                     </CardTitle>
                     <CardDescription>
-                        Manage your saved answers and knowledge entries
+                        Quản lý câu trả lời đã lưu và các mục kiến thức
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -91,10 +91,10 @@ export const KnowledgeBaseCard: React.FC<KnowledgeBaseCardProps> = ({ instructor
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <BookOpen className="h-5 w-5" />
-                    My Knowledge Base
+                    Kho Kiến Thức Của Tôi
                 </CardTitle>
                 <CardDescription>
-                    Manage your saved answers and knowledge entries
+                    Quản lý câu trả lời đã lưu và các mục kiến thức
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -106,7 +106,7 @@ export const KnowledgeBaseCard: React.FC<KnowledgeBaseCardProps> = ({ instructor
                             {stats.totalEntries}
                         </div>
                         <div className="text-xs text-muted-foreground text-center mt-1">
-                            Total Entries
+                            Tổng Mục
                         </div>
                     </div>
 
@@ -116,7 +116,7 @@ export const KnowledgeBaseCard: React.FC<KnowledgeBaseCardProps> = ({ instructor
                             {stats.totalViews}
                         </div>
                         <div className="text-xs text-muted-foreground text-center mt-1">
-                            Total Views
+                            Tổng Lượt Xem
                         </div>
                     </div>
 
@@ -126,7 +126,7 @@ export const KnowledgeBaseCard: React.FC<KnowledgeBaseCardProps> = ({ instructor
                             {stats.avgHelpfulPercentage.toFixed(0)}%
                         </div>
                         <div className="text-xs text-muted-foreground text-center mt-1">
-                            Avg Helpful
+                            TB Hữu Ích
                         </div>
                     </div>
                 </div>
@@ -135,14 +135,14 @@ export const KnowledgeBaseCard: React.FC<KnowledgeBaseCardProps> = ({ instructor
                 {stats.totalEntries === 0 ? (
                     <div className="text-center py-4">
                         <p className="text-sm text-muted-foreground mb-3">
-                            You haven't created any knowledge entries yet. Start by answering tickets and saving your responses to the knowledge base.
+                            Bạn chưa tạo mục kiến thức nào. Bắt đầu bằng cách trả lời ticket và lưu câu trả lời vào kho kiến thức.
                         </p>
                         <Button
                             variant="outline"
                             onClick={() => navigate('/dashboard')}
                             className="w-full"
                         >
-                            View Tickets
+                            Xem Ticket
                         </Button>
                     </div>
                 ) : (
@@ -151,7 +151,7 @@ export const KnowledgeBaseCard: React.FC<KnowledgeBaseCardProps> = ({ instructor
                         className="w-full bg-gradient-primary hover:shadow-glow"
                     >
                         <TrendingUp className="h-4 w-4 mr-2" />
-                        Manage Entries
+                        Quản Lý Mục
                     </Button>
                 )}
             </CardContent>

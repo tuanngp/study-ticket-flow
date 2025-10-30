@@ -43,6 +43,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookOpen, Edit, Eye, History as HistoryIcon, Loader2, Search, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
+import { t } from "@/lib/translations";
 
 // Type that matches actual database response (snake_case)
 type KnowledgeEntry = {
@@ -314,7 +315,7 @@ export const KnowledgeEntryManager: React.FC<KnowledgeEntryManagerProps> = ({
                 <div className="flex-1 relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder="Search questions and answers..."
+                        placeholder={t("knowledgeBaseSection.searchQuestionsAndAnswers")}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-10"
@@ -471,7 +472,7 @@ export const KnowledgeEntryManager: React.FC<KnowledgeEntryManagerProps> = ({
                                                         variant="ghost"
                                                         size="sm"
                                                         onClick={() => handleViewHistory(entry)}
-                                                        title="View version history"
+                                                        title={t("knowledgeBaseSection.viewVersionHistory")}
                                                     >
                                                         <HistoryIcon className="h-4 w-4" />
                                                     </Button>
@@ -480,7 +481,7 @@ export const KnowledgeEntryManager: React.FC<KnowledgeEntryManagerProps> = ({
                                                     variant="ghost"
                                                     size="sm"
                                                     onClick={() => handleEditClick(entry)}
-                                                    title="Edit entry"
+                                                    title={t("knowledgeBaseSection.editEntry")}
                                                 >
                                                     <Edit className="h-4 w-4" />
                                                 </Button>
@@ -489,7 +490,7 @@ export const KnowledgeEntryManager: React.FC<KnowledgeEntryManagerProps> = ({
                                                     size="sm"
                                                     onClick={() => handleDeleteClick(entry)}
                                                     className="text-destructive hover:text-destructive"
-                                                    title="Delete entry"
+                                                    title={t("knowledgeBaseSection.deleteEntry")}
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
@@ -674,10 +675,10 @@ export const KnowledgeEntryManager: React.FC<KnowledgeEntryManagerProps> = ({
                             {deleteMutation.isPending ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Deleting...
+                                    {t("deleting")}
                                 </>
                             ) : (
-                                "Delete"
+                                t("actions.delete")
                             )}
                         </AlertDialogAction>
                     </AlertDialogFooter>

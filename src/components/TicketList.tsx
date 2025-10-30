@@ -1,17 +1,18 @@
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PaginatedTickets, Ticket, TicketOperationsService } from "@/services/ticketOperationsService";
+import { t } from "@/lib/translations";
+import { formatDistanceToNow } from "date-fns";
+import { BookOpen, Brain, Clock, Edit, Filter, Search, Trash2, User, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { formatDistanceToNow } from "date-fns";
-import { Clock, User, Brain, BookOpen, Users, AlertCircle, CheckCircle, Filter, Search, X, Star, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { TicketOperationsService, Ticket, PaginatedTickets } from "@/services/ticketOperationsService";
-import { ReviewSummary } from "./ReviewButton";
 import { Pagination } from "./Pagination";
+import { ReviewSummary } from "./ReviewButton";
 
 interface TicketListProps {
   userId: string;
@@ -39,7 +40,7 @@ export const TicketList = ({ userId }: TicketListProps) => {
   });
   const [showFilters, setShowFilters] = useState(false);
   const [deletingTicketId, setDeletingTicketId] = useState<string | null>(null);
-  
+
   // Pagination state
   const [pagination, setPagination] = useState<PaginatedTickets>({
     tickets: [],
@@ -58,11 +59,11 @@ export const TicketList = ({ userId }: TicketListProps) => {
       const { success, error } = await TicketOperationsService.deleteTicket(ticketId, userId);
 
       if (!success) {
-        toast.error(error || "Failed to delete ticket");
+        toast.error(error || "Không thể xóa ticket");
         return;
       }
 
-      toast.success("Ticket deleted successfully");
+      toast.success("Xóa ticket thành công");
       // Refresh the ticket list with current pagination
       const queryOptions: any = {
         page: currentPage,
@@ -88,7 +89,7 @@ export const TicketList = ({ userId }: TicketListProps) => {
       setTickets(paginatedData.tickets);
       setFilteredTickets(paginatedData.tickets);
     } catch (error: any) {
-      toast.error(error.message || "Failed to delete ticket");
+      toast.error(error.message || "Không thể xóa ticket");
     } finally {
       setDeletingTicketId(null);
     }
@@ -108,10 +109,10 @@ export const TicketList = ({ userId }: TicketListProps) => {
   };
 
   const canDeleteTicket = (ticket: Ticket) => {
-    return ticket.creator_id === userId && 
-           ticket.status !== 'resolved' && 
-           ticket.status !== 'closed' && 
-           ticket.status !== 'deleted';
+    return ticket.creator_id === userId &&
+      ticket.status !== 'resolved' &&
+      ticket.status !== 'closed' &&
+      ticket.status !== 'deleted';
   };
 
   useEffect(() => {
@@ -163,7 +164,7 @@ export const TicketList = ({ userId }: TicketListProps) => {
 
     // Search filter (client-side only)
     if (filters.search) {
-      filtered = filtered.filter(ticket => 
+      filtered = filtered.filter(ticket =>
         ticket.title.toLowerCase().includes(filters.search.toLowerCase()) ||
         ticket.description.toLowerCase().includes(filters.search.toLowerCase())
       );
@@ -227,7 +228,7 @@ export const TicketList = ({ userId }: TicketListProps) => {
   if (tickets.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
-        <p>No tickets found. Create your first ticket to get started!</p>
+        <p>Không tìm thấy ticket nào. Tạo ticket đầu tiên để bắt đầu!</p>
       </div>
     );
   }
@@ -240,9 +241,9 @@ export const TicketList = ({ userId }: TicketListProps) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4" />
-              <span className="font-medium">Filters</span>
+              <span className="font-medium">Bộ Lọc</span>
               <Badge variant="outline" className="text-xs">
-                {filteredTickets.length} of {tickets.length} tickets
+                {filteredTickets.length} trong {tickets.length} ticket
               </Badge>
             </div>
             <div className="flex items-center gap-2">
@@ -252,7 +253,7 @@ export const TicketList = ({ userId }: TicketListProps) => {
                 onClick={() => setShowFilters(!showFilters)}
               >
                 <Filter className="h-4 w-4 mr-2" />
-                {showFilters ? 'Hide' : 'Show'} Filters
+                {showFilters ? 'Ẩn' : 'Hiện'} Bộ Lọc
               </Button>
               <Button
                 variant="ghost"
@@ -261,7 +262,7 @@ export const TicketList = ({ userId }: TicketListProps) => {
                 disabled={Object.values(filters).every(v => v === 'all' || v === '')}
               >
                 <X className="h-4 w-4 mr-2" />
-                Clear
+                Xóa
               </Button>
             </div>
           </div>
@@ -272,11 +273,11 @@ export const TicketList = ({ userId }: TicketListProps) => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               {/* Search */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">Search</label>
+                <label className="text-sm font-medium">Tìm kiếm</label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search tickets..."
+                    placeholder="Tìm kiếm ticket..."
                     value={filters.search}
                     onChange={(e) => handleFilterChange('search', e.target.value)}
                     className="pl-9"
@@ -286,64 +287,64 @@ export const TicketList = ({ userId }: TicketListProps) => {
 
               {/* Status Filter */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">Status</label>
+                <label className="text-sm font-medium">Trạng thái</label>
                 <Select value={filters.status} onValueChange={(value) => handleFilterChange('status', value)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="All Status" />
+                    <SelectValue placeholder="Tất cả trạng thái" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="open">Open</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="resolved">Resolved</SelectItem>
-                    <SelectItem value="closed">Closed</SelectItem>
+                    <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                    <SelectItem value="open">Mở</SelectItem>
+                    <SelectItem value="in_progress">Đang xử lý</SelectItem>
+                    <SelectItem value="resolved">Đã giải quyết</SelectItem>
+                    <SelectItem value="closed">Đã đóng</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {/* Priority Filter */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">Priority</label>
+                <label className="text-sm font-medium">Mức độ ưu tiên</label>
                 <Select value={filters.priority} onValueChange={(value) => handleFilterChange('priority', value)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="All Priority" />
+                    <SelectValue placeholder="Tất cả mức độ" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Priority</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="critical">Critical</SelectItem>
+                    <SelectItem value="all">Tất cả mức độ</SelectItem>
+                    <SelectItem value="low">Thấp</SelectItem>
+                    <SelectItem value="medium">Trung bình</SelectItem>
+                    <SelectItem value="high">Cao</SelectItem>
+                    <SelectItem value="critical">Khẩn cấp</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {/* Type Filter */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">Type</label>
+                <label className="text-sm font-medium">Loại</label>
                 <Select value={filters.type} onValueChange={(value) => handleFilterChange('type', value)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="All Types" />
+                    <SelectValue placeholder="Tất cả loại" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="bug">Bug</SelectItem>
-                    <SelectItem value="feature">Feature</SelectItem>
-                    <SelectItem value="question">Question</SelectItem>
-                    <SelectItem value="task">Task</SelectItem>
+                    <SelectItem value="all">Tất cả loại</SelectItem>
+                    <SelectItem value="bug">Lỗi</SelectItem>
+                    <SelectItem value="feature">Tính năng</SelectItem>
+                    <SelectItem value="question">Câu hỏi</SelectItem>
+                    <SelectItem value="task">Nhiệm vụ</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {/* Course Code Filter */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">Course</label>
+                <label className="text-sm font-medium">Môn học</label>
                 <Select value={filters.courseCode} onValueChange={(value) => handleFilterChange('courseCode', value)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="All Courses" />
+                    <SelectValue placeholder="Tất cả môn học" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Courses</SelectItem>
+                    <SelectItem value="all">Tất cả môn học</SelectItem>
                     {getUniqueCourseCodes().map((code) => (
                       <SelectItem key={code} value={code}>
                         {code}
@@ -361,9 +362,9 @@ export const TicketList = ({ userId }: TicketListProps) => {
       {filteredTickets.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <Filter className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p>No tickets match your current filters.</p>
+          <p>Không có ticket nào phù hợp với bộ lọc hiện tại.</p>
           <Button variant="outline" onClick={clearFilters} className="mt-2">
-            Clear Filters
+            Xóa Bộ Lọc
           </Button>
         </div>
       ) : (
@@ -374,7 +375,7 @@ export const TicketList = ({ userId }: TicketListProps) => {
           >
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between gap-4">
-                <div 
+                <div
                   className="flex-1 min-w-0 cursor-pointer"
                   onClick={() => navigate(`/tickets/${ticket.id}`)}
                 >
@@ -384,7 +385,7 @@ export const TicketList = ({ userId }: TicketListProps) => {
                   <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
                     {ticket.description}
                   </p>
-                  
+
                   {/* Educational Context */}
                   {(ticket as any).courseCode && (
                     <div className="flex items-center gap-2 mb-2">
@@ -405,7 +406,7 @@ export const TicketList = ({ userId }: TicketListProps) => {
                     <div className="flex items-center gap-2 mb-2">
                       <Brain className="h-4 w-4 text-purple-600" />
                       <Badge variant="secondary" className="text-xs">
-                        AI Suggested: {ticket.ai_suggested_priority}
+                        AI Gợi ý: {ticket.ai_suggested_priority === 'low' ? 'Thấp' : ticket.ai_suggested_priority === 'medium' ? 'Trung bình' : ticket.ai_suggested_priority === 'high' ? 'Cao' : ticket.ai_suggested_priority === 'critical' ? 'Khẩn cấp' : ticket.ai_suggested_priority}
                       </Badge>
                     </div>
                   )}
@@ -426,7 +427,7 @@ export const TicketList = ({ userId }: TicketListProps) => {
                     <ReviewSummary ticketId={ticket.id} />
                   </div>
                 </div>
-                
+
                 <div className="flex flex-col gap-2 items-end">
                   <div className="flex gap-2">
                     {canEditTicket(ticket) && (
@@ -465,19 +466,19 @@ export const TicketList = ({ userId }: TicketListProps) => {
                             <Button variant="outline">
                               Cancel
                             </Button>
-                            <Button 
-                              variant="destructive" 
+                            <Button
+                              variant="destructive"
                               onClick={() => handleDeleteTicket(ticket.id)}
                               disabled={deletingTicketId === ticket.id}
                             >
-                              {deletingTicketId === ticket.id ? "Deleting..." : "Delete"}
+                              {deletingTicketId === ticket.id ? t("deleting") : t("actions.delete")}
                             </Button>
                           </div>
                         </DialogContent>
                       </Dialog>
                     )}
                   </div>
-                  
+
                   <Badge className={getPriorityColor(ticket.priority)}>
                     {ticket.priority}
                   </Badge>

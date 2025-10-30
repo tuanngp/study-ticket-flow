@@ -47,11 +47,11 @@ export const UserHomeSidebar = ({ user, profile, onClose, isMobile = false }: Us
     const { error } = await AuthService.signOut();
 
     if (error) {
-      toast.error("Failed to sign out");
+      toast.error("Không thể đăng xuất");
       return;
     }
 
-    toast.success("Signed out successfully");
+    toast.success("Đăng xuất thành công");
     navigate("/");
   };
 

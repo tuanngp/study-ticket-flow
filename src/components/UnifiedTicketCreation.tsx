@@ -4,7 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { normalizeTicketType } from "@/lib/utils";
 import { ImageUploadService } from "@/services/imageUploadService";
+import { Instructor, InstructorService } from "@/services/instructorService";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -38,8 +40,7 @@ import { EnhancedTicketTemplates } from "./EnhancedTicketTemplates";
 import { ImageUpload } from "./ImageUpload";
 import { RichTextEditor } from "./RichTextEditor";
 import { ValidationMessage } from "./ValidationMessage";
-import { InstructorService, Instructor } from "@/services/instructorService";
-import { normalizeTicketType } from "@/lib/utils";
+import { t } from "@/lib/translations";
 
 interface UnifiedTicketCreationProps {
   onSubmit: (data: any) => void;
@@ -213,7 +214,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
           console.log('Uploaded image URLs:', imageUrls);
         } catch (error) {
           console.error('Image upload failed:', error);
-          toast.error('Failed to upload images. Please try again.');
+          toast.error('Không thể tải lên hình ảnh. Vui lòng thử lại.');
           return;
         }
       }
@@ -775,7 +776,7 @@ export const UnifiedTicketCreation = ({ onSubmit, onCancel, initialData }: Unifi
                       <Input
                         value={newTag}
                         onChange={(e) => setNewTag(e.target.value)}
-                        placeholder="Add a tag..."
+                        placeholder={t("knowledgeBaseSection.addTag")}
                         onKeyPress={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
