@@ -46,25 +46,31 @@ const Dashboard = () => {
         status: filters.status && filters.status !== 'all' ? filters.status : undefined,
         priority: filters.priority && filters.priority !== 'all' ? filters.priority : undefined,
         type: filters.type && filters.type !== 'all' ? filters.type : undefined,
-        courseCode: filters.dateRange && filters.dateRange !== 'all' ? filters.dateRange : undefined,
+        dateRange: filters.dateRange && filters.dateRange !== 'all' ? filters.dateRange : undefined,
         includeGroupTickets: true,
       };
 
+      // Debug logging for date range filter
+      if (filters.dateRange && filters.dateRange !== 'all') {
+        console.log('Dashboard: Applying date range filter', {
+          dateRange: filters.dateRange,
+          queryParams
+        });
+      }
+
       if (tab === 'my-tickets') {
-        if (profile?.role === 'instructor' || profile?.role === 'admin') {
-          queryParams.assigneeId = userId;
-        } else {
-          queryParams.creatorId = userId;
-        }
+        // Always show tickets created by the user in "My Tickets" tab
+        // For instructors/admins, they can see assigned tickets in a separate view if needed
+        queryParams.creatorId = userId;
       }
 
       const result = await TicketOperationsService.getTicketsPaginated(queryParams);
 
-      // Sort tickets by created_at ascending (earliest to latest)
+      // Sort tickets by created_at descending (newest first)
       const sortedTickets = (result.tickets || []).sort((a, b) => {
         const dateA = new Date(a.created_at).getTime();
         const dateB = new Date(b.created_at).getTime();
-        return dateA - dateB; // Ascending: earliest first
+        return dateB - dateA; // Descending: newest first
       });
 
       setTickets(sortedTickets);
@@ -82,7 +88,7 @@ const Dashboard = () => {
       setIsLoadingTickets(false);
       fetchingRef.current = false;
     }
-  }, [filters, pageSize, activeTab, profile?.role]);
+  }, [filters, pageSize, activeTab]);
 
   useEffect(() => {
     if (user?.id && !authLoading && isAuthenticated) {
@@ -103,11 +109,11 @@ const Dashboard = () => {
       );
     }
 
-    // Sort by created_at ascending (earliest to latest)
+    // Sort by created_at descending (newest first)
     const sorted = [...filtered].sort((a, b) => {
       const dateA = new Date(a.created_at).getTime();
       const dateB = new Date(b.created_at).getTime();
-      return dateA - dateB; // Ascending: earliest first
+      return dateB - dateA; // Descending: newest first
     });
 
     setFilteredTickets(sorted);
@@ -219,9 +225,7 @@ const Dashboard = () => {
                 <div>
                   <h2 className="text-lg font-bold">
                     {activeTab === 'my-tickets'
-                      ? (user?.role === 'instructor' || user?.role === 'admin'
-                        ? 'Ticket được gán cho tôi'
-                        : 'Ticket của tôi')
+                      ? 'Ticket của tôi'
                       : 'Tất cả ticket trong hệ thống'
                     }
                   </h2>
@@ -260,9 +264,7 @@ const Dashboard = () => {
               </h3>
               <p className="text-muted-foreground">
                 {activeTab === 'my-tickets'
-                  ? (user?.role === 'instructor' || user?.role === 'admin'
-                    ? 'Đang tải tickets được gán cho bạn'
-                    : 'Đang tải tickets của bạn')
+                  ? 'Đang tải tickets của bạn'
                   : 'Đang tải tất cả tickets'
                 }
               </p>
@@ -280,17 +282,13 @@ const Dashboard = () => {
               </div>
               <h3 className="text-lg font-semibold mb-2">
                 {activeTab === 'my-tickets'
-                  ? (user?.role === 'instructor' || user?.role === 'admin'
-                    ? 'Chưa có ticket nào được gán cho bạn'
-                    : 'Chưa có ticket nào của bạn')
+                  ? 'Chưa có ticket nào của bạn'
                   : 'Chưa có ticket nào trong hệ thống'
                 }
               </h3>
               <p className="text-muted-foreground mb-6">
                 {activeTab === 'my-tickets'
-                  ? (user?.role === 'instructor' || user?.role === 'admin'
-                    ? 'Sinh viên sẽ gán ticket cho bạn khi cần hỗ trợ'
-                    : 'Tạo ticket đầu tiên để bắt đầu sử dụng hệ thống')
+                  ? 'Tạo ticket đầu tiên để bắt đầu sử dụng hệ thống'
                   : 'Hệ thống chưa có ticket nào. Hãy tạo ticket đầu tiên!'
                 }
               </p>
@@ -298,10 +296,7 @@ const Dashboard = () => {
                 onClick={() => setShowCreateForm(true)}
                 className="bg-primary text-primary-foreground px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors"
               >
-                {activeTab === 'my-tickets' && (user?.role === 'instructor' || user?.role === 'admin')
-                  ? 'Tạo Ticket Mới'
-                  : 'Tạo Ticket'
-                }
+                Tạo Ticket
               </button>
             </div>
           </div>

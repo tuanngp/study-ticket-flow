@@ -37,6 +37,7 @@ export interface TicketListOptions {
   priority?: string;
   type?: string;
   courseCode?: string;
+  dateRange?: 'today' | 'week' | 'month';
   includeDeleted?: boolean;
   includeGroupTickets?: boolean;
 }
@@ -273,6 +274,50 @@ export class TicketOperationsService {
         query = query.eq("course_code", options.courseCode) as any;
       }
 
+      // Apply date range filter
+      // Logic: Filter from current time going back in time (easier to understand)
+      if (options.dateRange) {
+        const now = new Date();
+        let startDate: Date;
+        const endDate = now; // Always end at current time
+
+        switch (options.dateRange) {
+          case 'today':
+            // Last 24 hours from now
+            startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            break;
+          case 'week':
+            // Last 7 days from now
+            startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            break;
+          case 'month':
+            // Last 30 days from now (approximately 1 month)
+            startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            break;
+          default:
+            startDate = new Date(0); // Beginning of time
+        }
+
+        // Convert to ISO string for Supabase
+        const startISO = startDate.toISOString();
+        const endISO = endDate.toISOString();
+
+        // Debug logging
+        console.log('Date range filter:', {
+          range: options.dateRange,
+          startLocal: startDate.toLocaleString('vi-VN'),
+          endLocal: endDate.toLocaleString('vi-VN'),
+          hoursAgo: options.dateRange === 'today' ? '24' : options.dateRange === 'week' ? '168 (7 days)' : '720 (30 days)',
+          startISO,
+          endISO,
+          nowISO: now.toISOString()
+        });
+
+        // Use both gte and lte for proper date range filtering
+        query = query.gte("created_at", startISO);
+        query = query.lte("created_at", endISO);
+      }
+
       // Always exclude deleted tickets unless specifically requested
       if (!options.includeDeleted) {
         query = query.neq("status", "deleted");
@@ -356,6 +401,7 @@ export class TicketOperationsService {
     }
   }
 
+  
   /**
    * Update ticket status
    */
