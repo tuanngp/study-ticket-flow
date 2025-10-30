@@ -185,7 +185,9 @@ export class TicketOperationsService {
         query = query.neq("status", "deleted");
       }
 
-      // Only show tickets with descriptions (non-empty)
+      // Only show valid tickets: non-empty title and description
+      query = query.not("title", "is", null);
+      query = query.neq("title", "");
       query = query.not("description", "is", null);
       query = query.neq("description", "");
 
@@ -323,9 +325,11 @@ export class TicketOperationsService {
         query = query.neq("status", "deleted");
       }
 
-      // Only show tickets with descriptions (non-empty) - commented out for debugging
-      // query = query.not("description", "is", null);
-      // query = query.neq("description", "");
+      // Only show valid tickets: non-empty title and description
+      query = query.not("title", "is", null);
+      query = query.neq("title", "");
+      query = query.not("description", "is", null);
+      query = query.neq("description", "");
 
       // Exclude tickets with project_group (group tickets) unless specifically requested
       if (!options.includeGroupTickets) {

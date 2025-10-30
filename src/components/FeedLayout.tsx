@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { NotificationBell } from '@/components/NotificationBell';
 import { SmartAvatar } from '@/components/SmartAvatar';
+import { Ticket} from "lucide-react";
 import {
   Search,
   Bell,
@@ -165,7 +166,7 @@ export const FeedLayout = ({ children, onCreateTicket, user, profile, searchQuer
 
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">T</span>
+                <Ticket className="h-4 w-4 text-white" />
               </div>
               <span className="font-bold text-lg">EduTicket AI</span>
             </div>
