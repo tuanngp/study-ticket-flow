@@ -1,4 +1,4 @@
-import React, { FC } from 'react';
+import React, { FC, useEffect, useMemo, useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AvatarGenerator } from '@/components/AvatarGenerator';
 import { cn } from '@/lib/utils';
@@ -34,14 +34,37 @@ export const SmartAvatar: FC<SmartAvatarProps> = ({
   showFallback = true,
   fallbackIcon
 }) => {
+  // Normalize and stabilize src to reduce flicker and handle intermittent failures
+  const [src, setSrc] = useState<string | undefined>(avatarUrl);
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setSrc(avatarUrl);
+    setHasError(false);
+  }, [avatarUrl]);
+
+  const bustedSrc = useMemo(() => {
+    return src;
+  }, [src]);
+
   // If we have an uploaded avatar URL, use the shadcn Avatar component
-  if (avatarUrl) {
+  if (bustedSrc && !hasError) {
     return (
       <Avatar className={cn(sizeConfig[size], className)}>
         <AvatarImage
-          src={avatarUrl}
+          key={bustedSrc}
+          src={bustedSrc}
           alt={name}
           className="object-cover"
+          onError={() => {
+            // Attempt one cache-busted retry if the first load fails
+            if (src && !/([?&])cb=/.test(src)) {
+              const withBust = src + (src.includes('?') ? '&' : '?') + `cb=${Date.now()}`;
+              setSrc(withBust);
+            } else {
+              setHasError(true);
+            }
+          }}
         />
         <AvatarFallback className="text-white font-semibold">
           {getInitials(name)}

@@ -19,7 +19,15 @@ import {
   ThumbsUp,
   User,
   Edit,
-  Trash2
+  Trash2,
+  Code,
+  Settings as SettingsIcon,
+  Award,
+  AlertTriangle,
+  BookOpen,
+  Upload,
+  Wrench,
+  GraduationCap
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -144,6 +152,97 @@ export const GroupTicketCard = ({
         textColor: "text-teal-700 dark:text-teal-300",
         subtextColor: "text-teal-500 dark:text-teal-400"
       },
+      // Educational subtypes
+      coding_error: {
+        icon: Code,
+        title: "Coding Error",
+        subtitle: "No code snippet available",
+        gradient: "from-red-50 to-red-100 dark:from-red-950/20 dark:to-red-900/20",
+        iconBg: "bg-red-100 dark:bg-red-900/30",
+        iconColor: "text-red-600 dark:text-red-400",
+        textColor: "text-red-700 dark:text-red-300",
+        subtextColor: "text-red-500 dark:text-red-400"
+      },
+      project_setup: {
+        icon: SettingsIcon,
+        title: "Project Setup",
+        subtitle: "No setup guide",
+        gradient: "from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20",
+        iconBg: "bg-blue-100 dark:bg-blue-900/30",
+        iconColor: "text-blue-600 dark:text-blue-400",
+        textColor: "text-blue-700 dark:text-blue-300",
+        subtextColor: "text-blue-500 dark:text-blue-400"
+      },
+      concept_question: {
+        icon: HelpCircle,
+        title: "Concept Question",
+        subtitle: "No diagram available",
+        gradient: "from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20",
+        iconBg: "bg-green-100 dark:bg-green-900/30",
+        iconColor: "text-green-600 dark:text-green-400",
+        textColor: "text-green-700 dark:text-green-300",
+        subtextColor: "text-green-500 dark:text-green-400"
+      },
+      grading_issue: {
+        icon: Award,
+        title: "Grading Issue",
+        subtitle: "No rubric available",
+        gradient: "from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20",
+        iconBg: "bg-purple-100 dark:bg-purple-900/30",
+        iconColor: "text-purple-600 dark:text-purple-400",
+        textColor: "text-purple-700 dark:text-purple-300",
+        subtextColor: "text-purple-500 dark:text-purple-400"
+      },
+      system_issue: {
+        icon: AlertTriangle,
+        title: "System Issue",
+        subtitle: "No logs attached",
+        gradient: "from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20",
+        iconBg: "bg-orange-100 dark:bg-orange-900/30",
+        iconColor: "text-orange-600 dark:text-orange-400",
+        textColor: "text-orange-700 dark:text-orange-300",
+        subtextColor: "text-orange-500 dark:text-orange-400"
+      },
+      exam: {
+        icon: FileText,
+        title: "Exam",
+        subtitle: "No exam paper",
+        gradient: "from-teal-50 to-teal-100 dark:from-teal-950/20 dark:to-teal-900/20",
+        iconBg: "bg-teal-100 dark:bg-teal-900/30",
+        iconColor: "text-teal-600 dark:text-teal-400",
+        textColor: "text-teal-700 dark:text-teal-300",
+        subtextColor: "text-teal-500 dark:text-teal-400"
+      },
+      submission: {
+        icon: Upload,
+        title: "Submission",
+        subtitle: "No file uploaded",
+        gradient: "from-cyan-50 to-cyan-100 dark:from-cyan-950/20 dark:to-cyan-900/20",
+        iconBg: "bg-cyan-100 dark:bg-cyan-900/30",
+        iconColor: "text-cyan-600 dark:text-cyan-400",
+        textColor: "text-cyan-700 dark:text-cyan-300",
+        subtextColor: "text-cyan-500 dark:text-cyan-400"
+      },
+      technical: {
+        icon: Wrench,
+        title: "Technical Support",
+        subtitle: "No screenshot available",
+        gradient: "from-slate-50 to-slate-100 dark:from-slate-950/20 dark:to-slate-900/20",
+        iconBg: "bg-slate-100 dark:bg-slate-900/30",
+        iconColor: "text-slate-600 dark:text-slate-400",
+        textColor: "text-slate-700 dark:text-slate-300",
+        subtextColor: "text-slate-500 dark:text-slate-400"
+      },
+      academic: {
+        icon: GraduationCap,
+        title: "Academic Support",
+        subtitle: "No resource attached",
+        gradient: "from-emerald-50 to-emerald-100 dark:from-emerald-950/20 dark:to-emerald-900/20",
+        iconBg: "bg-emerald-100 dark:bg-emerald-900/30",
+        iconColor: "text-emerald-600 dark:text-emerald-400",
+        textColor: "text-emerald-700 dark:text-emerald-300",
+        subtextColor: "text-emerald-500 dark:text-emerald-400"
+      },
       default: {
         icon: FileText,
         title: "No Image",
@@ -156,7 +255,17 @@ export const GroupTicketCard = ({
       }
     };
 
-    return configs[type as keyof typeof configs] || configs.default;
+    // Normalize some base types to educational subtypes for richer placeholders
+    const typeMap: Record<string, keyof typeof configs> = {
+      bug: 'coding_error',
+      task: 'project_setup',
+      question: 'concept_question',
+      grading: 'grading_issue',
+      report: 'system_issue',
+    };
+
+    const normalized = (typeMap[type] as keyof typeof configs) || (type as keyof typeof configs);
+    return configs[normalized] || configs.default;
   };
 
   // Fetch comment count for this ticket

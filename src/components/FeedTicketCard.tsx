@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,8 +19,14 @@ import {
   AlertTriangle,
   BookOpen,
   Award,
+  Upload,
+  Wrench,
+  GraduationCap,
+  Eye,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { LikeService } from '@/services/likeService';
+import { CommentService } from '@/services/commentService';
 
 interface FeedTicketCardProps {
   ticket: {
@@ -61,10 +68,44 @@ export const FeedTicketCard = ({
   onDelete,
   showActions = true
 }: FeedTicketCardProps) => {
+  const navigate = useNavigate();
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
-  // Removed comment count fetching to avoid multiple API calls
+  const [likeCount, setLikeCount] = useState<number>(0);
   const [showComments, setShowComments] = useState(false);
+  const [commentCount, setCommentCount] = useState<number | null>(null);
+
+  // Fetch comment count for each ticket card
+  useEffect(() => {
+    // Likes
+    let unsubLikes: (() => void) | undefined;
+    const loadLikes = async () => {
+      const { count, userLikes } = await LikeService.getLikes(ticket.id);
+      setLikeCount(count);
+      setIsLiked(userLikes);
+    };
+    loadLikes();
+    unsubLikes = LikeService.subscribe(ticket.id, loadLikes);
+
+    let unsubscribe: (() => void) | undefined;
+
+    const fetchCount = async () => {
+      try {
+        const comments = await CommentService.getCommentsByTicketId(ticket.id);
+        setCommentCount(comments.length);
+      } catch (e) {
+        setCommentCount(null);
+      }
+    };
+
+    fetchCount();
+    unsubscribe = CommentService.subscribeToComments(ticket.id, fetchCount);
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+      if (unsubLikes) unsubLikes();
+    };
+  }, [ticket.id]);
 
   // Educational ticket type configurations
   // Maps both UI-friendly names and database enum values to display configs
@@ -161,6 +202,36 @@ export const FeedTicketCard = ({
         iconColor: "text-teal-600 dark:text-teal-400",
         textColor: "text-teal-700 dark:text-teal-300",
         subtextColor: "text-teal-500 dark:text-teal-400"
+      },
+      submission: {
+        icon: Upload,
+        title: "Nộp bài",
+        subtitle: "Vấn đề nộp file",
+        gradient: "from-cyan-50 to-cyan-100 dark:from-cyan-950/20 dark:to-cyan-900/20",
+        iconBg: "bg-cyan-100 dark:bg-cyan-900/30",
+        iconColor: "text-cyan-600 dark:text-cyan-400",
+        textColor: "text-cyan-700 dark:text-cyan-300",
+        subtextColor: "text-cyan-500 dark:text-cyan-400"
+      },
+      technical: {
+        icon: Wrench,
+        title: "Hỗ trợ kỹ thuật",
+        subtitle: "Lỗi môi trường/cài đặt",
+        gradient: "from-slate-50 to-slate-100 dark:from-slate-950/20 dark:to-slate-900/20",
+        iconBg: "bg-slate-100 dark:bg-slate-900/30",
+        iconColor: "text-slate-600 dark:text-slate-400",
+        textColor: "text-slate-700 dark:text-slate-300",
+        subtextColor: "text-slate-500 dark:text-slate-400"
+      },
+      academic: {
+        icon: GraduationCap,
+        title: "Hỗ trợ học tập",
+        subtitle: "Tài nguyên/khái niệm",
+        gradient: "from-emerald-50 to-emerald-100 dark:from-emerald-950/20 dark:to-emerald-900/20",
+        iconBg: "bg-emerald-100 dark:bg-emerald-900/30",
+        iconColor: "text-emerald-600 dark:text-emerald-400",
+        textColor: "text-emerald-700 dark:text-emerald-300",
+        subtextColor: "text-emerald-500 dark:text-emerald-400"
       },
       default: {
         icon: FileText,
@@ -302,10 +373,11 @@ export const FeedTicketCard = ({
             {ticket.title}
           </h3>
           
-          {/* Description - Single line only */}
-          <p className="text-sm text-muted-foreground line-clamp-1">
-            {ticket.description}
-          </p>
+          {/* Description - Single line only, render stored HTML */}
+          <div
+            className="text-sm text-muted-foreground line-clamp-1"
+            dangerouslySetInnerHTML={{ __html: ticket.description }}
+          />
         </div>
 
         {/* Tags - Add spacing from separator */}
@@ -354,25 +426,44 @@ export const FeedTicketCard = ({
               size="sm"
               onClick={(e) => {
                 e.stopPropagation();
-                setIsLiked(!isLiked);
+                // Optimistic toggle
+                setIsLiked((prev) => !prev);
+                setLikeCount((prev) => (isLiked ? Math.max(0, prev - 1) : prev + 1));
+                LikeService.toggleLike(ticket.id).then((res) => {
+                  if (!res.success) {
+                    // Revert on failure
+                    setIsLiked((prev) => !prev);
+                    setLikeCount((prev) => (isLiked ? prev + 1 : Math.max(0, prev - 1)));
+                  }
+                });
               }}
               className={`${isLiked ? 'text-primary' : 'text-muted-foreground'}`}
             >
               <ThumbsUp className="h-4 w-4 mr-1" />
-              <span className="text-xs">12</span>
+              <span className="text-xs">{likeCount}</span>
             </Button>
-            
+            <div className="text-muted-foreground flex items-center gap-1 select-none">
+              <Eye className="h-4 w-4" />
+              <span className="text-xs">{(ticket as any).views_count ?? (ticket as any).viewsCount ?? 0}</span>
+            </div>
+
             <Button
               variant="ghost"
               size="sm"
-              onClick={(e) => {
+              onClick={async (e) => {
                 e.stopPropagation();
-                setShowComments(!showComments);
+                // Count a view when user clicks to open comments directly
+                const { ViewService } = await import('@/services/viewService');
+                await ViewService.increment(ticket.id);
+                navigate(`/tickets/${ticket.id}#comments`);
               }}
               className="text-muted-foreground"
+              aria-label="Xem bình luận"
             >
               <MessageSquare className="h-4 w-4 mr-1" />
-              <span className="text-xs">...</span>
+              {commentCount !== null && (
+                <span className="text-xs">{commentCount}</span>
+              )}
             </Button>
             
             <Button
@@ -398,17 +489,7 @@ export const FeedTicketCard = ({
           </Button>
         </div>
 
-        {/* Comments Section */}
-        {showComments && (
-          <div className="mt-4 pt-4 border-t">
-            <div className="text-sm text-muted-foreground mb-2">
-              Comments
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Click to view full comments in ticket detail
-            </div>
-          </div>
-        )}
+        {/* Optional inline comments preview could go here if desired */}
       </CardContent>
     </Card>
   );

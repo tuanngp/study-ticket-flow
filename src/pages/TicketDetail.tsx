@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/RichTextEditor";
 import type { KnowledgeEntry } from "@/db/schema";
 import { usePermissions } from "@/hooks/usePermissions";
 import { AuthService, UserProfile } from "@/services/authService";
@@ -99,6 +100,18 @@ const TicketDetail = () => {
       }
     }
   }, [ticket]);
+
+  // Scroll to comments if navigated with #comments
+  useEffect(() => {
+    if (!isLoading && ticket) {
+      if (window.location.hash === '#comments') {
+        const el = document.getElementById('comments');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+    }
+  }, [isLoading, ticket]);
 
   // Load instructors when component mounts
   useEffect(() => {
@@ -720,11 +733,10 @@ const TicketDetail = () => {
               </CardHeader>
               <CardContent>
                 {isEditing ? (
-                  <Textarea
+                  <RichTextEditor
                     value={editData.description}
-                    onChange={(e) => setEditData(prev => ({ ...prev, description: e.target.value }))}
+                    onChange={(html) => setEditData(prev => ({ ...prev, description: html }))}
                     placeholder="Ticket description"
-                    className="min-h-[200px]"
                   />
                 ) : (
                   <div className="prose max-w-none">
@@ -749,7 +761,7 @@ const TicketDetail = () => {
               />
             )}
 
-            <Card className="shadow-lg">
+            <Card className="shadow-lg" id="comments">
               <CardHeader>
                 <CardTitle>Comments</CardTitle>
               </CardHeader>

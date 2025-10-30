@@ -210,6 +210,7 @@ export const tickets = pgTable("tickets", {
   // Attachments
   images: text("images").array(),
   tags: text("tags").array(),
+  viewsCount: integer("views_count").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -234,6 +235,24 @@ export const ticketComments = pgTable("ticket_comments", {
     .notNull()
     .defaultNow(),
 });
+
+// Likes table
+export const ticketLikes = pgTable("ticket_likes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ticketId: uuid("ticket_id")
+    .notNull()
+    .references(() => tickets.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+}, (table) => ({
+  uniqueTicketUser: index("idx_ticket_likes_unique").on(table.ticketId, table.userId),
+  ticketIdx: index("idx_ticket_likes_ticket").on(table.ticketId),
+  userIdx: index("idx_ticket_likes_user").on(table.userId),
+}));
 
 // RAG Assistant Tables
 export const documents = pgTable("documents", {
@@ -578,6 +597,7 @@ export const ticketsRelations = relations(tickets, ({ one, many }) => ({
   knowledgeEntries: many(knowledgeEntries),
   knowledgeFeedback: many(knowledgeFeedback),
   knowledgeSuggestions: many(knowledgeSuggestions),
+  likes: many(ticketLikes),
   // Group system relations
   groupTickets: many(groupTickets),
   groupGrades: many(groupGrades),
@@ -590,6 +610,17 @@ export const ticketCommentsRelations = relations(ticketComments, ({ one }) => ({
   }),
   user: one(profiles, {
     fields: [ticketComments.userId],
+    references: [profiles.id],
+  }),
+}));
+
+export const ticketLikesRelations = relations(ticketLikes, ({ one }) => ({
+  ticket: one(tickets, {
+    fields: [ticketLikes.ticketId],
+    references: [tickets.id],
+  }),
+  user: one(profiles, {
+    fields: [ticketLikes.userId],
     references: [profiles.id],
   }),
 }));

@@ -10,6 +10,7 @@ import { FullPageLoadingSpinner } from "@/components/LoadingSpinner";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User, Globe } from "lucide-react";
+import { ViewService } from "@/services/viewService";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -29,11 +30,16 @@ const Dashboard = () => {
   const fetchingRef = useRef(false);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(12);
+  const [pageSize, setPageSize] = useState(12);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 
-  const fetchTickets = useCallback(async (userId: string, page: number = 1, tab: string = activeTab) => {
+  const fetchTickets = useCallback(async (
+    userId: string,
+    page: number = 1,
+    tab: string = activeTab,
+    customLimit?: number
+  ) => {
     if (!userId || fetchingRef.current) return;
 
     try {
@@ -42,7 +48,7 @@ const Dashboard = () => {
 
       let queryParams: any = {
         page,
-        limit: pageSize,
+        limit: customLimit ?? pageSize,
         status: filters.status && filters.status !== 'all' ? filters.status : undefined,
         priority: filters.priority && filters.priority !== 'all' ? filters.priority : undefined,
         type: filters.type && filters.type !== 'all' ? filters.type : undefined,
@@ -140,7 +146,9 @@ const Dashboard = () => {
     }
   }, [user?.id, fetchTickets, currentPage, activeTab]);
 
-  const handleTicketClick = useCallback((ticketId: string) => {
+  const handleTicketClick = useCallback(async (ticketId: string) => {
+    // Increment views and wait to avoid the request being aborted by navigation
+    await ViewService.increment(ticketId);
     navigate(`/tickets/${ticketId}`);
   }, [navigate]);
 
@@ -320,7 +328,7 @@ const Dashboard = () => {
             </div>
 
             {/* Pagination */}
-            {totalPages > 1 && (
+            {totalPages > 0 && (
               <div className="col-span-full mt-8 flex justify-center">
                 <Pagination
                   currentPage={currentPage}
@@ -328,7 +336,13 @@ const Dashboard = () => {
                   totalCount={totalCount}
                   pageSize={pageSize}
                   onPageChange={handlePageChange}
-                  onPageSizeChange={() => { }}
+                  onPageSizeChange={async (size) => {
+                    setPageSize(size);
+                    setCurrentPage(1);
+                    if (user?.id) {
+                      await fetchTickets(user.id, 1, activeTab, size);
+                    }
+                  }}
                   hasNextPage={currentPage < totalPages}
                   hasPreviousPage={currentPage > 1}
                 />
