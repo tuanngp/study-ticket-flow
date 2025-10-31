@@ -1,4 +1,5 @@
 import { SmartAvatar } from '@/components/SmartAvatar';
+import { UserHomeSidebar } from '@/components/UserHomeSidebar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { SidebarProvider } from '@/components/ui/sidebar';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -14,25 +15,22 @@ import { AuthService } from '@/services/authService';
 import { GroupService, type CreateGroupData, type GroupWithDetails } from '@/services/groupService';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
+import { vi } from 'date-fns/locale';
 import {
-  BarChart3,
-  Bell,
   Calendar,
   Crown,
-  LogOut,
+  LogIn,
   Menu,
   MessageSquare,
   Plus,
   Search,
   Settings,
   Shield,
-  Ticket,
   User,
   UserCheck,
-  Users,
-  X
+  Users
 } from 'lucide-react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -48,12 +46,33 @@ export const GroupsPage = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // Fetch user's groups
-  const { data: userGroups, isLoading: isLoadingGroups } = useQuery({
+  // Fetch user's groups (groups they belong to or created)
+  const { data: userGroups, isLoading: isLoadingUserGroups } = useQuery({
     queryKey: ['user-groups', user?.id],
     queryFn: () => GroupService.getUserGroups(user!.id),
     enabled: !!user?.id,
   });
+
+  // Fetch public groups (for all students to discover)
+  const { data: publicGroups, isLoading: isLoadingPublicGroups } = useQuery({
+    queryKey: ['public-groups'],
+    queryFn: () => GroupService.getPublicGroups(),
+  });
+
+  // Combine user groups and public groups, removing duplicates
+  const allGroups = React.useMemo(() => {
+    if (!userGroups && !publicGroups) return [];
+    
+    const userGroupIds = new Set(userGroups?.map(g => g.id) || []);
+    const publicGroupsFiltered = publicGroups?.filter(g => !userGroupIds.has(g.id)) || [];
+    
+    return [
+      ...(userGroups || []),
+      ...publicGroupsFiltered
+    ];
+  }, [userGroups, publicGroups]);
+
+  const isLoadingGroups = isLoadingUserGroups || isLoadingPublicGroups;
 
   // Fetch available courses for filtering
   const { data: availableCourses } = useQuery({
@@ -74,6 +93,7 @@ export const GroupsPage = () => {
     mutationFn: (data: CreateGroupData) => GroupService.createGroup(data, user!.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['public-groups'] });
       setIsCreateDialogOpen(false);
       toast.success('Tạo nhóm thành công!');
     },
@@ -87,6 +107,7 @@ export const GroupsPage = () => {
     mutationFn: (groupId: string) => GroupService.joinGroup(groupId, user!.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['public-groups'] });
       toast.success('Tham gia nhóm thành công!');
     },
     onError: (error: any) => {
@@ -95,14 +116,14 @@ export const GroupsPage = () => {
   });
 
   // Filter groups
-  const filteredGroups = userGroups?.filter(group => {
+  const filteredGroups = allGroups.filter(group => {
     const matchesSearch = group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       group.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCourse = !filterCourse || filterCourse === 'all' || group.courseCode === filterCourse;
     const matchesSemester = !filterSemester || filterSemester === 'all' || group.semester === filterSemester;
 
     return matchesSearch && matchesCourse && matchesSemester;
-  }) || [];
+  });
 
   const handleCreateGroup = (data: CreateGroupData) => {
     createGroupMutation.mutate(data);
@@ -155,147 +176,11 @@ export const GroupsPage = () => {
   }
 
   return (
-    <div className="relative min-h-screen">
-      {/* Floating Hamburger Menu Button */}
-      <Button
-        onClick={() => setIsSidebarOpen(true)}
-        className="fixed bottom-6 left-6 z-50 h-12 w-12 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 bg-primary hover:bg-primary/90"
-        size="icon"
-      >
-        <Menu className="h-6 w-6" />
-      </Button>
-
-      {/* Sidebar Overlay */}
-      {isSidebarOpen && (
-        <>
-          {/* Light overlay */}
-          <div
-            className="fixed inset-0 z-40 bg-black/10"
-            onClick={() => setIsSidebarOpen(false)}
-          />
-
-          {/* Compact Sidebar */}
-          <div className="fixed left-0 top-0 h-full w-64 z-50 bg-card border-r border-border shadow-lg">
-            <SidebarProvider>
-              <div className="h-full flex flex-col">
-                {/* Header */}
-                <div className="p-4 border-b border-border">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <SmartAvatar
-                        name={profile?.full_name || user?.email || 'User'}
-                        avatarUrl={profile?.avatar_url}
-                        size="sm"
-                      />
-                      <div>
-                        <h3 className="font-semibold text-sm">
-                          {profile?.full_name || user?.email}
-                        </h3>
-                        <p className="text-xs text-muted-foreground capitalize">
-                          {profile?.role || "student"}
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setIsSidebarOpen(false)}
-                      className="h-8 w-8"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Navigation */}
-                <div className="flex-1 p-4 space-y-2">
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start gap-3"
-                    onClick={() => {
-                      navigate("/dashboard");
-                      setIsSidebarOpen(false);
-                    }}
-                  >
-                    <Ticket className="h-4 w-4" />
-                    My Tickets
-                  </Button>
-
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start gap-3"
-                    onClick={() => {
-                      navigate("/analytics");
-                      setIsSidebarOpen(false);
-                    }}
-                  >
-                    <BarChart3 className="h-4 w-4" />
-                    Analytics
-                  </Button>
-
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start gap-3"
-                    onClick={() => {
-                      navigate("/calendar");
-                      setIsSidebarOpen(false);
-                    }}
-                  >
-                    <Calendar className="h-4 w-4" />
-                    Calendar
-                  </Button>
-
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start gap-3"
-                    onClick={() => {
-                      navigate("/notifications");
-                      setIsSidebarOpen(false);
-                    }}
-                  >
-                    <Bell className="h-4 w-4" />
-                    Notifications
-                  </Button>
-
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start gap-3"
-                    onClick={() => {
-                      navigate("/settings");
-                      setIsSidebarOpen(false);
-                    }}
-                  >
-                    <Settings className="h-4 w-4" />
-                    Settings
-                  </Button>
-                </div>
-
-                {/* Footer */}
-                <div className="p-4 border-t border-border">
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10"
-                    onClick={async () => {
-                      const { error } = await AuthService.signOut();
-                      if (error) {
-                        toast.error("Không thể đăng xuất");
-                        return;
-                      }
-                      toast.success("Đăng xuất thành công");
-                      navigate("/");
-                    }}
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Đăng xuất
-                  </Button>
-                </div>
-              </div>
-            </SidebarProvider>
-          </div>
-        </>
-      )}
-
-      <div className="container mx-auto p-6 space-y-6">
+    <SidebarProvider>
+      <div className="flex h-screen w-full overflow-hidden">
+        <UserHomeSidebar user={user} profile={profile} isMobile={false} />
+        <SidebarInset className="flex-1 overflow-auto bg-gradient-to-br from-background via-background to-muted/20">
+          <div className="w-full p-6 space-y-6 flex flex-col overflow-x-hidden">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -366,50 +251,61 @@ export const GroupsPage = () => {
         </div>
 
         {/* Groups Grid */}
-        {filteredGroups.length === 0 ? (
-          <div className="text-center py-12">
-            <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Không tìm thấy nhóm</h3>
-            <p className="text-muted-foreground mb-4">
-              {searchTerm || (filterCourse && filterCourse !== 'all') || (filterSemester && filterSemester !== 'all')
-                ? 'Thử điều chỉnh bộ lọc tìm kiếm'
-                : 'Tạo nhóm đầu tiên hoặc tham gia nhóm có sẵn'}
-            </p>
-            {canCreateGroups && (
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Tạo Nhóm
-              </Button>
-            )}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredGroups.map((group) => (
-              <GroupCard
-                key={group.id}
-                group={group}
-                userRole={profile?.role}
-                onGroupClick={handleGroupClick}
-                onJoinGroup={handleJoinGroup}
-                canJoin={canJoinGroups}
-                canManage={canManageGroups}
-                getRoleIcon={getRoleIcon}
-                getRoleColor={getRoleColor}
-              />
-            ))}
-          </div>
-        )}
+        <div className="flex-1 min-h-[500px]">
+          {filteredGroups.length === 0 ? (
+            <div className="text-center py-12">
+              <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Không tìm thấy nhóm</h3>
+              <p className="text-muted-foreground mb-4">
+                {searchTerm || (filterCourse && filterCourse !== 'all') || (filterSemester && filterSemester !== 'all')
+                  ? 'Thử điều chỉnh bộ lọc tìm kiếm'
+                  : 'Tạo nhóm đầu tiên hoặc tham gia nhóm có sẵn'}
+              </p>
+              {canCreateGroups && (
+                <Button onClick={() => setIsCreateDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Tạo Nhóm
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredGroups.map((group) => {
+                // Check if user is already a member of this group
+                const isMember = userGroups?.some(g => g.id === group.id) || false;
+                
+                return (
+                  <GroupCard
+                    key={group.id}
+                    group={group}
+                    userRole={profile?.role}
+                    userId={user?.id}
+                    isMember={isMember}
+                    onGroupClick={handleGroupClick}
+                    onJoinGroup={handleJoinGroup}
+                    canJoin={canJoinGroups}
+                    canManage={canManageGroups}
+                    getRoleIcon={getRoleIcon}
+                    getRoleColor={getRoleColor}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
 
-        {/* Add bottom padding to prevent content from being hidden behind floating button */}
-        <div className="pb-20"></div>
+          </div>
+        </SidebarInset>
       </div>
-    </div>
+    </SidebarProvider>
   );
 };
 
 interface GroupCardProps {
   group: GroupWithDetails;
   userRole?: string;
+  userId?: string;
+  isMember: boolean;
   onGroupClick: (groupId: string) => void;
   onJoinGroup: (groupId: string) => void;
   canJoin: boolean;
@@ -421,6 +317,8 @@ interface GroupCardProps {
 const GroupCard = ({
   group,
   userRole,
+  userId,
+  isMember,
   onGroupClick,
   onJoinGroup,
   canJoin,
@@ -428,8 +326,6 @@ const GroupCard = ({
   getRoleIcon,
   getRoleColor
 }: GroupCardProps) => {
-  const [isJoined, setIsJoined] = useState(false); // This would come from group membership check
-
   const handleCardClick = () => {
     onGroupClick(group.id);
   };
@@ -437,7 +333,11 @@ const GroupCard = ({
   const handleJoinClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onJoinGroup(group.id);
-    setIsJoined(true);
+  };
+
+  const handleEnterClassClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onGroupClick(group.id);
   };
 
   return (
@@ -450,7 +350,7 @@ const GroupCard = ({
           <div className="space-y-1">
             <CardTitle className="text-lg">{group.name}</CardTitle>
             <CardDescription className="line-clamp-2">
-              {group.description || 'No description provided'}
+              {group.description || 'Không có mô tả'}
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
@@ -476,8 +376,8 @@ const GroupCard = ({
               <Calendar className="h-4 w-4" />
               <span>
                 {group.createdAt
-                  ? `${formatDistanceToNow(new Date(group.createdAt))} ago`
-                  : 'Recently created'
+                  ? formatDistanceToNow(new Date(group.createdAt), { addSuffix: true, locale: vi })
+                  : 'Vừa tạo'
                 }
               </span>
             </div>
@@ -485,9 +385,9 @@ const GroupCard = ({
 
           <div className="flex items-center gap-1">
             {group.isPublic ? (
-              <Badge variant="outline" className="text-xs">Public</Badge>
+              <Badge variant="outline" className="text-xs">Công khai</Badge>
             ) : (
-              <Badge variant="outline" className="text-xs">Private</Badge>
+              <Badge variant="outline" className="text-xs">Riêng tư</Badge>
             )}
           </div>
         </div>
@@ -510,7 +410,7 @@ const GroupCard = ({
         )}
 
         {/* Actions */}
-        <div className="flex items-center justify-between pt-2">
+        <div className="flex items-end justify-between pt-2">
           <div className="flex items-center gap-2">
             {canManage && (
               <Button variant="outline" size="sm">
@@ -522,17 +422,20 @@ const GroupCard = ({
             </Button>
           </div>
 
-          {canJoin && !isJoined && (
-            <Button size="sm" onClick={handleJoinClick}>
-              Join Group
-            </Button>
-          )}
+          <div className="flex items-end">
+            {canJoin && !isMember && (
+              <Button size="sm" onClick={handleJoinClick} variant="default" className="h-9 flex items-center justify-center">
+                Tham gia
+              </Button>
+            )}
 
-          {isJoined && (
-            <Badge className="bg-green-500/10 text-green-500 border-green-500/20">
-              Joined
-            </Badge>
-          )}
+            {isMember && (
+              <Button size="sm" onClick={handleEnterClassClick} variant="default" className="h-9 flex items-center justify-center">
+                <LogIn className="h-4 w-4 mr-2" />
+                Vào lớp
+              </Button>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

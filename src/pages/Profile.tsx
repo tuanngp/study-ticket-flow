@@ -18,7 +18,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 const Profile = () => {
-  const { user, profile: authProfile, loading: authLoading } = useAuth();
+  const { user, profile: authProfile, loading: authLoading, refreshAuth } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [formData, setFormData] = useState<UpdateProfileData>({});
@@ -43,8 +43,10 @@ const Profile = () => {
   const updateProfileMutation = useMutation({
     mutationFn: (data: UpdateProfileData) =>
       ProfileService.updateProfile(user!.id, data),
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+      // Refresh auth context to update profile in sidebar
+      await refreshAuth();
       toast.success('Cập nhật hồ sơ thành công');
       setIsEditing(false);
       setEditingSection(null);
@@ -60,6 +62,9 @@ const Profile = () => {
       await ProfileService.updateProfile(user!.id, { avatarUrl: newAvatarUrl });
       setCurrentAvatarUrl(newAvatarUrl);
       queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+      
+      // Refresh auth context to update profile in sidebar
+      await refreshAuth();
     } catch (error: any) {
       toast.error(error.message || 'Không thể cập nhật ảnh đại diện');
     }

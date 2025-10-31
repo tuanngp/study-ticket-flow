@@ -114,8 +114,14 @@ export const Calendar: React.FC<CalendarProps> = ({
     });
   };
 
-  // Get event color
+  // Get event color - prioritize event.color, fallback to type-based color
   const getEventColor = (event: CalendarEvent): string => {
+    // If event has a custom color, use it
+    if (event.color) {
+      return event.color;
+    }
+    
+    // Otherwise, use type-based color mapping
     const colorMap: Record<string, string> = {
       personal: 'bg-blue-500',
       academic: 'bg-green-500',
@@ -272,29 +278,35 @@ export const Calendar: React.FC<CalendarProps> = ({
                 {/* Events and Tickets */}
                 <div className="space-y-1">
                   {/* Events */}
-                  {dayEvents.slice(0, 2).map((event) => (
-                    <div
-                      key={`event-${event.id}`}
-                      className={`
-                        text-xs p-1 rounded cursor-pointer truncate
-                        ${getEventColor(event)} text-white
-                        hover:opacity-80
-                      `}
-                      onClick={(e) => handleEventClick(event, e)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="truncate">{event.title}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-4 w-4 p-0 ml-1 opacity-0 hover:opacity-100"
-                          onClick={(e) => handleDeleteEvent(event.id, e)}
-                        >
-                          <MoreHorizontal className="h-3 w-3" />
-                        </Button>
+                  {dayEvents.slice(0, 2).map((event) => {
+                    const eventColor = getEventColor(event);
+                    const isHexColor = eventColor.startsWith('#');
+                    
+                    return (
+                      <div
+                        key={`event-${event.id}`}
+                        className={`
+                          text-xs p-1 rounded cursor-pointer truncate
+                          ${isHexColor ? '' : eventColor} text-white
+                          hover:opacity-80
+                        `}
+                        style={isHexColor ? { backgroundColor: eventColor } : undefined}
+                        onClick={(e) => handleEventClick(event, e)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="truncate">{event.title}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-4 w-4 p-0 ml-1 opacity-0 hover:opacity-100"
+                            onClick={(e) => handleDeleteEvent(event.id, e)}
+                          >
+                            <MoreHorizontal className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   
                   {/* Tickets */}
                   {dayTickets.slice(0, 2).map((ticket) => (
@@ -327,33 +339,6 @@ export const Calendar: React.FC<CalendarProps> = ({
           })}
         </div>
 
-        {/* Legend */}
-        <div className="mt-4 flex flex-wrap gap-2">
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-blue-500 rounded"></div>
-            <span className="text-xs text-muted-foreground">Personal</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-green-500 rounded"></div>
-            <span className="text-xs text-muted-foreground">Academic</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-yellow-500 rounded"></div>
-            <span className="text-xs text-muted-foreground">Assignment</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-red-500 rounded"></div>
-            <span className="text-xs text-muted-foreground">Exam</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-purple-500 rounded"></div>
-            <span className="text-xs text-muted-foreground">Meeting</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-orange-500 rounded"></div>
-            <span className="text-xs text-muted-foreground">Deadline</span>
-          </div>
-        </div>
       </CardContent>
     </Card>
   );

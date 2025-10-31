@@ -274,7 +274,81 @@ export class GroupService {
   }
 
   /**
-   * Get groups for a user (groups they belong to or created)
+   * Get all public groups (for discovery by all students)
+   */
+  static async getPublicGroups(): Promise<GroupWithDetails[]> {
+    try {
+      // Get all public groups
+      const { data: publicGroups, error: publicError } = await supabase
+        .from('groups')
+        .select('*')
+        .eq('is_public', true)
+        .eq('status', 'active');
+
+      if (publicError) {
+        throw publicError;
+      }
+
+      if (!publicGroups || publicGroups.length === 0) {
+        return [];
+      }
+
+      // Get member counts for all groups
+      const groupIds = publicGroups.map(g => g.id);
+      
+      const { data: memberCounts, error: countError } = await supabase
+        .from('group_members')
+        .select('group_id')
+        .in('group_id', groupIds)
+        .eq('status', 'active');
+
+      if (countError) {
+        throw countError;
+      }
+
+      // Count members per group
+      const memberCountMap = memberCounts?.reduce((acc, member) => {
+        acc[member.group_id] = (acc[member.group_id] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>) || {};
+
+      // Get instructor and creator info
+      const instructorIds = publicGroups.map(g => g.instructor_id).filter(Boolean);
+      const creatorIds = publicGroups.map(g => g.created_by).filter(Boolean);
+      
+      const allUserIds = [...new Set([...instructorIds, ...creatorIds])];
+
+      const { data: users } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .in('id', allUserIds);
+
+      // Format results
+      const formattedGroups: GroupWithDetails[] = publicGroups.map(group => ({
+        ...group,
+        maxMembers: group.max_members,
+        isPublic: group.is_public,
+        allowSelfJoin: group.allow_self_join,
+        courseCode: group.course_code,
+        className: group.class_name,
+        createdBy: group.created_by,
+        instructorId: group.instructor_id,
+        createdAt: group.created_at,
+        updatedAt: group.updated_at,
+        memberCount: memberCountMap[group.id] || 0,
+        instructor: users?.find(u => u.id === group.instructor_id) || null,
+        creator: users?.find(u => u.id === group.created_by) || null,
+      }));
+
+      return formattedGroups;
+    } catch (error) {
+      console.error('Error getting public groups:', error);
+      throw new Error('Failed to get public groups');
+    }
+  }
+
+  /**
+   * Get groups for a user (groups they belong to or created, plus all public groups)
    */
   static async getUserGroups(userId: string): Promise<GroupWithDetails[]> {
     try {

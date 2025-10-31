@@ -14,6 +14,7 @@ import {
   SidebarSeparator
 } from '@/components/ui/sidebar';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/hooks/useAuth';
 import { AuthService } from '@/services/authService';
 import {
   BarChart3,
@@ -29,19 +30,34 @@ import {
   Users,
   X
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 interface UserHomeSidebarProps {
-  user: any;
-  profile: any;
+  user?: any;
+  profile?: any;
   onClose?: () => void;
   isMobile?: boolean;
 }
 
-export const UserHomeSidebar = ({ user, profile, onClose, isMobile = false }: UserHomeSidebarProps) => {
+export const UserHomeSidebar = ({ user: userProp, profile: profileProp, onClose, isMobile = false }: UserHomeSidebarProps) => {
+  // Use profile from useAuth hook to ensure it's always up-to-date
+  const { user: authUser, profile: authProfile } = useAuth();
+  
+  // Prefer props if provided, otherwise fallback to auth context
+  const user = userProp || authUser;
+  const profile = profileProp || authProfile;
   const navigate = useNavigate();
+  const location = useLocation();
   const { theme, setTheme, actualTheme } = useTheme();
+
+  // Check if a menu item is active based on current route
+  const isActiveRoute = (path: string) => {
+    if (path === '/dashboard') {
+      return location.pathname === '/dashboard';
+    }
+    return location.pathname.startsWith(path);
+  };
 
   const handleSignOut = async () => {
     const { error } = await AuthService.signOut();
@@ -91,26 +107,31 @@ export const UserHomeSidebar = ({ user, profile, onClose, isMobile = false }: Us
   const menuItems = [
     {
       title: "Analytics",
+      path: "/analytics",
       icon: BarChart3,
       onClick: () => handleNavigation("/analytics"),
     },
     {
       title: "My Tickets",
+      path: "/dashboard",
       icon: Ticket,
       onClick: () => handleNavigation("/dashboard"),
     },
     {
       title: "Groups",
+      path: "/groups",
       icon: Users,
       onClick: () => handleNavigation("/groups"),
     },
     {
       title: "Calendar",
+      path: "/calendar",
       icon: Calendar,
       onClick: () => handleNavigation("/calendar"),
     },
     {
       title: "Notifications",
+      path: "/notifications",
       icon: Bell,
       onClick: () => handleNavigation("/notifications"),
     },
@@ -120,6 +141,7 @@ export const UserHomeSidebar = ({ user, profile, onClose, isMobile = false }: Us
   const instructorMenuItems = profile?.role === 'instructor' ? [
     {
       title: "Knowledge Base",
+      path: "/knowledge-base",
       icon: BookOpen,
       onClick: () => handleNavigation("/knowledge-base"),
     },
@@ -130,9 +152,9 @@ export const UserHomeSidebar = ({ user, profile, onClose, isMobile = false }: Us
   return (
     <Sidebar
       variant="inset"
-      className={`border-r bg-gradient-to-b from-card to-card/50 transition-all duration-300 ease-in-out ${isMobile ? 'w-full' : ''}`}
+      className={`border-r bg-sidebar ${isMobile ? 'w-full' : ''}`}
     >
-      <SidebarHeader className="p-6 border-b border-border/50">
+      <SidebarHeader className="p-5 border-b">
         <div className="flex flex-col items-center gap-4">
           {/* Mobile Close Button */}
           {isMobile && (
@@ -148,90 +170,106 @@ export const UserHomeSidebar = ({ user, profile, onClose, isMobile = false }: Us
             </div>
           )}
 
-          {/* Avatar with enhanced styling */}
-          <div className="relative">
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleNavigation("/profile");
-              }}
-              className="hover:opacity-80 transition-all duration-200 ease-in-out hover:scale-105"
-            >
-              <SmartAvatar
-                name={profile?.full_name || user?.email || 'User'}
-                avatarUrl={profile?.avatar_url}
-                size="xl"
-              />
-            </button>
-            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 border-2 border-card rounded-full flex items-center justify-center">
-              <div className="w-2 h-2 bg-white rounded-full"></div>
-            </div>
-          </div>
+          {/* Avatar */}
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleNavigation("/profile");
+            }}
+            className="relative hover:opacity-90 transition-opacity"
+          >
+            <SmartAvatar
+              name={profile?.full_name || user?.email || 'User'}
+              avatarUrl={profile?.avatar_url}
+              size="xl"
+            />
+            <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 border-2 border-sidebar rounded-full"></div>
+          </button>
 
-          {/* User Info with better styling */}
-          <div className="text-center space-y-1">
-            <h3 className="font-semibold text-lg text-foreground">
-              {profile?.full_name || user?.email}
+          {/* User Info */}
+          <div className="text-center space-y-1.5 w-full">
+            <h3 className="font-semibold text-base text-foreground truncate w-full px-2">
+              {profile?.full_name || user?.email || 'User'}
             </h3>
-            <div className="flex items-center justify-center gap-2">
-              <div className="w-2 h-2 bg-primary rounded-full"></div>
-              <p className="text-sm text-muted-foreground capitalize font-medium">
-                {profile?.role || "student"}
-              </p>
-            </div>
+            <p className="text-xs text-muted-foreground capitalize">
+              {profile?.role === 'student' ? 'Sinh viên' : 
+               profile?.role === 'instructor' ? 'Giảng viên' : 
+               profile?.role === 'admin' ? 'Quản trị viên' : 
+               profile?.role || "student"}
+            </p>
           </div>
 
-          {/* Enhanced Theme Toggle Button */}
+          {/* Theme Toggle */}
           <Button
             variant="outline"
             size="sm"
             onClick={toggleTheme}
-            className="w-full gap-2 bg-background/50 hover:bg-background/80 border-border/50"
+            className="w-full gap-2"
           >
             {getThemeIcon()}
-            <span className="text-sm font-medium">{getThemeLabel()} Mode</span>
+            <span className="text-sm">{getThemeLabel()} Mode</span>
           </Button>
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-4 py-4">
+      <SidebarContent className="px-3 py-4">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-            Navigation
+          <SidebarGroupLabel className="text-xs font-medium text-muted-foreground mb-3 px-2">
+            Điều hướng
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu className="space-y-1">
-              {allMenuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    onClick={item.onClick}
-                    className="w-full justify-start gap-3 h-11 rounded-lg hover:bg-accent/50 transition-all duration-200 ease-in-out group"
-                  >
-                    <item.icon className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-                    <span className="font-medium">{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+            <SidebarMenu className="space-y-0.5">
+              {allMenuItems.map((item) => {
+                const isActive = isActiveRoute(item.path);
+                
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      onClick={item.onClick}
+                      className={`w-full justify-start gap-3 h-10 rounded-md transition-colors ${
+                        isActive
+                          ? 'bg-accent text-accent-foreground'
+                          : 'hover:bg-accent/50 text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span className="text-sm font-medium">
+                        {item.title === 'Analytics' ? 'Phân tích' :
+                         item.title === 'My Tickets' ? 'Ticket của tôi' :
+                         item.title === 'Groups' ? 'Nhóm' :
+                         item.title === 'Calendar' ? 'Lịch' :
+                         item.title === 'Notifications' ? 'Thông báo' :
+                         item.title === 'Knowledge Base' ? 'Kiến thức' :
+                         item.title}
+                      </span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarSeparator className="my-6 bg-border/50" />
+        <SidebarSeparator className="my-4" />
 
         <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-            Settings
+          <SidebarGroupLabel className="text-xs font-medium text-muted-foreground mb-3 px-2">
+            Cài đặt
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu className="space-y-1">
+            <SidebarMenu className="space-y-0.5">
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={() => handleNavigation("/settings")}
-                  className="w-full justify-start gap-3 h-11 rounded-lg hover:bg-accent/50 transition-all duration-200 ease-in-out group"
+                  className={`w-full justify-start gap-3 h-10 rounded-md transition-colors ${
+                    isActiveRoute('/settings')
+                      ? 'bg-accent text-accent-foreground'
+                      : 'hover:bg-accent/50 text-muted-foreground hover:text-foreground'
+                  }`}
                 >
-                  <Settings className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-                  <span className="font-medium">Settings</span>
+                  <Settings className="h-4 w-4" />
+                  <span className="text-sm font-medium">Cài đặt</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -239,15 +277,15 @@ export const UserHomeSidebar = ({ user, profile, onClose, isMobile = false }: Us
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t border-border/50">
+      <SidebarFooter className="p-4 border-t">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={handleSignOut}
-              className="w-full justify-start gap-3 h-11 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10 transition-all duration-200 ease-in-out group"
+              className="w-full justify-start gap-3 h-10 rounded-md text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors"
             >
-              <LogOut className="h-4 w-4 group-hover:scale-110 transition-transform" />
-              <span className="font-medium">Sign Out</span>
+              <LogOut className="h-4 w-4" />
+              <span className="text-sm font-medium">Đăng xuất</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
