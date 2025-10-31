@@ -397,7 +397,7 @@ const GroupCard = ({
           <div className="flex items-center gap-2">
             <SmartAvatar
               name={group.instructor.fullName || group.instructor.email}
-              avatarUrl={null}
+              avatarUrl={group.instructor.avatarUrl || undefined}
               size="sm"
             />
             <div className="flex-1 min-w-0">
