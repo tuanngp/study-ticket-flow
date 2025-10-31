@@ -17,6 +17,9 @@ Slide: https://www.canva.com/design/DAG2scqfHqY/P3RTQsAHv8XgQ8ciTxlrUQ/edit?utm_
 - **Comment System**: Hệ thống bình luận và theo dõi tiến độ
 - **Dashboard Analytics**: Thống kê và báo cáo chi tiết
 - **Responsive Design**: Giao diện tối ưu cho mọi thiết bị
+- **AI Ticket Quality Scoring**: Tự đánh giá chất lượng ticket bằng AI (độ rõ ràng, đầy đủ thông tin)
+- **Student Groups**: Tính năng nhóm sinh viên để cộng tác và quản lý ticket theo nhóm
+- **AI Answer Suggestions**: Gợi ý câu trả lời/giải pháp tự động dựa trên RAG + ngữ cảnh ticket
 
 ## 🛠️ Công nghệ sử dụng
 
@@ -176,6 +179,7 @@ src/
 │   ├── TicketDetail.tsx # Ticket detail view
 │   ├── NewTicket.tsx    # Create ticket form
 │   ├── AdminDocuments.tsx # Document management (NEW!)
+│   ├── Groups.tsx       # Quản lý/Tham gia nhóm sinh viên (NEW!)
 │   └── NotFound.tsx     # 404 page
 ├── services/            # Business logic layer
 │   ├── authService.ts           # Authentication
@@ -186,6 +190,9 @@ src/
 │   ├── embeddingService.ts      # Gemini embeddings (NEW!)
 │   ├── documentIngestionService.ts # Document processing (NEW!)
 │   ├── ragAssistantService.ts   # RAG chat API (NEW!)
+│   ├── ticketQualityService.ts  # Đánh giá chất lượng ticket bằng AI (NEW!)
+│   ├── answerSuggestionService.ts # Gợi ý câu trả lời dựa trên RAG (NEW!)
+│   ├── groupService.ts          # Quản lý nhóm sinh viên (NEW!)
 │   └── README.md               # Services documentation
 ├── hooks/               # Custom React hooks
 ├── lib/                 # Utilities
@@ -229,6 +236,9 @@ const ticket = await TicketService.createTicket(formData, userId);
 - `TicketOperationsService`: CRUD operations + real-time subscriptions
 - `CommentService`: Quản lý comments
 - `StatisticsService`: Thống kê và analytics
+- `TicketQualityService`: Tự đánh giá chất lượng ticket bằng AI
+- `AnswerSuggestionService`: Gợi ý câu trả lời/giải pháp dựa trên RAG
+- `GroupService`: Quản lý nhóm sinh viên và quyền truy cập theo nhóm
 
 ### State Management
 
@@ -405,6 +415,9 @@ This project is licensed under the MIT License.
 - 🤖 **Powered by Gemini**: Google Gemini API cho embeddings và chat
 - 💬 **Floating Widget**: Chat widget luôn sẵn sàng trên mọi trang
 - 📊 **Source Citations**: Trích dẫn nguồn tài liệu trong mọi câu trả lời
+- 🧪 **AI Ticket Quality Scoring**: Tự động chấm điểm chất lượng ticket (clarity/completeness)
+- 👥 **Student Groups**: Tổ chức/cộng tác theo nhóm sinh viên
+- 💡 **AI Answer Suggestions**: Gợi ý câu trả lời/giải pháp ngay trong ticket
 
 ## 📞 Liên hệ
 - **GitHub Issues**: Báo bug và yêu cầu tính năng mới
