@@ -372,14 +372,14 @@ export const GroupGrades = ({ groupId, groupName, courseCode }: GroupGradesProps
                   <SelectValue placeholder="Filter by type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="assignment">Assignment</SelectItem>
-                  <SelectItem value="quiz">Quiz</SelectItem>
-                  <SelectItem value="group_project">Group Project</SelectItem>
-                  <SelectItem value="individual_contribution">Individual Contribution</SelectItem>
-                  <SelectItem value="peer_review">Peer Review</SelectItem>
-                  <SelectItem value="attendance">Attendance</SelectItem>
-                  <SelectItem value="participation">Participation</SelectItem>
+                  <SelectItem key="all" value="all">All Types</SelectItem>
+                  <SelectItem key="assignment" value="assignment">Assignment</SelectItem>
+                  <SelectItem key="quiz" value="quiz">Quiz</SelectItem>
+                  <SelectItem key="group_project" value="group_project">Group Project</SelectItem>
+                  <SelectItem key="individual_contribution" value="individual_contribution">Individual Contribution</SelectItem>
+                  <SelectItem key="peer_review" value="peer_review">Peer Review</SelectItem>
+                  <SelectItem key="attendance" value="attendance">Attendance</SelectItem>
+                  <SelectItem key="participation" value="participation">Participation</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -483,11 +483,17 @@ const CreateGradeForm = ({ members, onSubmit, isLoading }: CreateGradeFormProps)
             <SelectValue placeholder="Select student" />
           </SelectTrigger>
           <SelectContent>
-            {members.map((member) => (
-              <SelectItem key={member.id} value={member.userId}>
-                {member.user.fullName} ({member.user.email})
-              </SelectItem>
-            ))}
+            {members.map((member, index) => {
+              const displayName = `${member.user.fullName} (${member.user.email})`;
+              return (
+                <SelectItem 
+                  key={member.id || `member-${member.userId}-${index}`} 
+                  value={member.userId}
+                >
+                  {displayName}
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       </div>
@@ -499,13 +505,13 @@ const CreateGradeForm = ({ members, onSubmit, isLoading }: CreateGradeFormProps)
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="assignment">Assignment</SelectItem>
-            <SelectItem value="quiz">Quiz</SelectItem>
-            <SelectItem value="group_project">Group Project</SelectItem>
-            <SelectItem value="individual_contribution">Individual Contribution</SelectItem>
-            <SelectItem value="peer_review">Peer Review</SelectItem>
-            <SelectItem value="attendance">Attendance</SelectItem>
-            <SelectItem value="participation">Participation</SelectItem>
+            <SelectItem key="assignment" value="assignment">Assignment</SelectItem>
+            <SelectItem key="quiz" value="quiz">Quiz</SelectItem>
+            <SelectItem key="group_project" value="group_project">Group Project</SelectItem>
+            <SelectItem key="individual_contribution" value="individual_contribution">Individual Contribution</SelectItem>
+            <SelectItem key="peer_review" value="peer_review">Peer Review</SelectItem>
+            <SelectItem key="attendance" value="attendance">Attendance</SelectItem>
+            <SelectItem key="participation" value="participation">Participation</SelectItem>
           </SelectContent>
         </Select>
       </div>

@@ -39,7 +39,16 @@ export const SmartAvatar: FC<SmartAvatarProps> = ({
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    setSrc(avatarUrl);
+    if (avatarUrl) {
+      // Add cache buster when avatarUrl changes to ensure fresh image
+      if (!/([?&])(cb=|t=|v=|_t=)/i.test(avatarUrl)) {
+        setSrc(`${avatarUrl}${avatarUrl.includes('?') ? '&' : '?'}cb=${Date.now()}`);
+      } else {
+        setSrc(avatarUrl);
+      }
+    } else {
+      setSrc(undefined);
+    }
     setHasError(false);
   }, [avatarUrl]);
 

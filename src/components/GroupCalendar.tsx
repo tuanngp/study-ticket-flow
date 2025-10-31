@@ -10,6 +10,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/hooks/useAuth';
 import { GroupEventService, GroupService, type GroupEventWithDetails, type GroupEventType } from '@/services/groupService';
 import { toast } from 'sonner';
@@ -40,6 +48,10 @@ export const GroupCalendar = ({ groupId, groupName, courseCode }: GroupCalendarP
   
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
+  const [isEditEventOpen, setIsEditEventOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isEventDetailOpen, setIsEventDetailOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<GroupEventWithDetails | null>(null);
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month');
 
   // Fetch group events
@@ -83,10 +95,44 @@ export const GroupCalendar = ({ groupId, groupName, courseCode }: GroupCalendarP
     },
   });
 
-  const canManageEvents = group && (
+  // Update event mutation
+  const updateEventMutation = useMutation({
+    mutationFn: ({ eventId, eventData, eventType }: { eventId: string; eventData: any; eventType: GroupEventType }) =>
+      GroupEventService.updateGroupEvent(eventId, eventData, eventType, user!.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['group-events'] });
+      setIsEditEventOpen(false);
+      setSelectedEvent(null);
+      toast.success('Event updated successfully!');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to update event');
+    },
+  });
+
+  // Delete event mutation
+  const deleteEventMutation = useMutation({
+    mutationFn: (eventId: string) =>
+      GroupEventService.deleteGroupEvent(eventId, user!.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['group-events'] });
+      setIsDeleteDialogOpen(false);
+      setSelectedEvent(null);
+      toast.success('Event deleted successfully!');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to delete event');
+    },
+  });
+
+  // Students can only view events, not manage them
+  const canManageEvents = group && profile?.role !== 'student' && (
     group.createdBy === user?.id || 
     group.instructorId === user?.id ||
-    profile?.role === 'admin'
+    profile?.role === 'admin' ||
+    profile?.role === 'instructor' ||
+    profile?.role === 'lead' ||
+    profile?.role === 'manager'
   );
 
   const getEventsForDate = (date: Date) => {
@@ -106,7 +152,10 @@ export const GroupCalendar = ({ groupId, groupName, courseCode }: GroupCalendarP
     });
   };
 
-  const getEventTypeIcon = (eventType: string) => {
+  const getEventTypeIcon = (eventType?: string) => {
+    if (!eventType) {
+      return <CalendarIcon className="h-4 w-4 text-gray-500" />;
+    }
     switch (eventType) {
       case 'study_session':
         return <Users className="h-4 w-4 text-blue-500" />;
@@ -125,7 +174,10 @@ export const GroupCalendar = ({ groupId, groupName, courseCode }: GroupCalendarP
     }
   };
 
-  const getEventTypeColor = (eventType: string) => {
+  const getEventTypeColor = (eventType?: string) => {
+    if (!eventType) {
+      return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
+    }
     switch (eventType) {
       case 'study_session':
         return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
@@ -191,9 +243,14 @@ export const GroupCalendar = ({ groupId, groupName, courseCode }: GroupCalendarP
                 {dayEvents.slice(0, 3).map(event => (
                   <div
                     key={event.id}
-                    className="text-xs p-1 rounded bg-primary/10 text-primary truncate"
+                    className="text-xs p-1 rounded bg-primary/10 text-primary truncate cursor-pointer hover:bg-primary/20 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedEvent(event);
+                      setIsEventDetailOpen(true);
+                    }}
                   >
-                    {event.event.title}
+                    {event.event?.title || 'Untitled Event'}
                   </div>
                 ))}
                 {dayEvents.length > 3 && (
@@ -233,9 +290,14 @@ export const GroupCalendar = ({ groupId, groupName, courseCode }: GroupCalendarP
                   {dayEvents.map(event => (
                     <div
                       key={event.id}
-                      className="text-xs p-1 rounded bg-primary/10 text-primary truncate"
+                      className="text-xs p-1 rounded bg-primary/10 text-primary truncate cursor-pointer hover:bg-primary/20 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedEvent(event);
+                        setIsEventDetailOpen(true);
+                      }}
                     >
-                      {event.event.title}
+                      {event.event?.title || 'Untitled Event'}
                     </div>
                   ))}
                 </div>
@@ -260,20 +322,35 @@ export const GroupCalendar = ({ groupId, groupName, courseCode }: GroupCalendarP
         <div className="space-y-3">
           {dayEvents.length > 0 ? (
             dayEvents.map(event => (
-              <EventCard
+              <div
                 key={event.id}
-                event={event}
-                canManage={canManageEvents}
-                onRecordAttendance={(status, reason) => 
-                  recordAttendanceMutation.mutate({ 
-                    eventId: event.id, 
-                    status, 
-                    reason 
-                  })
-                }
-                getEventTypeIcon={getEventTypeIcon}
-                getEventTypeColor={getEventTypeColor}
-              />
+                onClick={() => {
+                  setSelectedEvent(event);
+                  setIsEventDetailOpen(true);
+                }}
+              >
+                <EventCard
+                  event={event}
+                  canManage={canManageEvents || false}
+                  onRecordAttendance={(status, reason) => 
+                    recordAttendanceMutation.mutate({ 
+                      eventId: event.id, 
+                      status, 
+                      reason 
+                    })
+                  }
+                  getEventTypeIcon={getEventTypeIcon}
+                  getEventTypeColor={getEventTypeColor}
+                  onEdit={() => {
+                    setSelectedEvent(event);
+                    setIsEditEventOpen(true);
+                  }}
+                  onDelete={() => {
+                    setSelectedEvent(event);
+                    setIsDeleteDialogOpen(true);
+                  }}
+                />
+              </div>
             ))
           ) : (
             <div className="text-center py-8 text-muted-foreground">
@@ -415,6 +492,79 @@ export const GroupCalendar = ({ groupId, groupName, courseCode }: GroupCalendarP
             {viewMode === 'day' && renderDayView()}
           </div>
         )}
+
+        {/* Event Detail Dialog */}
+        <EventDetailDialog
+          event={selectedEvent}
+          isOpen={isEventDetailOpen}
+          onOpenChange={setIsEventDetailOpen}
+          canManage={canManageEvents || false}
+          onEdit={() => {
+            setIsEventDetailOpen(false);
+            setIsEditEventOpen(true);
+          }}
+          onDelete={() => {
+            setIsEventDetailOpen(false);
+            setIsDeleteDialogOpen(true);
+          }}
+          getEventTypeIcon={getEventTypeIcon}
+          getEventTypeColor={getEventTypeColor}
+          onRecordAttendance={(status, reason) => 
+            recordAttendanceMutation.mutate({ 
+              eventId: selectedEvent!.id, 
+              status, 
+              reason 
+            })
+          }
+        />
+
+        {/* Edit Event Dialog */}
+        {selectedEvent && (
+          <Dialog open={isEditEventOpen} onOpenChange={setIsEditEventOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Event</DialogTitle>
+                <DialogDescription>
+                  Update event details
+                </DialogDescription>
+              </DialogHeader>
+              <EditEventForm
+                event={selectedEvent}
+                onSubmit={(data) => updateEventMutation.mutate({
+                  eventId: selectedEvent.id,
+                  ...data
+                })}
+                isLoading={updateEventMutation.isPending}
+                onCancel={() => {
+                  setIsEditEventOpen(false);
+                  setSelectedEvent(null);
+                }}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the event
+                {selectedEvent?.event?.title && ` "${selectedEvent.event.title}"`}.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => selectedEvent && deleteEventMutation.mutate(selectedEvent.id)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );
@@ -426,6 +576,8 @@ interface EventCardProps {
   onRecordAttendance: (status: string, reason?: string) => void;
   getEventTypeIcon: (eventType: string) => React.ReactNode;
   getEventTypeColor: (eventType: string) => string;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 const EventCard = ({ 
@@ -433,10 +585,10 @@ const EventCard = ({
   canManage, 
   onRecordAttendance, 
   getEventTypeIcon, 
-  getEventTypeColor 
+  getEventTypeColor,
+  onEdit,
+  onDelete
 }: EventCardProps) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardContent className="p-4">
@@ -445,9 +597,11 @@ const EventCard = ({
             <div className="flex items-center gap-2 mb-2">
               {getEventTypeIcon(event.eventType)}
               <h4 className="font-medium">{event.event.title}</h4>
-              <Badge className={getEventTypeColor(event.eventType)}>
-                {event.eventType.replace('_', ' ')}
-              </Badge>
+              {event.eventType && (
+                <Badge className={getEventTypeColor(event.eventType)}>
+                  {event.eventType.replace('_', ' ')}
+                </Badge>
+              )}
             </div>
             
             <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
@@ -480,10 +634,40 @@ const EventCard = ({
           </div>
           
           <div className="flex items-center gap-2">
-            {canManage && (
-              <Button variant="outline" size="sm">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
+            {canManage && onEdit && onDelete && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit();
+                    }}
+                  >
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete();
+                    }}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
         </div>
@@ -525,10 +709,311 @@ const EventCard = ({
   );
 };
 
+// Event Detail Dialog Component
+interface EventDetailDialogProps {
+  event: GroupEventWithDetails | null;
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  canManage: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+  getEventTypeIcon: (eventType: string) => React.ReactNode;
+  getEventTypeColor: (eventType: string) => string;
+  onRecordAttendance: (status: string, reason?: string) => void;
+}
+
+const EventDetailDialog = ({
+  event,
+  isOpen,
+  onOpenChange,
+  canManage,
+  onEdit,
+  onDelete,
+  getEventTypeIcon,
+  getEventTypeColor,
+  onRecordAttendance
+}: EventDetailDialogProps) => {
+  if (!event || !event.event) return null;
+
+  const startDate = event.event.startDate instanceof Date 
+    ? event.event.startDate 
+    : event.event.startDate 
+    ? new Date(event.event.startDate) 
+    : null;
+  const endDate = event.event.endDate instanceof Date 
+    ? event.event.endDate 
+    : event.event.endDate 
+    ? new Date(event.event.endDate) 
+    : null;
+
+  const isValidStartDate = startDate && !isNaN(startDate.getTime());
+  const isValidEndDate = endDate && !isNaN(endDate.getTime());
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <div className="flex items-center gap-2">
+            {getEventTypeIcon(event.eventType || '')}
+            <DialogTitle>{event.event.title}</DialogTitle>
+            {event.eventType && (
+              <Badge className={getEventTypeColor(event.eventType)}>
+                {event.eventType.replace('_', ' ')}
+              </Badge>
+            )}
+          </div>
+          <DialogDescription>
+            {isValidStartDate && format(startDate, 'EEEE, MMMM dd, yyyy')}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {event.event.description && (
+            <div>
+              <Label className="text-sm font-semibold mb-2 block">Description</Label>
+              <p className="text-sm text-muted-foreground">{event.event.description}</p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <Label className="text-xs text-muted-foreground">Time</Label>
+                <p className="text-sm">
+                  {isValidStartDate ? format(startDate, 'HH:mm') : 'N/A'}
+                  {isValidEndDate && ` - ${format(endDate, 'HH:mm')}`}
+                </p>
+              </div>
+            </div>
+
+            {event.event.location && (
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <Label className="text-xs text-muted-foreground">Location</Label>
+                  <p className="text-sm">{event.event.location}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <Label className="text-xs text-muted-foreground">Attendance</Label>
+                <p className="text-sm">{event.attendanceCount}/{event.maxParticipants || '∞'}</p>
+              </div>
+            </div>
+          </div>
+
+          {event.requiresAttendance && (
+            <div className="pt-4 border-t">
+              <Label className="text-sm font-semibold mb-2 block">Your Attendance</Label>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onRecordAttendance('attending')}
+                >
+                  <CheckCircle className="mr-1 h-3 w-3" />
+                  Attending
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onRecordAttendance('not_attending')}
+                >
+                  <XCircle className="mr-1 h-3 w-3" />
+                  Not Attending
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onRecordAttendance('excused')}
+                >
+                  <AlertCircle className="mr-1 h-3 w-3" />
+                  Excused
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {canManage && (
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button variant="outline" size="sm" onClick={onEdit}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
+              <Button variant="destructive" size="sm" onClick={onDelete}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </Button>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 interface CreateEventFormProps {
   onSubmit: (data: { eventData: any; eventType: GroupEventType }) => void;
   isLoading: boolean;
 }
+
+// Edit Event Form Component
+interface EditEventFormProps {
+  event: GroupEventWithDetails;
+  onSubmit: (data: { eventData: any; eventType: GroupEventType }) => void;
+  isLoading: boolean;
+  onCancel: () => void;
+}
+
+const EditEventForm = ({ event, onSubmit, isLoading, onCancel }: EditEventFormProps) => {
+  const startDate = event.event.startDate instanceof Date 
+    ? event.event.startDate 
+    : event.event.startDate 
+    ? new Date(event.event.startDate) 
+    : new Date();
+  const endDate = event.event.endDate instanceof Date 
+    ? event.event.endDate 
+    : event.event.endDate 
+    ? new Date(event.event.endDate) 
+    : null;
+
+  // Format date for datetime-local input (YYYY-MM-DDTHH:mm)
+  const formatDateForInput = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  const [formData, setFormData] = useState({
+    title: event.event.title || '',
+    description: event.event.description || '',
+    eventType: event.eventType as GroupEventType,
+    startDate: formatDateForInput(startDate),
+    endDate: endDate ? formatDateForInput(endDate) : '',
+    location: event.event.location || '',
+    maxParticipants: event.maxParticipants?.toString() || '',
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit({
+      eventData: {
+        title: formData.title,
+        description: formData.description,
+        startDate: new Date(formData.startDate),
+        endDate: formData.endDate ? new Date(formData.endDate) : null,
+        location: formData.location,
+        maxParticipants: formData.maxParticipants ? parseInt(formData.maxParticipants) : null,
+      },
+      eventType: formData.eventType,
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="edit-title">Event Title</Label>
+        <Input
+          id="edit-title"
+          value={formData.title}
+          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+          placeholder="Enter event title"
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="edit-description">Description</Label>
+        <Textarea
+          id="edit-description"
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          placeholder="Describe the event"
+          rows={3}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="edit-eventType">Event Type</Label>
+        <Select value={formData.eventType} onValueChange={(value) => setFormData({ ...formData, eventType: value as GroupEventType })}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="study_session">Study Session</SelectItem>
+            <SelectItem value="assignment_deadline">Assignment Deadline</SelectItem>
+            <SelectItem value="exam_schedule">Exam Schedule</SelectItem>
+            <SelectItem value="group_meeting">Group Meeting</SelectItem>
+            <SelectItem value="teacher_office_hours">Teacher Office Hours</SelectItem>
+            <SelectItem value="project_presentation">Project Presentation</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="edit-startDate">Start Date & Time</Label>
+          <Input
+            id="edit-startDate"
+            type="datetime-local"
+            value={formData.startDate}
+            onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="edit-endDate">End Date & Time (Optional)</Label>
+          <Input
+            id="edit-endDate"
+            type="datetime-local"
+            value={formData.endDate}
+            onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="edit-location">Location (Optional)</Label>
+          <Input
+            id="edit-location"
+            value={formData.location}
+            onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+            placeholder="e.g., Room A101"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="edit-maxParticipants">Max Participants (Optional)</Label>
+          <Input
+            id="edit-maxParticipants"
+            type="number"
+            value={formData.maxParticipants}
+            onChange={(e) => setFormData({ ...formData, maxParticipants: e.target.value })}
+            placeholder="Leave empty for unlimited"
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end space-x-2 pt-4">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? 'Updating...' : 'Update Event'}
+        </Button>
+      </div>
+    </form>
+  );
+};
 
 const CreateEventForm = ({ onSubmit, isLoading }: CreateEventFormProps) => {
   const [formData, setFormData] = useState({

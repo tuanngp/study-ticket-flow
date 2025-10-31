@@ -53,11 +53,13 @@ export interface GroupWithDetails extends Group {
     id: string;
     fullName: string | null;
     email: string;
+    avatarUrl: string | null;
   };
   creator?: {
     id: string;
     fullName: string | null;
     email: string;
+    avatarUrl: string | null;
   };
 }
 
@@ -210,7 +212,7 @@ export class GroupService {
       if (group.instructor_id) {
         const { data: instructorData, error: instructorError } = await supabase
           .from('profiles')
-          .select('id, full_name, email')
+          .select('id, full_name, email, avatar_url')
           .eq('id', group.instructor_id)
           .single();
         
@@ -218,7 +220,10 @@ export class GroupService {
           console.error('Error fetching instructor:', instructorError);
           // Don't throw error, just log it and continue without instructor
         } else {
-          instructor = instructorData;
+          instructor = {
+            ...instructorData,
+            avatarUrl: instructorData.avatar_url
+          };
         }
       } else {
         
@@ -229,10 +234,13 @@ export class GroupService {
             // Re-fetch instructor data
             const { data: instructorData } = await supabase
               .from('profiles')
-              .select('id, full_name, email')
+              .select('id, full_name, email, avatar_url')
               .eq('id', group.created_by)
               .single();
-            instructor = instructorData;
+            instructor = instructorData ? {
+              ...instructorData,
+              avatarUrl: instructorData.avatar_url
+            } : null;
             console.log('Auto-set instructor:', instructor);
           } catch (error) {
             console.error('Error auto-setting instructor:', error);
@@ -245,10 +253,13 @@ export class GroupService {
       if (group.created_by) {
         const { data: creatorData } = await supabase
           .from('profiles')
-          .select('id, full_name, email')
+          .select('id, full_name, email, avatar_url')
           .eq('id', group.created_by)
           .single();
-        creator = creatorData;
+        creator = creatorData ? {
+          ...creatorData,
+          avatarUrl: creatorData.avatar_url
+        } : null;
       }
 
       return {
@@ -320,25 +331,36 @@ export class GroupService {
 
       const { data: users } = await supabase
         .from('profiles')
-        .select('id, full_name, email')
+        .select('id, full_name, email, avatar_url')
         .in('id', allUserIds);
 
       // Format results
-      const formattedGroups: GroupWithDetails[] = publicGroups.map(group => ({
-        ...group,
-        maxMembers: group.max_members,
-        isPublic: group.is_public,
-        allowSelfJoin: group.allow_self_join,
-        courseCode: group.course_code,
-        className: group.class_name,
-        createdBy: group.created_by,
-        instructorId: group.instructor_id,
-        createdAt: group.created_at,
-        updatedAt: group.updated_at,
-        memberCount: memberCountMap[group.id] || 0,
-        instructor: users?.find(u => u.id === group.instructor_id) || null,
-        creator: users?.find(u => u.id === group.created_by) || null,
-      }));
+      const formattedGroups: GroupWithDetails[] = publicGroups.map(group => {
+        const instructor = users?.find(u => u.id === group.instructor_id);
+        const creator = users?.find(u => u.id === group.created_by);
+        
+        return {
+          ...group,
+          maxMembers: group.max_members,
+          isPublic: group.is_public,
+          allowSelfJoin: group.allow_self_join,
+          courseCode: group.course_code,
+          className: group.class_name,
+          createdBy: group.created_by,
+          instructorId: group.instructor_id,
+          createdAt: group.created_at,
+          updatedAt: group.updated_at,
+          memberCount: memberCountMap[group.id] || 0,
+          instructor: instructor ? {
+            ...instructor,
+            avatarUrl: instructor.avatar_url
+          } : null,
+          creator: creator ? {
+            ...creator,
+            avatarUrl: creator.avatar_url
+          } : null,
+        };
+      });
 
       return formattedGroups;
     } catch (error) {
@@ -412,7 +434,7 @@ export class GroupService {
 
       const { data: instructors } = await supabase
         .from('profiles')
-        .select('id, full_name, email')
+        .select('id, full_name, email, avatar_url')
         .in('id', instructorIds);
 
       // Get creator info
@@ -422,12 +444,15 @@ export class GroupService {
 
       const { data: creators } = await supabase
         .from('profiles')
-        .select('id, full_name, email')
+        .select('id, full_name, email, avatar_url')
         .in('id', creatorIds);
 
       // Combine and format results
       const uniqueGroups = allGroups.reduce((acc, group) => {
         if (!acc.find(g => g.id === group.id)) {
+          const instructor = instructors?.find(i => i.id === group.instructor_id);
+          const creator = creators?.find(c => c.id === group.created_by);
+          
           acc.push({
             ...group,
             // Map snake_case to camelCase for frontend compatibility
@@ -441,8 +466,14 @@ export class GroupService {
             createdAt: group.created_at,
             updatedAt: group.updated_at,
             memberCount: memberCountMap[group.id] || 0,
-            instructor: instructors?.find(i => i.id === group.instructor_id) || null,
-            creator: creators?.find(c => c.id === group.created_by) || null,
+            instructor: instructor ? {
+              ...instructor,
+              avatarUrl: instructor.avatar_url
+            } : null,
+            creator: creator ? {
+              ...creator,
+              avatarUrl: creator.avatar_url
+            } : null,
           });
         }
         return acc;
@@ -980,14 +1011,95 @@ export class GroupEventService {
     createdBy: string
   ): Promise<GroupEvent> {
     try {
+      // Map camelCase to snake_case for database
+      const insertData: Record<string, any> = {
+        title: eventData.title,
+        description: eventData.description,
+        type: 'academic', // Group events are academic type
+        user_id: createdBy,
+      };
+
+      // Handle start_date - convert Date to ISO string
+      if (eventData.startDate instanceof Date) {
+        insertData.start_date = eventData.startDate.toISOString();
+      } else if (eventData.start_date) {
+        insertData.start_date = eventData.start_date;
+      } else if (eventData.startDate) {
+        insertData.start_date = eventData.startDate;
+      }
+
+      // Handle end_date - convert Date to ISO string or null
+      if (eventData.endDate instanceof Date) {
+        insertData.end_date = eventData.endDate.toISOString();
+      } else if (eventData.end_date !== undefined) {
+        insertData.end_date = eventData.end_date;
+      } else if (eventData.endDate !== undefined) {
+        insertData.end_date = eventData.endDate;
+      } else {
+        insertData.end_date = null;
+      }
+
+      // Handle optional fields
+      if (eventData.isAllDay !== undefined || eventData.is_all_day !== undefined) {
+        insertData.is_all_day = eventData.isAllDay ?? eventData.is_all_day ?? false;
+      }
+
+      if (eventData.location !== undefined) {
+        insertData.location = eventData.location;
+      }
+
+      if (eventData.color !== undefined) {
+        insertData.color = eventData.color;
+      }
+
+      if (eventData.ticketId || eventData.ticket_id) {
+        insertData.ticket_id = eventData.ticketId || eventData.ticket_id;
+      }
+
+      if (eventData.metadata !== undefined) {
+        insertData.metadata = eventData.metadata;
+      }
+
+      // Ensure insertData only contains valid snake_case fields
+      const cleanInsertData: Record<string, any> = {
+        title: insertData.title,
+        description: insertData.description,
+        type: insertData.type,
+        user_id: insertData.user_id,
+      };
+
+      if (insertData.start_date) {
+        cleanInsertData.start_date = insertData.start_date;
+      }
+
+      if (insertData.end_date !== undefined) {
+        cleanInsertData.end_date = insertData.end_date;
+      }
+
+      if (insertData.is_all_day !== undefined) {
+        cleanInsertData.is_all_day = insertData.is_all_day;
+      }
+
+      if (insertData.location !== undefined) {
+        cleanInsertData.location = insertData.location;
+      }
+
+      if (insertData.color !== undefined) {
+        cleanInsertData.color = insertData.color;
+      }
+
+      if (insertData.ticket_id !== undefined) {
+        cleanInsertData.ticket_id = insertData.ticket_id;
+      }
+
+      if (insertData.metadata !== undefined) {
+        cleanInsertData.metadata = insertData.metadata;
+      }
+
       // First create the base calendar event
       const { data: event, error } = await supabase
         .from('calendar_events')
-        .insert({
-          ...eventData,
-          user_id: createdBy,
-          type: 'academic' // Group events are academic type
-        })
+        .insert(cleanInsertData)
         .select()
         .single();
 
@@ -1044,15 +1156,211 @@ export class GroupEventService {
         throw error;
       }
 
-      return groupEvents?.map(groupEvent => ({
-        ...groupEvent,
-        event: groupEvent.event,
-        attendanceCount: groupEvent.attendance?.[0]?.count || 0,
-        maxParticipants: groupEvent.max_participants
-      })) || [];
+      return groupEvents?.map(groupEvent => {
+        // Map event from snake_case to camelCase
+        let mappedEvent = null;
+        if (groupEvent.event) {
+          const startDate = groupEvent.event.start_date 
+            ? new Date(groupEvent.event.start_date) 
+            : null;
+          const endDate = groupEvent.event.end_date 
+            ? new Date(groupEvent.event.end_date) 
+            : null;
+
+          // Only create mapped event if startDate is valid
+          if (startDate && !isNaN(startDate.getTime())) {
+            mappedEvent = {
+              ...groupEvent.event,
+              startDate,
+              endDate: endDate && !isNaN(endDate.getTime()) ? endDate : null,
+            };
+          }
+        }
+
+        return {
+          ...groupEvent,
+          eventType: groupEvent.event_type, // Map snake_case to camelCase
+          event: mappedEvent,
+          attendanceCount: groupEvent.attendance?.[0]?.count || 0,
+          maxParticipants: groupEvent.max_participants,
+          requiresAttendance: groupEvent.requires_attendance,
+        };
+      }) || [];
     } catch (error) {
       console.error('Error getting group events:', error);
       throw new Error('Failed to get group events');
+    }
+  }
+
+  /**
+   * Update a group event
+   */
+  static async updateGroupEvent(
+    groupEventId: string,
+    eventData: any,
+    eventType: GroupEventType,
+    userId: string
+  ): Promise<GroupEvent> {
+    try {
+      // Get the group event to find the calendar event ID
+      const { data: groupEvent, error: groupEventError } = await supabase
+        .from('group_events')
+        .select('event_id, group_id, created_by')
+        .eq('id', groupEventId)
+        .single();
+
+      if (groupEventError || !groupEvent) {
+        throw new Error('Group event not found');
+      }
+
+      // Check permissions
+      const { data: group } = await supabase
+        .from('groups')
+        .select('created_by, instructor_id')
+        .eq('id', groupEvent.group_id)
+        .single();
+
+      const canUpdate = 
+        group?.created_by === userId ||
+        group?.instructor_id === userId ||
+        groupEvent.created_by === userId;
+
+      if (!canUpdate) {
+        throw new Error('Insufficient permissions to update event');
+      }
+
+      // Map camelCase to snake_case for database
+      const updateData: Record<string, any> = {};
+
+      if (eventData.title !== undefined) {
+        updateData.title = eventData.title;
+      }
+
+      if (eventData.description !== undefined) {
+        updateData.description = eventData.description;
+      }
+
+      // Handle start_date
+      if (eventData.startDate instanceof Date) {
+        updateData.start_date = eventData.startDate.toISOString();
+      } else if (eventData.start_date) {
+        updateData.start_date = eventData.start_date;
+      } else if (eventData.startDate) {
+        updateData.start_date = eventData.startDate;
+      }
+
+      // Handle end_date
+      if (eventData.endDate instanceof Date) {
+        updateData.end_date = eventData.endDate.toISOString();
+      } else if (eventData.end_date !== undefined) {
+        updateData.end_date = eventData.end_date;
+      } else if (eventData.endDate !== undefined) {
+        updateData.end_date = eventData.endDate;
+      } else if (eventData.endDate === null) {
+        updateData.end_date = null;
+      }
+
+      if (eventData.isAllDay !== undefined || eventData.is_all_day !== undefined) {
+        updateData.is_all_day = eventData.isAllDay ?? eventData.is_all_day ?? false;
+      }
+
+      if (eventData.location !== undefined) {
+        updateData.location = eventData.location;
+      }
+
+      if (eventData.color !== undefined) {
+        updateData.color = eventData.color;
+      }
+
+      updateData.updated_at = new Date().toISOString();
+
+      // Update the calendar event
+      const { error: updateError } = await supabase
+        .from('calendar_events')
+        .update(updateData)
+        .eq('id', groupEvent.event_id);
+
+      if (updateError) {
+        throw new Error(updateError.message);
+      }
+
+      // Update the group event if eventType changed
+      if (eventType) {
+        const { error: groupUpdateError } = await supabase
+          .from('group_events')
+          .update({
+            event_type: eventType,
+            requires_attendance: eventType === 'study_session' || eventType === 'group_meeting',
+            max_participants: eventData.maxParticipants,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', groupEventId);
+
+        if (groupUpdateError) {
+          throw new Error(groupUpdateError.message);
+        }
+      }
+
+      // Fetch and return updated group event
+      const { data: updatedGroupEvent } = await supabase
+        .from('group_events')
+        .select('*')
+        .eq('id', groupEventId)
+        .single();
+
+      return updatedGroupEvent;
+    } catch (error) {
+      console.error('Error updating group event:', error);
+      throw new Error('Failed to update group event');
+    }
+  }
+
+  /**
+   * Delete a group event
+   */
+  static async deleteGroupEvent(groupEventId: string, userId: string): Promise<boolean> {
+    try {
+      // Get the group event to find the calendar event ID
+      const { data: groupEvent, error: groupEventError } = await supabase
+        .from('group_events')
+        .select('event_id, group_id, created_by')
+        .eq('id', groupEventId)
+        .single();
+
+      if (groupEventError || !groupEvent) {
+        throw new Error('Group event not found');
+      }
+
+      // Check permissions
+      const { data: group } = await supabase
+        .from('groups')
+        .select('created_by, instructor_id')
+        .eq('id', groupEvent.group_id)
+        .single();
+
+      const canDelete = 
+        group?.created_by === userId ||
+        group?.instructor_id === userId ||
+        groupEvent.created_by === userId;
+
+      if (!canDelete) {
+        throw new Error('Insufficient permissions to delete event');
+      }
+
+      // Delete the group event (this will cascade delete the calendar event due to foreign key)
+      const { error } = await supabase
+        .from('group_events')
+        .delete()
+        .eq('id', groupEventId);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting group event:', error);
+      throw new Error('Failed to delete group event');
     }
   }
 
@@ -1265,7 +1573,7 @@ export class GroupChatService {
           reply_to:group_chat_messages!reply_to(id, content, user:profiles!user_id(full_name))
         `)
         .eq('group_id', groupId)
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: true })
         .range(offset, offset + limit - 1);
 
       if (error) {
@@ -1274,7 +1582,13 @@ export class GroupChatService {
 
       return messages?.map(message => ({
         ...message,
-        user: message.user,
+        createdAt: message.created_at || (message as any).createdAt,
+        userId: message.user_id || (message as any).userId,
+        user: message.user ? {
+          ...message.user,
+          fullName: message.user.full_name,
+          avatarUrl: message.user.avatar_url
+        } : null,
         replyTo: message.reply_to
       })) || [];
     } catch (error) {

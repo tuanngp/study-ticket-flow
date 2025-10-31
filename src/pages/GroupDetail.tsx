@@ -1,6 +1,5 @@
 import { GroupAIAssistant } from '@/components/GroupAIAssistant';
 import { GroupCalendar } from '@/components/GroupCalendar';
-import { GroupGrades } from '@/components/GroupGrades';
 import { GroupTicketCard } from '@/components/GroupTicketCard';
 import { Pagination } from '@/components/Pagination';
 import { SmartAvatar } from '@/components/SmartAvatar';
@@ -19,10 +18,8 @@ import { usePermissions } from '@/hooks/usePermissions';
 import {
   GroupChatService,
   GroupEventService,
-  GroupGradeService,
   GroupService,
   GroupTicketService,
-  type GradeType,
   type GroupEventType,
   type GroupMemberWithDetails,
   type GroupTicketType
@@ -42,6 +39,7 @@ import {
   FileText,
   Link,
   Lock,
+  MessageCircle,
   MoreHorizontal,
   Plus,
   Send,
@@ -58,7 +56,7 @@ import {
   Users,
   XCircle
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -66,13 +64,12 @@ export const GroupDetailPage = () => {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
   const { user, profile } = useAuth();
-  const { canManageGroups, canGradeStudents, canManageGroupMembers } = usePermissions();
+  const { canManageGroups, canManageGroupMembers } = usePermissions();
   const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState('overview');
   const [isCreateTicketOpen, setIsCreateTicketOpen] = useState(false);
   const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
-  const [isCreateGradeOpen, setIsCreateGradeOpen] = useState(false);
   const [isManageGroupOpen, setIsManageGroupOpen] = useState(false);
   const [manageGroupTab, setManageGroupTab] = useState('settings');
   const [groupSettings, setGroupSettings] = useState({
@@ -189,13 +186,6 @@ export const GroupDetailPage = () => {
     enabled: !!groupId,
   });
 
-  // Fetch group grades
-  const { data: grades, isLoading: isLoadingGrades } = useQuery({
-    queryKey: ['group-grades', groupId],
-    queryFn: () => GroupGradeService.getGroupGrades(groupId!),
-    enabled: !!groupId,
-  });
-
   // Fetch group chat messages
   const { data: messages, isLoading: isLoadingMessages } = useQuery({
     queryKey: ['group-messages', groupId],
@@ -231,19 +221,15 @@ export const GroupDetailPage = () => {
     },
   });
 
-  // Create grade mutation
-  const createGradeMutation = useMutation({
-    mutationFn: ({ userId, gradeData }: { userId: string; gradeData: any }) =>
-      GroupGradeService.createGroupGrade(groupId!, userId, gradeData, user!.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['group-grades'] });
-      setIsCreateGradeOpen(false);
-      toast.success('Grade recorded successfully!');
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to record grade');
-    },
-  });
+  // Chat scroll ref
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto scroll to bottom when messages change
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
 
   // Send message mutation
   const sendMessageMutation = useMutation({
@@ -252,6 +238,12 @@ export const GroupDetailPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-messages'] });
       setNewMessage('');
+      // Scroll to bottom after sending
+      setTimeout(() => {
+        if (chatEndRef.current) {
+          chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
     },
     onError: (error: any) => {
       toast.error(error.message || 'Failed to send message');
@@ -488,7 +480,7 @@ export const GroupDetailPage = () => {
                 <div className="flex items-center gap-2">
                   <SmartAvatar
                     name={group.instructor.fullName || group.instructor.email}
-                    avatarUrl={null}
+                    avatarUrl={group.instructor.avatarUrl || undefined}
                     size="sm"
                   />
                   <div>
@@ -506,12 +498,11 @@ export const GroupDetailPage = () => {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="members">Members</TabsTrigger>
           <TabsTrigger value="tickets">Tickets</TabsTrigger>
           <TabsTrigger value="events">Events</TabsTrigger>
-          <TabsTrigger value="grades">Grades</TabsTrigger>
           <TabsTrigger value="chat">Chat</TabsTrigger>
         </TabsList>
 
@@ -625,17 +616,32 @@ export const GroupDetailPage = () => {
                   </div>
                 ) : events && events.length > 0 ? (
                   <div className="space-y-3">
-                    {events.slice(0, 5).map((event) => (
-                      <div key={event.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{event.event.title}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {format(new Date(event.event.startDate), 'MMM dd, yyyy HH:mm')}
-                          </p>
+                    {events.slice(0, 5).map((event) => {
+                      if (!event.event) return null;
+                      
+                      const startDate = event.event.startDate instanceof Date 
+                        ? event.event.startDate 
+                        : event.event.startDate 
+                        ? new Date(event.event.startDate) 
+                        : null;
+                      
+                      const isValidDate = startDate && !isNaN(startDate.getTime());
+                      
+                      return (
+                        <div key={event.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div>
+                            <p className="font-medium">{event.event.title}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {isValidDate 
+                                ? format(startDate, 'MMM dd, yyyy HH:mm')
+                                : 'Invalid date'
+                              }
+                            </p>
+                          </div>
+                          <Badge variant="outline">{event.eventType?.replace('_', ' ') || 'Unknown Type'}</Badge>
                         </div>
-                        <Badge variant="outline">{event.eventType?.replace('_', ' ') || 'Unknown Type'}</Badge>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-muted-foreground text-center py-4">No events scheduled</p>
@@ -644,62 +650,6 @@ export const GroupDetailPage = () => {
             </Card>
           </div>
 
-          {/* Recent Grades */}
-          {canGradeStudents && (
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Recent Grades</CardTitle>
-                <Dialog open={isCreateGradeOpen} onOpenChange={setIsCreateGradeOpen}>
-                  <DialogTrigger asChild>
-                    <Button size="sm">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Record Grade</DialogTitle>
-                      <DialogDescription>
-                        Record a grade for a group member.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <CreateGradeForm
-                      members={members || []}
-                      onSubmit={(data) => createGradeMutation.mutate(data)}
-                      isLoading={createGradeMutation.isPending}
-                    />
-                  </DialogContent>
-                </Dialog>
-              </CardHeader>
-              <CardContent>
-                {isLoadingGrades ? (
-                  <div className="space-y-2">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="h-16 bg-muted animate-pulse rounded" />
-                    ))}
-                  </div>
-                ) : grades && grades.length > 0 ? (
-                  <div className="space-y-3">
-                    {grades.slice(0, 5).map((grade) => (
-                      <div key={grade.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{grade.user.fullName}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {grade.gradeType?.replace('_', ' ') || 'Unknown Type'} • {grade.gradedAt ? formatDistanceToNow(new Date(grade.gradedAt)) : 'Unknown time'} ago
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">{grade.score}/{grade.maxScore}</p>
-                          <Badge variant="outline">{grade.gradeType}</Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground text-center py-4">No grades recorded</p>
-                )}
-              </CardContent>
-            </Card>
-          )}
         </TabsContent>
 
         {/* Members Tab */}
@@ -903,76 +853,201 @@ export const GroupDetailPage = () => {
           />
         </TabsContent>
 
-        {/* Grades Tab */}
-        <TabsContent value="grades" className="space-y-6">
-          <GroupGrades
-            groupId={groupId!}
-            groupName={group.name}
-            courseCode={group.courseCode}
-          />
-        </TabsContent>
 
         {/* Chat Tab */}
         <TabsContent value="chat" className="space-y-6">
-          <Card className="h-[600px] flex flex-col">
-            <CardHeader>
-              <CardTitle>Group Chat</CardTitle>
-              <CardDescription>
-                Real-time communication with group members
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col">
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto space-y-3 mb-4">
-                {isLoadingMessages ? (
-                  <div className="space-y-3">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <div key={i} className="h-16 bg-muted animate-pulse rounded" />
-                    ))}
-                  </div>
-                ) : messages && messages.length > 0 ? (
-                  messages.map((message) => (
-                    <div key={message.id} className="flex items-start gap-3">
-                      <SmartAvatar
-                        name={message.user.fullName || message.user.email}
-                        avatarUrl={message.user.avatarUrl}
-                        size="sm"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-sm">{message.user.fullName}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {message.createdAt
-                              ? `${message.createdAt ? formatDistanceToNow(new Date(message.createdAt)) : 'Unknown time'} ago`
-                              : 'Just now'
-                            }
-                          </p>
-                        </div>
-                        <p className="text-sm mt-1">{message.content}</p>
+          <Card className="h-[600px] flex flex-col p-0">
+            {/* Chat Header */}
+            <div className="px-4 py-3 border-b bg-card">
+              <div className="flex items-center gap-3">
+                <Users className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <CardTitle className="text-lg">Group Chat</CardTitle>
+                  <CardDescription className="text-xs">
+                    {members?.length || 0} members
+                  </CardDescription>
+                </div>
+              </div>
+            </div>
+
+            {/* Messages Container */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2 bg-gradient-to-b from-background to-muted/20">
+              {isLoadingMessages ? (
+                <div className="space-y-3">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 w-24 bg-muted animate-pulse rounded" />
+                        <div className="h-12 w-48 bg-muted animate-pulse rounded-2xl" />
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <p className="text-muted-foreground text-center py-8">No messages yet</p>
-                )}
-              </div>
+                  ))}
+                </div>
+              ) : messages && messages.length > 0 ? (
+                messages.map((message, index) => {
+                  // Get userId - service now maps user_id to userId, but check both for safety
+                  const messageUserId = (message as any).userId || (message as any).user_id || message.user?.id;
+                  const currentUserId = user?.id;
+                  const isOwnMessage = String(messageUserId) === String(currentUserId);
+                  
+                  const prevMessage = index > 0 ? messages[index - 1] : null;
+                  const prevMessageUserId = prevMessage ? ((prevMessage as any).userId || (prevMessage as any).user_id || prevMessage.user?.id) : null;
+                  
+                  // Get createdAt - service now maps created_at to createdAt, but check both for safety
+                  const messageCreatedAt = (message as any).createdAt || (message as any).created_at;
+                  const prevMessageCreatedAt = prevMessage ? ((prevMessage as any).createdAt || (prevMessage as any).created_at) : null;
+                  
+                  const showAvatar = !prevMessage || prevMessageUserId !== messageUserId || 
+                    (prevMessageUserId === messageUserId && prevMessageCreatedAt && messageCreatedAt &&
+                     new Date(messageCreatedAt).getTime() - new Date(prevMessageCreatedAt).getTime() > 300000); // 5 minutes
+                  const showName = !prevMessage || prevMessageUserId !== messageUserId;
+                  
+                  // Format timestamp
+                  let timeDisplay = 'Just now';
+                  if (messageCreatedAt) {
+                    try {
+                      const messageDate = new Date(messageCreatedAt);
+                      if (!isNaN(messageDate.getTime())) {
+                        const now = new Date();
+                        const diffMs = now.getTime() - messageDate.getTime();
+                        const diffMins = Math.floor(diffMs / 60000);
+                        const diffHours = Math.floor(diffMs / 3600000);
+                        const diffDays = Math.floor(diffMs / 86400000);
+                        
+                        if (diffMins < 1) {
+                          timeDisplay = 'Just now';
+                        } else if (diffMins < 60) {
+                          timeDisplay = `${diffMins}m ago`;
+                        } else if (diffHours < 24) {
+                          timeDisplay = `${diffHours}h ago`;
+                        } else if (diffDays < 7) {
+                          timeDisplay = `${diffDays}d ago`;
+                        } else {
+                          timeDisplay = format(messageDate, 'MMM dd, HH:mm');
+                        }
+                      }
+                    } catch (e) {
+                      console.error('Error formatting date:', e, messageCreatedAt);
+                    }
+                  }
+                  
+                  return (
+                    <div
+                      key={message.id}
+                      className={`flex items-end gap-2 mb-1 w-full ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+                    >
+                      {/* Avatar - Left side for received messages */}
+                      {!isOwnMessage && (
+                        <div className="flex-shrink-0 w-8 h-8">
+                          {showAvatar ? (
+                            <SmartAvatar
+                              name={message.user.fullName || message.user.email}
+                              avatarUrl={message.user.avatarUrl}
+                              size="sm"
+                              className="ring-2 ring-background"
+                            />
+                          ) : (
+                            <div className="w-8" />
+                          )}
+                        </div>
+                      )}
 
-              {/* Message Input */}
-              <div className="flex gap-2">
-                <Input
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Type a message..."
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                />
+                      {/* Message Bubble */}
+                      <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} max-w-[70%]`}>
+                        {showName && !isOwnMessage && (
+                          <p className="text-xs text-muted-foreground px-2 pb-1">
+                            {message.user.fullName || message.user.email}
+                          </p>
+                        )}
+                        <div
+                          className={`px-4 py-2.5 rounded-2xl shadow-sm ${
+                            isOwnMessage
+                              ? 'bg-primary text-primary-foreground rounded-br-sm'
+                              : 'bg-card border border-border rounded-bl-sm'
+                          }`}
+                        >
+                          <p className={`text-sm whitespace-pre-wrap break-words leading-relaxed ${isOwnMessage ? 'text-primary-foreground' : 'text-foreground'}`}>
+                            {message.content}
+                          </p>
+                        </div>
+                        <p className={`text-xs text-muted-foreground px-2 pt-0.5 ${isOwnMessage ? 'text-right' : 'text-left'}`}>
+                          {timeDisplay}
+                        </p>
+                      </div>
+
+                      {/* Avatar - Right side for own messages */}
+                      {isOwnMessage && (
+                        <div className="flex-shrink-0 w-8 h-8">
+                          {showAvatar ? (
+                            <SmartAvatar
+                              name={message.user.fullName || message.user.email}
+                              avatarUrl={message.user.avatarUrl}
+                              size="sm"
+                              className="ring-2 ring-background"
+                            />
+                          ) : (
+                            <div className="w-8" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                    <MessageCircle className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <p className="text-muted-foreground font-medium">No messages yet</p>
+                  <p className="text-sm text-muted-foreground mt-1">Start the conversation!</p>
+                </div>
+              )}
+              {/* Scroll anchor */}
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* Message Input Area */}
+            <div className="border-t bg-card p-4">
+              <div className="flex items-end gap-2">
+                <div className="flex-1 relative">
+                  <Input
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Type a message..."
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                    className="pr-12 rounded-full border-2 focus-visible:ring-2"
+                  />
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 rounded-full"
+                      onClick={() => {/* TODO: Add emoji picker */}}
+                    >
+                      <span className="text-lg">😊</span>
+                    </Button>
+                  </div>
+                </div>
                 <Button
                   onClick={handleSendMessage}
                   disabled={!newMessage.trim() || sendMessageMutation.isPending}
+                  className="rounded-full h-10 w-10 p-0 shrink-0"
+                  size="icon"
                 >
-                  <Send className="h-4 w-4" />
+                  {sendMessageMutation.isPending ? (
+                    <div className="h-4 w-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
-            </CardContent>
+            </div>
           </Card>
         </TabsContent>
       </Tabs>
@@ -1156,10 +1231,6 @@ export const GroupDetailPage = () => {
                         <input type="checkbox" defaultChecked />
                       </div>
                       <div className="flex items-center justify-between">
-                        <Label>Can view grades</Label>
-                        <input type="checkbox" defaultChecked />
-                      </div>
-                      <div className="flex items-center justify-between">
                         <Label>Can invite others</Label>
                         <input type="checkbox" />
                       </div>
@@ -1175,10 +1246,6 @@ export const GroupDetailPage = () => {
                       </div>
                       <div className="flex items-center justify-between">
                         <Label>Can create events</Label>
-                        <input type="checkbox" defaultChecked />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <Label>Can grade assignments</Label>
                         <input type="checkbox" defaultChecked />
                       </div>
                     </div>
@@ -1585,115 +1652,3 @@ const CreateEventForm = ({ onSubmit, isLoading }: CreateEventFormProps) => {
   );
 };
 
-interface CreateGradeFormProps {
-  members: GroupMemberWithDetails[];
-  onSubmit: (data: { userId: string; gradeData: any }) => void;
-  isLoading: boolean;
-}
-
-const CreateGradeForm = ({ members, onSubmit, isLoading }: CreateGradeFormProps) => {
-  const [formData, setFormData] = useState({
-    userId: '',
-    gradeType: 'assignment' as GradeType,
-    score: '',
-    maxScore: '100',
-    feedback: '',
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit({
-      userId: formData.userId,
-      gradeData: {
-        gradeType: formData.gradeType,
-        score: formData.score,
-        maxScore: formData.maxScore,
-        feedback: formData.feedback,
-      },
-    });
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="userId">Student</Label>
-        <Select value={formData.userId} onValueChange={(value) => setFormData({ ...formData, userId: value })}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select student" />
-          </SelectTrigger>
-          <SelectContent>
-            {members.map((member) => (
-              <SelectItem key={member.id} value={member.userId}>
-                {member.user.fullName} ({member.user.email})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="gradeType">Grade Type</Label>
-        <Select value={formData.gradeType} onValueChange={(value) => setFormData({ ...formData, gradeType: value as GradeType })}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="assignment">Assignment</SelectItem>
-            <SelectItem value="quiz">Quiz</SelectItem>
-            <SelectItem value="group_project">Group Project</SelectItem>
-            <SelectItem value="individual_contribution">Individual Contribution</SelectItem>
-            <SelectItem value="peer_review">Peer Review</SelectItem>
-            <SelectItem value="attendance">Attendance</SelectItem>
-            <SelectItem value="participation">Participation</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="score">Score</Label>
-          <Input
-            id="score"
-            type="number"
-            value={formData.score}
-            onChange={(e) => setFormData({ ...formData, score: e.target.value })}
-            placeholder="e.g., 85"
-            required
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="maxScore">Max Score</Label>
-          <Input
-            id="maxScore"
-            type="number"
-            value={formData.maxScore}
-            onChange={(e) => setFormData({ ...formData, maxScore: e.target.value })}
-            placeholder="e.g., 100"
-            required
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="feedback">Feedback (Optional)</Label>
-        <Textarea
-          id="feedback"
-          value={formData.feedback}
-          onChange={(e) => setFormData({ ...formData, feedback: e.target.value })}
-          placeholder="Provide feedback for the student"
-          rows={3}
-        />
-      </div>
-
-      <div className="flex justify-end space-x-2">
-        <Button type="button" variant="outline">
-          Cancel
-        </Button>
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? 'Recording...' : 'Record Grade'}
-        </Button>
-      </div>
-    </form>
-  );
-};
